@@ -345,7 +345,8 @@ export function analyzeLevelSolvability(
 // Single Level Construction with Silhouette & Difficulty Filtering
 function buildSingleLevelCandidate(
   levelNumber: number,
-  seed: number
+  seed: number,
+  deadline = Number.POSITIVE_INFINITY
 ): LevelConfig | null {
   const rng = createRNG(seed);
   const shapeDef = SHAPE_DEFINITIONS[levelNumber] || SHAPE_DEFINITIONS[1];
@@ -354,7 +355,8 @@ function buildSingleLevelCandidate(
   const { mask, cells: playableCells } = rasterizeShape(shapeDef, gridSize);
   if (playableCells.length < 8) return null;
 
-  const occupied = new Int16Array(gridSize * gridSize);\n  occupied.fill(-1); // -1 is empty; otherwise arrow index
+  const occupied = new Int16Array(gridSize * gridSize);
+  occupied.fill(-1); // -1 is empty; otherwise arrow index
   const arrows: ArrowData[] = [];
   const directions: Direction[] = ['up', 'down', 'left', 'right'];
 
@@ -371,7 +373,8 @@ function buildSingleLevelCandidate(
 
   while (
     currentCoveredCells < targetCoveredCells &&
-    attempts < maxPlacementAttempts
+    attempts < maxPlacementAttempts &&
+    performance.now() < deadline
   ) {
     attempts++;
 
@@ -391,7 +394,8 @@ function buildSingleLevelCandidate(
     }
 
     const path: CellCoord[] = [startCell];
-    const visited = new Uint8Array(gridSize * gridSize);\n    visited[startCell.r * gridSize + startCell.c] = 1;
+    const visited = new Uint8Array(gridSize * gridSize);
+    visited[startCell.r * gridSize + startCell.c] = 1;
 
     let currDir: Direction = directions[Math.floor(rng() * directions.length)];
     let stuck = false;
@@ -417,8 +421,6 @@ function buildSingleLevelCandidate(
         const [dr, dc] = DIR_DELTA[d];
         const nr = curr.r + dr;
         const nc = curr.c + dc;
-        const key = `${nr},${nc}`;
-
         // Must be inside silhouette mask, empty, not visited
         if (
           nr >= 0 &&
@@ -426,8 +428,8 @@ function buildSingleLevelCandidate(
           nc >= 0 &&
           nc < gridSize &&
           mask[nr][nc] &&
-          !occupied.has(key) &&
-          !visited.has(key)
+          occupied[nr * gridSize + nc] < 0 &&
+          visited[nr * gridSize + nc] === 0
         ) {
           path.push({ r: nr, c: nc });
           visited[nr * gridSize + nc] = 1;
@@ -502,7 +504,8 @@ function buildSingleLevelCandidate(
         ) {
           const miniHead = { r: nr, c: nc };
           const ray = getRayCells(miniHead, d, gridSize);
-          let rayBlocked = false;\n          for (let ri = 0; ri < ray.length; ri++) { const rc = ray[ri]; if (occupied[rc.r * gridSize + rc.c] >= 0) { rayBlocked = true; break; } }
+          let rayBlocked = false;
+          for (let ri = 0; ri < ray.length; ri++) { const rc = ray[ri]; if (occupied[rc.r * gridSize + rc.c] >= 0) { rayBlocked = true; break; } }
           if (!rayBlocked) {
             const arrowId = `a_${levelNumber}_${arrows.length + 1}`;
             const miniArrow: ArrowData = {
@@ -512,8 +515,8 @@ function buildSingleLevelCandidate(
               colorIndex: -1,
               order: arrows.length,
             };
-            occupied.set(`${cell.r},${cell.c}`, arrowId);
-            occupied.set(`${miniHead.r},${miniHead.c}`, arrowId);
+            occupied[cell.r * gridSize + cell.c] = arrows.length;
+            occupied[miniHead.r * gridSize + miniHead.c] = arrows.length;
             arrows.push(miniArrow);
             currentCoveredCells += 2;
             break;
