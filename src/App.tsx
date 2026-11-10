@@ -119,17 +119,32 @@ export default function App() {
   const [isGrandFinale, setIsGrandFinale] = useState<boolean>(false);
   const [isNewHighScore, setIsNewHighScore] = useState<boolean>(false);
 
-  // Startup verification
+  // Create one worker; it generates only requested levels and warms the next level.
   useEffect(() => {
-    soundManager.setPreferences(
-      settings.soundEnabled,
-      settings.musicEnabled,
-      settings.vibrationEnabled
-    );
-    setTimeout(() => {
-      preloadAndVerifyAllLevels();
-    }, 150);
+    const worker = new Worker(new URL('./levelWorker.ts', import.meta.url), { type: 'module' });
+    workerRef.current = worker;
+    worker.onmessage = (event: MessageEvent<{ levelNumber: number; level?: LevelConfig; error?: string }>) => {
+      const pending = pendingLevelsRef.current.get(event.data.levelNumber);
+      if (!pending) return;
+      pendingLevelsRef.current.delete(event.data.levelNumber);
+      if (event.data.level) pending.forEach(resolve => resolve(event.data.level!));
+      else pending.forEach(() => setIsPreparingLevel(false));
+    };
+    worker.onerror = () => {
+      pendingLevelsRef.current.forEach(resolvers => resolvers.forEach(() => setIsPreparingLevel(false)));
+      pendingLevelsRef.current.clear();
+    };
+    return () => { worker.terminate(); workerRef.current = null; };
   }, []);
+
+  const requestLevel = useCallback((levelNumber: number) => new Promise<LevelConfig>((resolve, reject) => {
+    const worker = workerRef.current;
+    if (!worker) { reject(new Error('Level worker is not ready')); return; }
+    const waiting = pendingLevelsRef.current.get(levelNumber) || [];
+    waiting.push(resolve);
+    pendingLevelsRef.current.set(levelNumber, waiting);
+    worker.postMessage({ levelNumber });
+  }), []);
 
   // Sync settings & sound
   useEffect(() => {
@@ -152,33 +167,42 @@ export default function App() {
   const currentCollection =
     COLLECTIONS.find((c) => c.id === levelConfig.collectionId) || COLLECTIONS[0];
 
-  // Start Level
-  const startLevel = useCallback((lvlNum: number, extraHint = false) => {
-    const config = getLevel(lvlNum);
-    setLevelConfig(config);
-    setActiveArrows(config.arrows.map((a) => ({ ...a, cells: [...a.cells] })));
+  // Start Level: wait for the worker without blocking the UI.
+  const startLevel = useCallback(async (lvlNum: number, extraHint = false) => {
+    const requestId = ++levelRequestIdRef.current;
+    setIsPreparingLevel(true);
     setCurrentLevelNumber(lvlNum);
-    setHearts(3);
-    setMistakes(0);
-    dispatchScore({ type: 'RESET_SCORE' });
-    setComboCount(0);
-    setShowComboPill(false);
-    lastClearTimeRef.current = 0;
-    setUndoHistory([]);
-    setHintsLeft(extraHint ? 4 : 3);
-    setHintedArrowId(null);
-    setEscapingArrowId(null);
-    setShakingArrowId(null);
-    setFlashBlockedArrowId(null);
-    setFloatingScores([]);
-    setZoomLevel(1);
-    setPanOffset({ x: 0, y: 0 });
-    setShowLevelComplete(false);
-    setShowGameOver(false);
-    setShowCollectionComplete(false);
-    isInteractingRef.current = false;
     setScreen('game');
-  }, []);
+    try {
+      const config = await requestLevel(lvlNum);
+      if (requestId !== levelRequestIdRef.current) return;
+      setLevelConfig(config);
+      setActiveArrows(config.arrows.map((a) => ({ ...a, cells: a.cells })));
+      setHearts(3);
+      setMistakes(0);
+      dispatchScore({ type: 'RESET_SCORE' });
+      setComboCount(0);
+      setShowComboPill(false);
+      lastClearTimeRef.current = 0;
+      setUndoHistory([]);
+      setHintsLeft(extraHint ? 4 : 3);
+      setHintedArrowId(null);
+      setEscapingArrowId(null);
+      setShakingArrowId(null);
+      setFlashBlockedArrowId(null);
+      setFloatingScores([]);
+      setZoomLevel(1);
+      setPanOffset({ x: 0, y: 0 });
+      setShowLevelComplete(false);
+      setShowGameOver(false);
+      setShowCollectionComplete(false);
+      isInteractingRef.current = false;
+    } catch {
+      setScreen('levels');
+    } finally {
+      if (requestId === levelRequestIdRef.current) setIsPreparingLevel(false);
+    }
+  }, [requestLevel]);
 
   // Arrow Tap / Click handling
   const handleArrowSelect = useCallback(
@@ -466,6 +490,15 @@ export default function App() {
             isDarkTheme={isDark}
           />
 
+          {isPreparingLevel && (
+            <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
+              <div className="flex items-center gap-2 rounded-full px-4 py-2 bg-slate-950/85 text-cyan-300 text-xs font-bold border border-cyan-400/30">
+                <span className="w-4 h-4 rounded-full border-2 border-cyan-300/30 border-t-cyan-300 animate-spin" />
+                Preparing level...
+              </div>
+            </div>
+          )}
+
           {/* Interactive Silhouette Board */}
           <Board
             gridSize={levelConfig.gridSize}
@@ -486,6 +519,7 @@ export default function App() {
             onZoomChange={setZoomLevel}
             onPanChange={setPanOffset}
             onArrowSelect={handleArrowSelect}
+            performanceMode={settings.performanceMode}
           />
 
           {/* Compact Bottom Bar */}
