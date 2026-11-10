@@ -25,7 +25,7 @@ export const Home: React.FC<HomeProps> = ({
   onOpenHowToPlay,
   onOpenSettings,
 }) => {
-  const currentLvl = Math.min(50, progress.unlockedLevel);
+  const currentLvl = Math.min(150, progress.unlockedLevel);
   const currentShape = SHAPE_DEFINITIONS[currentLvl] || SHAPE_DEFINITIONS[1];
 
   let totalStars = 0;
@@ -93,7 +93,7 @@ export const Home: React.FC<HomeProps> = ({
                 Current Level
               </span>
               <span className="text-xs font-bold opacity-75">
-                {clearedCount} of 50 Solved
+                {clearedCount} of 150 Solved
               </span>
             </div>
 
@@ -129,7 +129,7 @@ export const Home: React.FC<HomeProps> = ({
             }`}
           >
             <Grid className="w-4 h-4 text-cyan-400" />
-            <span>All 50 Levels</span>
+            <span>All 150 Levels</span>
           </button>
 
           <button
