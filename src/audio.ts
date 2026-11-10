@@ -37,6 +37,7 @@ class SoundManager {
     if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume().catch(() => {});
     }
+    if (this.ctx && this.musicEnabled && !this.isBgmPlaying) this.startBGM();
   }
 
   public setPreferences(sound: boolean, music: boolean, vibration: boolean) {
