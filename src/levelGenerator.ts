@@ -192,7 +192,8 @@ export function getLevelParams(level: number) {
     maxLen = Math.round(18 + step * 12 + tier);
   }
   if (level === 1) { gridSize = 10; minLen = 3; maxLen = 4; }
-  gridSize = Math.min(34, gridSize);\n  return { collection, gridSize, minLen, maxLen };
+  gridSize = Math.min(34, gridSize);
+  return { collection, gridSize, minLen, maxLen };
 }
 // Ray calculation from head in direction towards grid edge
 export function getRayCells(
