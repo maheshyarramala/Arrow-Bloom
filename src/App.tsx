@@ -271,12 +271,12 @@ export default function App() {
 
                 soundManager.playWin();
 
-                // Collection complete check (levels 10, 20, 30, 40, 50)
+                // Collection complete check (every tenth level through 150)
                 if (currentLevelNumber % 10 === 0) {
                   const colIdx = Math.floor((currentLevelNumber - 1) / 10);
                   const completed = COLLECTIONS[colIdx];
                   const nextCol = COLLECTIONS[colIdx + 1] || null;
-                  const finale = currentLevelNumber === 50;
+                  const finale = currentLevelNumber === 150;
 
                   setCompletedCollection(completed);
                   setNextCollection(nextCol);
@@ -521,7 +521,7 @@ export default function App() {
           score={score}
           mistakes={mistakes}
           isNewHigh={isNewHighScore}
-          hasNextLevel={currentLevelNumber < 50}
+          hasNextLevel={currentLevelNumber < 150}
           onNextLevel={() => startLevel(currentLevelNumber + 1)}
           onReplay={() => startLevel(currentLevelNumber)}
           onHome={() => setScreen('home')}
