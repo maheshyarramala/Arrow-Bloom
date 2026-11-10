@@ -234,7 +234,7 @@ export const Settings: React.FC<SettingsProps> = ({
                 <span>Reset all stars and progress?</span>
               </div>
               <p className="text-[11px] text-white/70">
-                This locks levels 2–50. This cannot be undone.
+                This locks all later levels. This cannot be undone.
               </p>
               <div className="flex gap-2 mt-1">
                 <button
