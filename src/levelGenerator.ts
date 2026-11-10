@@ -407,7 +407,7 @@ function buildSingleLevelCandidate(
       const wantTurn = rng() < 0.42;
       const directionStart = Math.floor(rng() * 4);
       let foundNext = false;
-      for (let candidateIndex = 0; candidateIndex < 4; candidateIndex++) {
+      for (let candidateIndex = 0; candidateIndex < (wantTurn ? 4 : 5); candidateIndex++) {
         let d: Direction;
         if (!wantTurn && candidateIndex === 0) d = currDir;
         else {
@@ -453,13 +453,13 @@ function buildSingleLevelCandidate(
 
     // Compute ray from head to edge of grid
     // ACCEPT ONLY IF ray has NO already-placed cell (cells outside mask on ray are fine!)
-    const ray = getRayCells(head, headDir, gridSize);
     let rayHitsAlreadyPlaced = false;
-    for (const cell of ray) {
-      if (occupied[cell.r * gridSize + cell.c] >= 0) {
-        rayHitsAlreadyPlaced = true;
-        break;
-      }
+    const [rayDr, rayDc] = DIR_DELTA[headDir];
+    let rayR = head.r + rayDr;
+    let rayC = head.c + rayDc;
+    while (rayR >= 0 && rayR < gridSize && rayC >= 0 && rayC < gridSize) {
+      if (occupied[rayR * gridSize + rayC] >= 0) { rayHitsAlreadyPlaced = true; break; }
+      rayR += rayDr; rayC += rayDc;
     }
 
     if (rayHitsAlreadyPlaced) {
@@ -500,9 +500,13 @@ function buildSingleLevelCandidate(
           occupied[nr * gridSize + nc] < 0
         ) {
           const miniHead = { r: nr, c: nc };
-          const ray = getRayCells(miniHead, d, gridSize);
           let rayBlocked = false;
-          for (let ri = 0; ri < ray.length; ri++) { const rc = ray[ri]; if (occupied[rc.r * gridSize + rc.c] >= 0) { rayBlocked = true; break; } }
+          let rayR = miniHead.r + dr;
+          let rayC = miniHead.c + dc;
+          while (rayR >= 0 && rayR < gridSize && rayC >= 0 && rayC < gridSize) {
+            if (occupied[rayR * gridSize + rayC] >= 0) { rayBlocked = true; break; }
+            rayR += dr; rayC += dc;
+          }
           if (!rayBlocked) {
             const arrowId = `a_${levelNumber}_${arrows.length + 1}`;
             const miniArrow: ArrowData = {
