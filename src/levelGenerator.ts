@@ -345,8 +345,7 @@ export function analyzeLevelSolvability(
 // Single Level Construction with Silhouette & Difficulty Filtering
 function buildSingleLevelCandidate(
   levelNumber: number,
-  seed: number,
-  deadline = Number.POSITIVE_INFINITY
+  seed: number
 ): LevelConfig | null {
   const rng = createRNG(seed);
   const shapeDef = SHAPE_DEFINITIONS[levelNumber] || SHAPE_DEFINITIONS[1];
@@ -373,8 +372,7 @@ function buildSingleLevelCandidate(
 
   while (
     currentCoveredCells < targetCoveredCells &&
-    attempts < maxPlacementAttempts &&
-    performance.now() < deadline
+    attempts < maxPlacementAttempts
   ) {
     attempts++;
 
