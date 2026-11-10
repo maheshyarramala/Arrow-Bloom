@@ -22,6 +22,8 @@ interface BoardProps {
   onPanChange: (newPan: { x: number; y: number }) => void;
   onArrowSelect: (arrowId: string) => void;
   performanceMode?: boolean;
+  debugOverlay?: boolean;
+  generationMs?: number;
 }
 
 interface Particle { x: number; y: number; vx: number; vy: number; life: number; color: string; size: number; }
@@ -48,6 +50,8 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
   const particlesRef = useRef<Particle[]>([]);
   const pointerRef = useRef({ down: false, dragging: false, x: 0, y: 0, startX: 0, startY: 0 });
   const lastPanRef = useRef({ x: panOffset.x, y: panOffset.y });
+  const fpsLabelRef = useRef<HTMLDivElement>(null);
+  const fpsStatsRef = useRef({ last: 0, frames: 0, badSince: 0 });
   const cellSizeRef = useRef(1);
 
   const arrowsByColor = useMemo(() => {
@@ -190,6 +194,15 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     ctx.clearRect(0, 0, board, board);
     const cell = board / gridSize;
     let active = false;
+    if (debugOverlay) {
+      const stats = fpsStatsRef.current;
+      stats.frames++;
+      if (stats.last && now - stats.last >= 500) {
+        const fps = Math.round(stats.frames * 1000 / (now - stats.last));
+        if (fpsLabelRef.current) fpsLabelRef.current.textContent = `${fps} FPS · Gen ${generationMs} ms`;
+        stats.frames = 0; stats.last = now;
+      } else if (!stats.last) stats.last = now;
+    }
     if (escapingArrowId) {
       const arrow = arrows.find(a => a.id === escapingArrowId);
       if (arrow) {
@@ -270,7 +283,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       active = true;
     }
     if (active && !rafRef.current) rafRef.current = requestAnimationFrame(tick);
-  }, [gridSize, arrows, escapingArrowId, shakingArrowId, flashBlockedArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, comboCount, drawArrow, performanceMode]);
+  }, [gridSize, arrows, escapingArrowId, shakingArrowId, flashBlockedArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, comboCount, drawArrow, performanceMode, debugOverlay, generationMs]);
 
   const tick = useCallback((now: number) => {
     rafRef.current = 0;
@@ -403,6 +416,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
 
   return (
     <div ref={containerRef} className="relative flex-1 w-full h-full flex items-center justify-center overflow-hidden select-none outline-none" style={{ touchAction: 'none' }} tabIndex={0} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp} onWheel={handleWheel} onKeyDown={handleKeyDown}>
+      {debugOverlay && <div ref={fpsLabelRef} className="absolute left-2 top-2 z-50 rounded bg-black/80 px-2 py-1 text-[10px] font-mono text-lime-300 pointer-events-none">-- FPS · Gen {generationMs} ms</div>}
       <div ref={wrapperRef} className="relative select-none" style={{ transformOrigin: 'center center', willChange: 'transform' }}>
         <canvas ref={staticRef} className="absolute inset-0 pointer-events-none" />
         <canvas ref={dynamicRef} className="absolute inset-0 pointer-events-none" />
