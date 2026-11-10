@@ -91,9 +91,9 @@ export function updateLevelCompletion(
     cleared: true,
   };
 
-  // Unlock next level (up to 50)
+  // Unlock next level (up to 150)
   const nextLevel = levelNumber + 1;
-  if (nextLevel <= 50) {
+  if (nextLevel <= 150) {
     if (nextProgress.unlockedLevel < nextLevel) {
       nextProgress.unlockedLevel = nextLevel;
     }
