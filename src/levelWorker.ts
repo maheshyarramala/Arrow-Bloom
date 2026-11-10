@@ -49,7 +49,7 @@ const generationTimes = new Map<number, number>();
 async function generate(levelNumber: number): Promise<LevelConfig> {
   const started = performance.now();
   const cached = await readCached(levelNumber);
-  if (cached) { generationTimes.set(levelNumber, 0); return cached; }
+  if (cached) { if (!generationTimes.has(levelNumber)) generationTimes.set(levelNumber, 0); return cached; }
   const result = getLevel(levelNumber, { maxAttempts: 20, timeBudgetMs: 400 });
   generationTimes.set(levelNumber, Math.round(performance.now() - started));
   await writeCached(result);
