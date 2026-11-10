@@ -2,7 +2,7 @@
  * Arrow Bloom - Compact Single-Row Game Top Bar
  * back button | shape name & collection | score | theme toggle | settings
  */
-import React from 'react';
+import React, { useRef } from 'react';
 import { ChevronLeft, Sun, Moon, Settings as SettingsIcon } from 'lucide-react';
 
 interface TopBarProps {
@@ -14,6 +14,7 @@ interface TopBarProps {
   onToggleTheme: () => void;
   onOpenSettings: () => void;
   onBack: () => void;
+  onToggleDebug?: () => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = React.memo(({
@@ -25,7 +26,10 @@ export const TopBar: React.FC<TopBarProps> = React.memo(({
   onToggleTheme,
   onOpenSettings,
   onBack,
+  onToggleDebug,
 }) => {
+  const longPressTimer = useRef<number | null>(null);
+  const cancelLongPress = () => { if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current); longPressTimer.current = null; };
   const isDark = theme === 'dark';
 
   return (
@@ -49,7 +53,7 @@ export const TopBar: React.FC<TopBarProps> = React.memo(({
           <span className="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded-md bg-pink-500/20 text-pink-500 border border-pink-500/30">
             L{levelNumber}
           </span>
-          <h1 className="text-sm sm:text-base font-black truncate tracking-wide whitespace-nowrap overflow-hidden">
+          <h1 onPointerDown={() => { if (onToggleDebug) longPressTimer.current = window.setTimeout(onToggleDebug, 650); }} onPointerUp={cancelLongPress} onPointerLeave={cancelLongPress} onPointerCancel={cancelLongPress} className="text-sm sm:text-base font-black truncate tracking-wide whitespace-nowrap overflow-hidden">
             {shapeName}
           </h1>
         </div>
