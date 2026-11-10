@@ -4,7 +4,6 @@ const config: CapacitorConfig = {
   appId: 'com.arrowbloom.game',
   appName: 'Arrow Bloom',
   webDir: 'dist',
-  bundledWebRuntime: false,
   server: {
     androidScheme: 'https',
   },
