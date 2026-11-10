@@ -83,3 +83,10 @@
 .animate-pulse-glow {
   animation: pulse-glow 1.5s ease-in-out infinite;
 }
+
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float, .animate-pulse, .animate-bounce, .animate-pulse-glow, .animate-shake {
+    animation: none !important;
+  }
+}
