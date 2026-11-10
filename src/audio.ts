@@ -19,9 +19,9 @@ class SoundManager {
   private createVoice(): OscillatorNode {
     if (this.activeVoices.size >= 4) {
       const oldest = this.activeVoices.values().next().value as OscillatorNode | undefined;
-      if (oldest) { try { oldest.stop(); } catch { /* already stopped */ } }
+      if (oldest) { try { oldest.stop(); } catch { /* already stopped */ } this.activeVoices.delete(oldest); }
     }
-    const osc = this.createVoice();
+    const osc = this.ctx!.createOscillator();
     this.activeVoices.add(osc);
     osc.onended = () => this.activeVoices.delete(osc);
     return osc;
@@ -55,6 +55,9 @@ class SoundManager {
   public vibrate(pattern: number | number[] = 40) {
     if (!this.vibrationEnabled) return;
     try {
+      const now = performance.now();
+      if (now - this.lastVibrationAt < 80) return;
+      this.lastVibrationAt = now;
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
         navigator.vibrate(pattern);
       }
