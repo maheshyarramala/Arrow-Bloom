@@ -79,7 +79,7 @@ export default function App() {
   const [generationMs, setGenerationMs] = useState(0);
   const [showPerfOverlay, setShowPerfOverlay] = useState(false);
   const workerRef = useRef<Worker | null>(null);
-  const pendingLevelsRef = useRef(new Map<number, Array<(level: LevelConfig) => void>>());
+  const pendingLevelsRef = useRef(new Map<number, Array<{ resolve: (level: LevelConfig) => void; reject: (error: Error) => void }>>());
   const levelRequestIdRef = useRef(0);
 
   // Score Reducer
@@ -129,11 +129,11 @@ export default function App() {
       const pending = pendingLevelsRef.current.get(event.data.levelNumber);
       if (!pending) return;
       pendingLevelsRef.current.delete(event.data.levelNumber);
-      if (event.data.level) { setGenerationMs(event.data.generationMs || 0); pending.forEach(resolve => resolve(event.data.level!)); }
-      else pending.forEach(() => setIsPreparingLevel(false));
+      if (event.data.level) { setGenerationMs(event.data.generationMs || 0); pending.forEach(item => item.resolve(event.data.level!)); }
+      else pending.forEach(item => item.reject(new Error(event.data.error || 'Level generation failed')));
     };
     worker.onerror = () => {
-      pendingLevelsRef.current.forEach(resolvers => resolvers.forEach(() => setIsPreparingLevel(false)));
+      pendingLevelsRef.current.forEach(resolvers => resolvers.forEach(item => item.reject(new Error('Level worker failed'))));
       pendingLevelsRef.current.clear();
     };
     return () => { worker.terminate(); workerRef.current = null; };
@@ -146,7 +146,7 @@ export default function App() {
     const worker = workerRef.current;
     if (!worker) { reject(new Error('Level worker is not ready')); return; }
     const waiting = pendingLevelsRef.current.get(levelNumber) || [];
-    waiting.push(resolve);
+    waiting.push({ resolve, reject });
     pendingLevelsRef.current.set(levelNumber, waiting);
     worker.postMessage({ levelNumber });
   }), []);
@@ -176,6 +176,8 @@ export default function App() {
   const startLevel = useCallback(async (lvlNum: number, extraHint = false) => {
     const requestId = ++levelRequestIdRef.current;
     setIsPreparingLevel(false);
+    setActiveArrows([]);
+    setLevelConfig(EMPTY_LEVEL);
     const spinnerTimer = window.setTimeout(() => setIsPreparingLevel(true), 150);
     setCurrentLevelNumber(lvlNum);
     setScreen('game');
