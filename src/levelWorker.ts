@@ -45,10 +45,13 @@ async function writeCached(level: LevelConfig): Promise<void> {
 }
 
 const pending = new Map<number, Promise<LevelConfig>>();
+const generationTimes = new Map<number, number>();
 async function generate(levelNumber: number): Promise<LevelConfig> {
+  const started = performance.now();
   const cached = await readCached(levelNumber);
-  if (cached) return cached;
+  if (cached) { generationTimes.set(levelNumber, 0); return cached; }
   const result = getLevel(levelNumber, { maxAttempts: 20, timeBudgetMs: 400 });
+  generationTimes.set(levelNumber, Math.round(performance.now() - started));
   await writeCached(result);
   return result;
 }
@@ -64,7 +67,7 @@ self.onmessage = async (event: MessageEvent<{ levelNumber: number }>) => {
     }
     const level = await task;
     pending.delete(levelNumber);
-    self.postMessage({ levelNumber, level, generationMs: Math.round(performance.now() - requestStarted) });
+    self.postMessage({ levelNumber, level, generationMs: generationTimes.get(levelNumber) ?? Math.round(performance.now() - requestStarted) });
     // Warm only the immediately following level after returning the requested one.
     if (levelNumber < 150 && !pending.has(levelNumber + 1)) {
       const next = generate(levelNumber + 1).finally(() => pending.delete(levelNumber + 1));
