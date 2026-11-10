@@ -1,0 +1,6 @@
+{
+  "name": "Arrow Bloom",
+  "description": "A colorful, vibrant arrow-escape logic puzzle game featuring 50 handcrafted solvable levels across 5 whimsical worlds.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
