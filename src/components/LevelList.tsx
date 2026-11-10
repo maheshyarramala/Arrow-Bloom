@@ -36,7 +36,7 @@ export const LevelList: React.FC<LevelListProps> = ({
           <ChevronLeft className="w-6 h-6" />
         </button>
 
-        <h1 className="text-xl md:text-2xl font-black tracking-wide">All 50 Levels</h1>
+        <h1 className="text-xl md:text-2xl font-black tracking-wide">All 150 Levels</h1>
 
         {/* Total Stars Counter */}
         <div
