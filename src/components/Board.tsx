@@ -270,17 +270,18 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     }
     ctx.globalAlpha = 1;
     if (floatingScores.length) {
-      const elapsed = Math.max(0, now - animationStartRef.current);
       ctx.font = '900 12px Fredoka, sans-serif';
       ctx.textAlign = 'center';
       for (let i = 0; i < Math.min(3, floatingScores.length); i++) {
         const item = floatingScores[i];
+        const elapsed = Math.max(0, now - (item.createdAt ?? animationStartRef.current));
+        if (elapsed >= 600) continue;
         ctx.fillStyle = item.color;
         ctx.globalAlpha = Math.max(0, 1 - elapsed / 600);
         ctx.fillText(item.text, item.x, item.y - elapsed * 0.035);
+        active = true;
       }
       ctx.globalAlpha = 1;
-      active ||= elapsed < 600;
     }
     if (active && !rafRef.current) rafRef.current = requestAnimationFrame(tick);
   }, [gridSize, arrows, escapingArrowId, shakingArrowId, flashBlockedArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, comboCount, drawArrow, performanceMode, onPerformanceModeChange, debugOverlay, generationMs]);
