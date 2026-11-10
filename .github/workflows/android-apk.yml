@@ -36,6 +36,9 @@ jobs:
       - name: Type-check
         run: npm run lint
 
+      - name: Verify gameplay rules and key levels
+        run: npm run test:levels
+
       - name: Build web game
         run: npm run build
 
