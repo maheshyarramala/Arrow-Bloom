@@ -23,6 +23,7 @@ interface BoardProps {
   onArrowSelect: (arrowId: string) => void;
   performanceMode?: boolean;
   onPerformanceModeChange?: (enabled: boolean) => void;
+  onDraggingChange?: (dragging: boolean) => void;
   debugOverlay?: boolean;
   generationMs?: number;
 }
@@ -381,7 +382,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     if (!p.down || transformRef.current.zoom <= 1) return;
     const dx = event.clientX - p.x;
     const dy = event.clientY - p.y;
-    if (Math.abs(dx) + Math.abs(dy) > 3) p.dragging = true;
+    if (Math.abs(dx) + Math.abs(dy) > 3 && !p.dragging) { p.dragging = true; onDraggingChange?.(true); }
     if (!p.dragging) return;
     const board = sizeRef.current.board;
     const maxPan = (board * (transformRef.current.zoom - 1)) / 2 + 50;
@@ -391,13 +392,15 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     transformRef.current.y = y;
     updateWrapperTransform();
     drawDynamic(performance.now());
-  }, [updateWrapperTransform, drawDynamic]);
+  }, [updateWrapperTransform, drawDynamic, onDraggingChange]);
 
   const handlePointerUp = useCallback(() => {
     const p = pointerRef.current;
     if (p.down && p.dragging) onPanChange({ x: transformRef.current.x, y: transformRef.current.y });
+    if (p.dragging) onDraggingChange?.(false);
     pointerRef.current.down = false;
-  }, [onPanChange]);
+    pointerRef.current.dragging = false;
+  }, [onPanChange, onDraggingChange]);
 
   const handleWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
     event.preventDefault();
