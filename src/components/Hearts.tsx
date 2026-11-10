@@ -9,7 +9,7 @@ interface HeartsProps {
   maxHearts?: number;
 }
 
-export const Hearts: React.FC<HeartsProps> = ({ hearts, maxHearts = 3 }) => {
+export const Hearts: React.FC<HeartsProps> = React.memo(({ hearts, maxHearts = 3 }) => {
   return (
     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-black/35 backdrop-blur-md border border-white/15 shadow-inner">
       {Array.from({ length: maxHearts }).map((_, idx) => {
@@ -35,4 +35,4 @@ export const Hearts: React.FC<HeartsProps> = ({ hearts, maxHearts = 3 }) => {
       })}
     </div>
   );
-};
+});
