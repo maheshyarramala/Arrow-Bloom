@@ -16,7 +16,7 @@ interface TopBarProps {
   onBack: () => void;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({
+export const TopBar: React.FC<TopBarProps> = React.memo(({
   levelNumber,
   shapeName,
   collectionName,
@@ -104,4 +104,4 @@ export const TopBar: React.FC<TopBarProps> = ({
       </div>
     </header>
   );
-};
+});
