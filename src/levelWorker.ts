@@ -56,6 +56,7 @@ async function generate(levelNumber: number): Promise<LevelConfig> {
 self.onmessage = async (event: MessageEvent<{ levelNumber: number }>) => {
   const levelNumber = Math.max(1, Math.min(150, Math.floor(event.data.levelNumber)));
   try {
+    const requestStarted = performance.now();
     let task = pending.get(levelNumber);
     if (!task) {
       task = generate(levelNumber);
@@ -63,7 +64,7 @@ self.onmessage = async (event: MessageEvent<{ levelNumber: number }>) => {
     }
     const level = await task;
     pending.delete(levelNumber);
-    self.postMessage({ levelNumber, level });
+    self.postMessage({ levelNumber, level, generationMs: Math.round(performance.now() - requestStarted) });
     // Warm only the immediately following level after returning the requested one.
     if (levelNumber < 150 && !pending.has(levelNumber + 1)) {
       const next = generate(levelNumber + 1).finally(() => pending.delete(levelNumber + 1));
