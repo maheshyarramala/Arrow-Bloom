@@ -9,6 +9,7 @@ import {
   LevelConfig,
 } from './types.ts';
 import { SHAPE_DEFINITIONS, rasterizeShape } from './shapes.ts';
+import './extendedShapes.ts';
 
 export const PALETTE = [
   '#FF2A85', // 0: Hot Pink
@@ -84,6 +85,69 @@ export const COLLECTIONS: CollectionConfig[] = [
   },
 ];
 
+COLLECTIONS.push(
+  {
+    id: 6, name: 'Deep Sea', theme: 'deep-sea',
+    levels: [51, 52, 53, 54, 55, 56, 57, 58, 59, 60],
+    subtitle: 'Explore the wonders beneath the waves', accentColor: '#22D3EE',
+    gradientDark: 'from-cyan-950 via-blue-950 to-slate-950', gradientLight: 'from-cyan-50 via-sky-100 to-blue-50',
+  },
+  {
+    id: 7, name: 'Enchanted', theme: 'enchanted',
+    levels: [61, 62, 63, 64, 65, 66, 67, 68, 69, 70],
+    subtitle: 'Magical objects from a hidden kingdom', accentColor: '#E879F9',
+    gradientDark: 'from-fuchsia-950 via-purple-950 to-slate-950', gradientLight: 'from-fuchsia-50 via-violet-100 to-purple-50',
+  },
+  {
+    id: 8, name: 'Cosmos', theme: 'cosmos',
+    levels: [71, 72, 73, 74, 75, 76, 77, 78, 79, 80],
+    subtitle: 'Travel through stars, planets and galaxies', accentColor: '#818CF8',
+    gradientDark: 'from-indigo-950 via-slate-950 to-black', gradientLight: 'from-indigo-50 via-blue-100 to-slate-100',
+  },
+  {
+    id: 9, name: 'Sweet World', theme: 'sweet',
+    levels: [81, 82, 83, 84, 85, 86, 87, 88, 89, 90],
+    subtitle: 'A colourful collection of sweet treats', accentColor: '#FB7185',
+    gradientDark: 'from-pink-950 via-rose-950 to-orange-950', gradientLight: 'from-pink-50 via-rose-100 to-orange-50',
+  },
+  {
+    id: 10, name: 'Sports', theme: 'sports',
+    levels: [91, 92, 93, 94, 95, 96, 97, 98, 99, 100],
+    subtitle: 'Gear up for the ultimate challenge', accentColor: '#FB923C',
+    gradientDark: 'from-orange-950 via-red-950 to-slate-950', gradientLight: 'from-orange-50 via-amber-100 to-red-50',
+  },
+  {
+    id: 11, name: 'Music', theme: 'music',
+    levels: [101, 102, 103, 104, 105, 106, 107, 108, 109, 110],
+    subtitle: 'Make shapes sing with every move', accentColor: '#A78BFA',
+    gradientDark: 'from-violet-950 via-indigo-950 to-slate-950', gradientLight: 'from-violet-50 via-indigo-100 to-blue-50',
+  },
+  {
+    id: 12, name: 'Adventure', theme: 'adventure',
+    levels: [111, 112, 113, 114, 115, 116, 117, 118, 119, 120],
+    subtitle: 'Discover maps, treasures and faraway places', accentColor: '#FBBF24',
+    gradientDark: 'from-amber-950 via-yellow-950 to-stone-950', gradientLight: 'from-amber-50 via-yellow-100 to-stone-100',
+  },
+  {
+    id: 13, name: 'Technology', theme: 'technology',
+    levels: [121, 122, 123, 124, 125, 126, 127, 128, 129, 130],
+    subtitle: 'A futuristic set of mechanical silhouettes', accentColor: '#38BDF8',
+    gradientDark: 'from-sky-950 via-cyan-950 to-slate-950', gradientLight: 'from-sky-50 via-cyan-100 to-slate-100',
+  },
+  {
+    id: 14, name: 'Mythical', theme: 'mythical',
+    levels: [131, 132, 133, 134, 135, 136, 137, 138, 139, 140],
+    subtitle: 'Legends, creatures and enchanted artefacts', accentColor: '#C084FC',
+    gradientDark: 'from-purple-950 via-fuchsia-950 to-slate-950', gradientLight: 'from-purple-50 via-fuchsia-100 to-indigo-50',
+  },
+  {
+    id: 15, name: 'Mastery', theme: 'mastery',
+    levels: [141, 142, 143, 144, 145, 146, 147, 148, 149, 150],
+    subtitle: 'The final ten challenges for master players', accentColor: '#F0ABFC',
+    gradientDark: 'from-slate-950 via-indigo-950 to-black', gradientLight: 'from-slate-100 via-indigo-100 to-violet-100',
+  }
+);
+
 // Seeded PRNG: Mulberry32
 export function createRNG(seed: number) {
   let s = seed >>> 0;
@@ -111,47 +175,25 @@ export function getDirFromDelta(dr: number, dc: number): Direction {
 
 // Compute level parameters (Grid size, snake lengths)
 export function getLevelParams(level: number) {
-  const collectionIdx = Math.min(4, Math.floor((level - 1) / 10));
+  const collectionIdx = Math.min(14, Math.floor((level - 1) / 10));
   const collection = COLLECTIONS[collectionIdx];
-  const step = ((level - 1) % 10) / 9; // 0..1
-
-  let gridSize: number;
-  let minLen: number;
-  let maxLen: number;
-
-  if (collection.id === 1) {
-    gridSize = Math.round(10 + step * 6); // 10 -> 16
-    minLen = 3;
-    maxLen = Math.round(4 + step * 3); // 4 -> 7
-  } else if (collection.id === 2) {
-    gridSize = Math.round(14 + step * 6); // 14 -> 20
-    minLen = 3;
-    maxLen = Math.round(6 + step * 4); // 6 -> 10
-  } else if (collection.id === 3) {
-    gridSize = Math.round(16 + step * 8); // 16 -> 24
-    minLen = 4;
-    maxLen = Math.round(8 + step * 6); // 8 -> 14
-  } else if (collection.id === 4) {
-    gridSize = Math.round(20 + step * 8); // 20 -> 28
-    minLen = 4;
-    maxLen = Math.round(10 + step * 10); // 10 -> 20
+  const step = ((level - 1) % 10) / 9;
+  let gridSize: number; let minLen: number; let maxLen: number;
+  if (collection.id <= 5) {
+    if (collection.id === 1) { gridSize = Math.round(10 + step * 6); minLen = 3; maxLen = Math.round(4 + step * 3); }
+    else if (collection.id === 2) { gridSize = Math.round(14 + step * 6); minLen = 3; maxLen = Math.round(6 + step * 4); }
+    else if (collection.id === 3) { gridSize = Math.round(16 + step * 8); minLen = 4; maxLen = Math.round(8 + step * 6); }
+    else if (collection.id === 4) { gridSize = Math.round(20 + step * 8); minLen = 4; maxLen = Math.round(10 + step * 10); }
+    else { gridSize = Math.round(26 + step * 8); minLen = 5; maxLen = Math.round(12 + step * 16); }
   } else {
-    // Collection 5: Legends
-    gridSize = Math.round(26 + step * 8); // 26 -> 34
-    minLen = 5;
-    maxLen = Math.round(12 + step * 16); // 12 -> 28 (with occasional mega snakes)
+    const tier = collection.id - 6;
+    gridSize = Math.round(28 + step * 10 + Math.min(4, Math.floor(tier / 2)));
+    minLen = 5 + Math.floor(tier / 4);
+    maxLen = Math.round(18 + step * 12 + tier);
   }
-
-  // Level 1 gentle tuning
-  if (level === 1) {
-    gridSize = 10;
-    minLen = 3;
-    maxLen = 4;
-  }
-
+  if (level === 1) { gridSize = 10; minLen = 3; maxLen = 4; }
   return { collection, gridSize, minLen, maxLen };
 }
-
 // Ray calculation from head in direction towards grid edge
 export function getRayCells(
   head: CellCoord,
