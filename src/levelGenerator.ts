@@ -271,79 +271,75 @@ export function assignColors(
 export function analyzeLevelSolvability(
   arrows: ArrowData[],
   gridSize: number
-): {
-  solvable: boolean;
-  depth: number;
-  initialFreeCount: number;
-  trapPct: number;
-} {
-  const activeArrows = new Map<string, ArrowData>();
-  const occupied = new Map<string, string>(); // 'r,c' -> arrowId
+): { solvable: boolean; depth: number; initialFreeCount: number; trapPct: number } {
+  const count = arrows.length;
+  const owner = new Int16Array(gridSize * gridSize);
+  owner.fill(-1);
+  for (let i = 0; i < count; i++) {
+    const cells = arrows[i].cells;
+    for (let j = 0; j < cells.length; j++) owner[cells[j].r * gridSize + cells[j].c] = i;
+  }
 
-  arrows.forEach((a) => {
-    activeArrows.set(a.id, a);
-    a.cells.forEach((c) => occupied.set(`${c.r},${c.c}`, a.id));
-  });
-
-  // Calculate initial free arrows & near-miss traps
+  const blockers = new Array<number[]>(count);
+  const blockedBy = new Array<number[]>(count);
+  const remaining = new Int16Array(count);
+  const removed = new Uint8Array(count);
   let initialFreeCount = 0;
   let trapCount = 0;
 
-  for (const arrow of arrows) {
+  for (let i = 0; i < count; i++) {
+    const arrow = arrows[i];
     const head = arrow.cells[arrow.cells.length - 1];
-    const ray = getRayCells(head, arrow.direction, gridSize);
-    const blockers = new Set<string>();
-    for (const cell of ray) {
-      const occ = occupied.get(`${cell.r},${cell.c}`);
-      if (occ && occ !== arrow.id) {
-        blockers.add(occ);
+    const [dr, dc] = DIR_DELTA[arrow.direction];
+    let r = head.r + dr;
+    let c = head.c + dc;
+    const seen = new Uint8Array(count);
+    const list: number[] = [];
+    while (r >= 0 && r < gridSize && c >= 0 && c < gridSize) {
+      const other = owner[r * gridSize + c];
+      if (other >= 0 && other !== i && seen[other] === 0) {
+        seen[other] = 1;
+        list.push(other);
       }
+      r += dr;
+      c += dc;
     }
-    if (blockers.size === 0) {
-      initialFreeCount++;
-    } else if (blockers.size === 1) {
-      trapCount++;
+    blockers[i] = list;
+    remaining[i] = list.length;
+    if (list.length === 0) initialFreeCount++;
+    else if (list.length === 1) trapCount++;
+    for (let j = 0; j < list.length; j++) {
+      const blocker = list[j];
+      (blockedBy[blocker] || (blockedBy[blocker] = [])).push(i);
     }
   }
 
-  const trapPct = arrows.length > 0 ? (trapCount / arrows.length) * 100 : 0;
-
-  // Rounds-based simulation for depth
+  const trapPct = count ? (trapCount / count) * 100 : 0;
+  let frontier = new Int16Array(count);
+  let next = new Int16Array(count);
+  let frontierCount = 0;
+  for (let i = 0; i < count; i++) if (remaining[i] === 0) frontier[frontierCount++] = i;
+  let removedCount = 0;
   let depth = 0;
-  while (activeArrows.size > 0) {
-    const freeInThisRound: string[] = [];
-
-    for (const [id, arrow] of activeArrows.entries()) {
-      const head = arrow.cells[arrow.cells.length - 1];
-      const ray = getRayCells(head, arrow.direction, gridSize);
-      let blocked = false;
-      for (const cell of ray) {
-        const occ = occupied.get(`${cell.r},${cell.c}`);
-        if (occ && occ !== id) {
-          blocked = true;
-          break;
-        }
+  while (frontierCount > 0) {
+    let nextCount = 0;
+    for (let q = 0; q < frontierCount; q++) {
+      const current = frontier[q];
+      if (removed[current]) continue;
+      removed[current] = 1;
+      removedCount++;
+      const dependents = blockedBy[current];
+      if (!dependents) continue;
+      for (let j = 0; j < dependents.length; j++) {
+        const target = dependents[j];
+        if (remaining[target] > 0 && --remaining[target] === 0) next[nextCount++] = target;
       }
-      if (!blocked) {
-        freeInThisRound.push(id);
-      }
-    }
-
-    if (freeInThisRound.length === 0) {
-      // Stuck!
-      return { solvable: false, depth, initialFreeCount, trapPct };
-    }
-
-    // Remove all free in this round
-    for (const id of freeInThisRound) {
-      const arrow = activeArrows.get(id)!;
-      arrow.cells.forEach((c) => occupied.delete(`${c.r},${c.c}`));
-      activeArrows.delete(id);
     }
     depth++;
+    const swap = frontier; frontier = next; next = swap;
+    frontierCount = nextCount;
   }
-
-  return { solvable: true, depth, initialFreeCount, trapPct };
+  return { solvable: removedCount === count, depth, initialFreeCount, trapPct };
 }
 
 // Single Level Construction with Silhouette & Difficulty Filtering
@@ -597,71 +593,34 @@ function meetsDifficultyTargets(level: number, candidate: LevelConfig): boolean 
 /**
  * Returns verified level config with retries
  */
-export function getLevel(levelNumber: number): LevelConfig {
-  if (levelCache.has(levelNumber)) {
-    return levelCache.get(levelNumber)!;
-  }
+export function getLevel(
+  levelNumber: number,
+  options: { maxAttempts?: number; timeBudgetMs?: number } = {}
+): LevelConfig {
+  const safeLevel = Math.max(1, Math.min(150, Math.floor(levelNumber)));
+  if (levelCache.has(safeLevel)) return levelCache.get(safeLevel)!;
 
-  let attempt = 0;
+  const started = performance.now();
+  const deadline = started + Math.max(50, options.timeBudgetMs ?? 400);
+  const maxAttempts = Math.min(20, Math.max(1, options.maxAttempts ?? 20));
   let bestCandidate: LevelConfig | null = null;
   let bestScore = -Infinity;
 
-  while (attempt < 45) {
-    const seed = levelNumber * 7919 + attempt;
-    const candidate = buildSingleLevelCandidate(levelNumber, seed);
-
-    if (candidate) {
-      if (meetsDifficultyTargets(levelNumber, candidate)) {
-        levelCache.set(levelNumber, candidate);
-        return candidate;
-      }
-
-      // Rank candidate by depth + traps
-      const score =
-        candidate.stats.depth * 2 +
-        candidate.stats.trapPct +
-        candidate.stats.coveragePct -
-        candidate.stats.initialFreeCount * 3;
-
-      if (score > bestScore) {
-        bestScore = score;
-        bestCandidate = candidate;
-      }
+  for (let attempt = 0; attempt < maxAttempts && performance.now() < deadline; attempt++) {
+    const candidate = buildSingleLevelCandidate(safeLevel, safeLevel * 7919 + attempt, deadline);
+    if (!candidate) continue;
+    if (meetsDifficultyTargets(safeLevel, candidate)) {
+      levelCache.set(safeLevel, candidate);
+      return candidate;
     }
-    attempt++;
+    const score = candidate.stats.depth * 2 + candidate.stats.trapPct +
+      candidate.stats.coveragePct - candidate.stats.initialFreeCount * 3;
+    if (score > bestScore) { bestScore = score; bestCandidate = candidate; }
   }
 
-  // Fallback to best candidate
-  if (bestCandidate) {
-    levelCache.set(levelNumber, bestCandidate);
-    return bestCandidate;
-  }
-
-  // Guaranteed emergency fallback
-  const fallback = buildSingleLevelCandidate(levelNumber, levelNumber * 7919)!;
-  levelCache.set(levelNumber, fallback);
-  return fallback;
+  if (!bestCandidate) bestCandidate = buildSingleLevelCandidate(safeLevel, safeLevel * 7919, deadline);
+  if (!bestCandidate) throw new Error(`Unable to construct level ${safeLevel} within the generation budget`);
+  levelCache.set(safeLevel, bestCandidate);
+  return bestCandidate;
 }
 
-/**
- * Pre-generate all 150 levels in small batches so startup stays responsive.
- */
-export function preloadAndVerifyAllLevels(): void {
-  const startTime = performance.now();
-  let current = 1;
-  let solvableCount = 0;
-  const processBatch = () => {
-    const end = Math.min(150, current + 4);
-    for (; current <= end; current++) {
-      const level = getLevel(current);
-      if (level.stats.depth > 0) solvableCount++;
-    }
-    if (current <= 150) {
-      window.setTimeout(processBatch, 0);
-    } else {
-      const elapsed = Math.round(performance.now() - startTime);
-      console.log(`[Arrow Bloom] 150 levels generated in ${elapsed}ms (${solvableCount}/150 with non-zero solution depth).`);
-    }
-  };
-  processBatch();
-}
