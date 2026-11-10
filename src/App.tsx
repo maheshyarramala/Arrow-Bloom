@@ -170,7 +170,8 @@ export default function App() {
   // Start Level: wait for the worker without blocking the UI.
   const startLevel = useCallback(async (lvlNum: number, extraHint = false) => {
     const requestId = ++levelRequestIdRef.current;
-    setIsPreparingLevel(true);
+    setIsPreparingLevel(false);
+    const spinnerTimer = window.setTimeout(() => setIsPreparingLevel(true), 150);
     setCurrentLevelNumber(lvlNum);
     setScreen('game');
     try {
@@ -200,6 +201,7 @@ export default function App() {
     } catch {
       setScreen('levels');
     } finally {
+      window.clearTimeout(spinnerTimer);
       if (requestId === levelRequestIdRef.current) setIsPreparingLevel(false);
     }
   }, [requestLevel]);
@@ -422,6 +424,8 @@ export default function App() {
       <Background
         collection={screen === 'game' ? currentCollection : null}
         theme={settings.theme}
+        performanceMode={settings.performanceMode}
+        paused={screen === 'game' && levelConfig.gridSize >= 20}
       />
 
       {/* Screen 1: Home Screen */}
