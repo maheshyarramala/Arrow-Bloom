@@ -13,11 +13,7 @@ import {
   PlayerProgress,
   ScreenState,
 } from './types.ts';
-import {
-  getLevel,
-  COLLECTIONS,
-  preloadAndVerifyAllLevels,
-} from './levelGenerator.ts';
+import { COLLECTIONS } from './levelGenerator.ts';
 import {
   checkArrowRay,
   getHintArrow,
@@ -28,7 +24,6 @@ import { soundManager } from './audio.ts';
 import {
   loadProgress,
   loadSettings,
-  saveProgress,
   saveSettings,
   updateLevelCompletion,
   resetProgress,
@@ -77,8 +72,13 @@ export default function App() {
   const [progress, setProgress] = useState<PlayerProgress>(loadProgress);
 
   // Active Level Data
-  const [levelConfig, setLevelConfig] = useState<LevelConfig>(() => getLevel(1));
-  const [activeArrows, setActiveArrows] = useState<ArrowData[]>(() => levelConfig.arrows);
+  const EMPTY_LEVEL: LevelConfig = { levelNumber: 1, collectionId: 1, shapeName: '', gridSize: 10, playableMask: [], playableCells: [], arrows: [], solutionOrder: [], stats: { depth: 0, initialFreeCount: 0, coveragePct: 0, trapPct: 0, avgLength: 0 } };
+  const [levelConfig, setLevelConfig] = useState<LevelConfig>(EMPTY_LEVEL);
+  const [activeArrows, setActiveArrows] = useState<ArrowData[]>([]);
+  const [isPreparingLevel, setIsPreparingLevel] = useState(false);
+  const workerRef = useRef<Worker | null>(null);
+  const pendingLevelsRef = useRef(new Map<number, Array<(level: LevelConfig) => void>>());
+  const levelRequestIdRef = useRef(0);
 
   // Score Reducer
   const [score, dispatchScore] = useReducer(scoreReducer, 0);
