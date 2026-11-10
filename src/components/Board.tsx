@@ -39,6 +39,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     escapingArrowId, shakingArrowId, flashBlockedArrowId, hintedArrowId,
     tutorialArrowId, comboCount, showComboPill, floatingScores, zoomLevel,
     panOffset, onZoomChange, onPanChange, onArrowSelect, performanceMode = false,
+    onPerformanceModeChange, onDraggingChange, debugOverlay = false, generationMs = 0,
   } = props;
   const containerRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
