@@ -577,10 +577,10 @@ function meetsDifficultyTargets(level: number, candidate: LevelConfig): boolean 
 
   // Linear ramp:
   // depth: 3 on level 1 rising to 18 on level 50
-  const requiredDepth = Math.max(2, Math.round(3 + (level / 50) * 14));
+  const requiredDepth = Math.max(2, Math.round(3 + (level / 150) * 14));
 
   // initialFree: <= 25% on level 1, falling to <= 6% on level 50
-  const maxInitialPct = Math.max(0.06, 0.25 - (level / 50) * 0.19);
+  const maxInitialPct = Math.max(0.06, 0.25 - (level / 150) * 0.19);
   const maxInitialCount = Math.max(2, Math.floor(totalArrows * maxInitialPct));
 
   // Traps: >= 25% near-miss traps
@@ -644,21 +644,24 @@ export function getLevel(levelNumber: number): LevelConfig {
 }
 
 /**
- * Pre-generate and verify all 50 levels for dev check
+ * Pre-generate all 150 levels in small batches so startup stays responsive.
  */
 export function preloadAndVerifyAllLevels(): void {
   const startTime = performance.now();
+  let current = 1;
   let solvableCount = 0;
-
-  for (let i = 1; i <= 50; i++) {
-    const lvl = getLevel(i);
-    if (lvl.stats.depth > 0) {
-      solvableCount++;
+  const processBatch = () => {
+    const end = Math.min(150, current + 4);
+    for (; current <= end; current++) {
+      const level = getLevel(current);
+      if (level.stats.depth > 0) solvableCount++;
     }
-  }
-
-  const elapsed = Math.round(performance.now() - startTime);
-  console.log(
-    `[Arrow Bloom] 50 silhouette levels generated & verified in ${elapsed}ms (${solvableCount}/50 solvable).`
-  );
+    if (current <= 150) {
+      window.setTimeout(processBatch, 0);
+    } else {
+      const elapsed = Math.round(performance.now() - startTime);
+      console.log(`[Arrow Bloom] 150 levels generated in ${elapsed}ms (${solvableCount}/150 with non-zero solution depth).`);
+    }
+  };
+  processBatch();
 }
