@@ -400,24 +400,21 @@ function buildSingleLevelCandidate(
     let currDir: Direction = directions[Math.floor(rng() * directions.length)];
     let stuck = false;
 
-    while (path.length < targetLen) {
+    while (path.length < targetLen && performance.now() < deadline) {
       const curr = path[path.length - 1];
 
       // Prefer turns with turnProbability 0.35-0.5
       const wantTurn = rng() < 0.42;
-      const candidateDirs: Direction[] = [];
-
-      if (!wantTurn) {
-        candidateDirs.push(currDir);
-      }
-      // Add other perpendicular directions
-      const otherDirs = directions
-        .filter((d) => d !== currDir)
-        .sort(() => rng() - 0.5);
-      candidateDirs.push(...otherDirs);
-
+      const directionStart = Math.floor(rng() * 4);
       let foundNext = false;
-      for (const d of candidateDirs) {
+      for (let candidateIndex = 0; candidateIndex < 4; candidateIndex++) {
+        let d: Direction;
+        if (!wantTurn && candidateIndex === 0) d = currDir;
+        else {
+          const directionIndex = (directionStart + candidateIndex) % 4;
+          d = directions[directionIndex];
+          if (d === currDir) continue;
+        }
         const [dr, dc] = DIR_DELTA[d];
         const nr = curr.r + dr;
         const nc = curr.c + dc;
