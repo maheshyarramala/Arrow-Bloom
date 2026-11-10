@@ -192,7 +192,7 @@ export function getLevelParams(level: number) {
     maxLen = Math.round(18 + step * 12 + tier);
   }
   if (level === 1) { gridSize = 10; minLen = 3; maxLen = 4; }
-  return { collection, gridSize, minLen, maxLen };
+  gridSize = Math.min(34, gridSize);\n  return { collection, gridSize, minLen, maxLen };
 }
 // Ray calculation from head in direction towards grid edge
 export function getRayCells(
@@ -400,7 +400,7 @@ function buildSingleLevelCandidate(
     let currDir: Direction = directions[Math.floor(rng() * directions.length)];
     let stuck = false;
 
-    while (path.length < targetLen && performance.now() < deadline) {
+    while (path.length < targetLen) {
       const curr = path[path.length - 1];
 
       // Prefer turns with turnProbability 0.35-0.5
@@ -610,7 +610,7 @@ export function getLevel(
   let bestScore = -Infinity;
 
   for (let attempt = 0; attempt < maxAttempts && performance.now() < deadline; attempt++) {
-    const candidate = buildSingleLevelCandidate(safeLevel, safeLevel * 7919 + attempt, deadline);
+    const candidate = buildSingleLevelCandidate(safeLevel, safeLevel * 7919 + attempt);
     if (!candidate) continue;
     if (meetsDifficultyTargets(safeLevel, candidate)) {
       levelCache.set(safeLevel, candidate);
@@ -621,7 +621,7 @@ export function getLevel(
     if (score > bestScore) { bestScore = score; bestCandidate = candidate; }
   }
 
-  if (!bestCandidate) bestCandidate = buildSingleLevelCandidate(safeLevel, safeLevel * 7919, deadline);
+  if (!bestCandidate) bestCandidate = buildSingleLevelCandidate(safeLevel, safeLevel * 7919);
   if (!bestCandidate) throw new Error(`Unable to construct level ${safeLevel} within the generation budget`);
   levelCache.set(safeLevel, bestCandidate);
   return bestCandidate;
