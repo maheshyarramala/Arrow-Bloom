@@ -91,4 +91,5 @@ export interface FloatingScoreItem {
   x: number;
   y: number;
   color: string;
+  createdAt?: number;
 }
