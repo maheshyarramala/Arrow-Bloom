@@ -365,6 +365,28 @@ export default function App() {
     ]
   );
 
+  const handleArrowSelectRef = useRef<(arrowId: string) => void>(() => {});
+  handleArrowSelectRef.current = handleArrowSelect;
+  const handleArrowSelectStable = useCallback((arrowId: string) => handleArrowSelectRef.current(arrowId), []);
+
+  const toggleTheme = useCallback(() => {
+    setSettings(current => ({ ...current, theme: current.theme === 'dark' ? 'light' : 'dark' }));
+  }, []);
+  const openSettings = useCallback(() => setScreen('settings'), []);
+  const backToLevels = useCallback(() => setScreen('levels'), []);
+  const zoomIn = useCallback(() => setZoomLevel(current => Math.min(4, current + 0.35)), []);
+  const zoomOut = useCallback(() => {
+    setZoomLevel(current => {
+      const next = Math.max(1, current - 0.35);
+      if (next === 1) setPanOffset({ x: 0, y: 0 });
+      return next;
+    });
+  }, []);
+  const zoomFit = useCallback(() => {
+    setZoomLevel(1);
+    setPanOffset({ x: 0, y: 0 });
+  }, []);
+
   // Undo (Z)
   const handleUndo = useCallback(() => {
     if (undoHistory.length === 0 || escapingArrowId || isInteractingRef.current) return;
@@ -482,11 +504,9 @@ export default function App() {
             collectionName={currentCollection.name}
             score={score}
             theme={settings.theme}
-            onToggleTheme={() =>
-              setSettings((s) => ({ ...s, theme: s.theme === 'dark' ? 'light' : 'dark' }))
-            }
-            onOpenSettings={() => setScreen('settings')}
-            onBack={() => setScreen('levels')}
+            onToggleTheme={toggleTheme}
+            onOpenSettings={openSettings}
+            onBack={backToLevels}
             onToggleDebug={import.meta.env.DEV ? togglePerfOverlay : undefined}
           />
 
@@ -526,7 +546,7 @@ export default function App() {
             panOffset={panOffset}
             onZoomChange={setZoomLevel}
             onPanChange={setPanOffset}
-            onArrowSelect={handleArrowSelect}
+            onArrowSelect={handleArrowSelectStable}
             performanceMode={settings.performanceMode}
             onPerformanceModeChange={enablePerformanceMode}
             onDraggingChange={handleDraggingChange}
@@ -542,18 +562,9 @@ export default function App() {
             isDarkTheme={isDark}
             onUndo={handleUndo}
             onHint={handleHint}
-            onZoomIn={() => setZoomLevel((z) => Math.min(4.0, z + 0.35))}
-            onZoomOut={() => {
-              setZoomLevel((z) => {
-                const next = Math.max(1.0, z - 0.35);
-                if (next === 1.0) setPanOffset({ x: 0, y: 0 });
-                return next;
-              });
-            }}
-            onZoomFit={() => {
-              setZoomLevel(1.0);
-              setPanOffset({ x: 0, y: 0 });
-            }}
+            onZoomIn={zoomIn}
+            onZoomOut={zoomOut}
+            onZoomFit={zoomFit}
           />
         </div>
       )}
