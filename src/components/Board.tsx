@@ -51,11 +51,14 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
   const animationStartRef = useRef(0);
   const particlesRef = useRef<Particle[]>(Array.from({ length: MAX_PARTICLES }, () => ({ x: 0, y: 0, vx: 0, vy: 0, life: 0, color: '#FFFFFF', size: 2, active: false })));
   const frameMonitorRef = useRef({ last: 0, average: 16.7, slowSince: 0 });
+  const focusedArrowIndexRef = useRef(0);
+  const focusActiveRef = useRef(false);
   const pointerRef = useRef({ down: false, dragging: false, x: 0, y: 0, startX: 0, startY: 0 });
-  const lastPanRef = useRef({ x: panOffset.x, y: panOffset.y });
   const fpsLabelRef = useRef<HTMLDivElement>(null);
   const fpsStatsRef = useRef({ last: 0, frames: 0, badSince: 0 });
   const cellSizeRef = useRef(1);
+
+  const arrowById = useMemo(() => new Map(arrows.map(arrow => [arrow.id, arrow])), [arrows]);
 
   const arrowsByColor = useMemo(() => {
     const groups: ArrowData[][] = Array.from({ length: PALETTE.length }, () => []);
@@ -217,7 +220,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       } else if (!stats.last) stats.last = now;
     }
     if (escapingArrowId) {
-      const arrow = arrows.find(a => a.id === escapingArrowId);
+      const arrow = arrowById.get(escapingArrowId);
       if (arrow) {
         const elapsed = Math.max(0, now - animationStartRef.current);
         const progress = Math.min(1, elapsed / 450);
@@ -227,7 +230,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       }
     }
     if (shakingArrowId) {
-      const arrow = arrows.find(a => a.id === shakingArrowId);
+      const arrow = arrowById.get(shakingArrowId);
       if (arrow) {
         const elapsed = Math.max(0, now - animationStartRef.current);
         const progress = Math.min(1, elapsed / 420);
@@ -238,7 +241,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     }
     const hintId = hintedArrowId || tutorialArrowId;
     if (hintId) {
-      const arrow = arrows.find(a => a.id === hintId);
+      const arrow = arrowById.get(hintId);
       if (arrow) {
         const pulse = performanceMode ? 1 : 0.65 + Math.sin(now / 180) * 0.2;
         drawArrow(ctx, arrow, cell, 1, 0, 0, true);
@@ -269,6 +272,8 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
       active = true;
     }
+    const focusedArrow = focusActiveRef.current ? arrows[focusedArrowIndexRef.current] : null;
+    if (focusedArrow) drawArrow(ctx, focusedArrow, cell, 0.9, 0, 0, true);
     ctx.globalAlpha = 1;
     if (floatingScores.length) {
       ctx.font = '900 12px Fredoka, sans-serif';
@@ -285,7 +290,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       ctx.globalAlpha = 1;
     }
     if (active && !rafRef.current) rafRef.current = requestAnimationFrame(tick);
-  }, [gridSize, arrows, escapingArrowId, shakingArrowId, flashBlockedArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, comboCount, drawArrow, performanceMode, onPerformanceModeChange, debugOverlay, generationMs]);
+  }, [gridSize, arrows, escapingArrowId, shakingArrowId, flashBlockedArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, comboCount, drawArrow, performanceMode, onPerformanceModeChange, debugOverlay, generationMs, arrowById]);
 
   const tick = useCallback((now: number) => {
     rafRef.current = 0;
@@ -416,11 +421,23 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
   }, [onZoomChange, onPanChange, updateWrapperTransform]);
 
   const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      const arrow = arrows[0];
+    if (!arrows.length) return;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      focusedArrowIndexRef.current = (focusedArrowIndexRef.current + 1) % arrows.length;
+      focusActiveRef.current = true;
+      drawDynamic(performance.now());
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      focusedArrowIndexRef.current = (focusedArrowIndexRef.current - 1 + arrows.length) % arrows.length;
+      focusActiveRef.current = true;
+      drawDynamic(performance.now());
+    } else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      const arrow = arrows[focusedArrowIndexRef.current];
       if (arrow) onArrowSelect(arrow.id);
     }
-  }, [arrows, onArrowSelect]);
+  }, [arrows, onArrowSelect, drawDynamic]);
 
   return (
     <div ref={containerRef} className="relative flex-1 w-full h-full flex items-center justify-center overflow-hidden select-none outline-none" style={{ touchAction: 'none' }} tabIndex={0} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp} onWheel={handleWheel} onKeyDown={handleKeyDown}>
