@@ -22,11 +22,12 @@ interface BoardProps {
   onPanChange: (newPan: { x: number; y: number }) => void;
   onArrowSelect: (arrowId: string) => void;
   performanceMode?: boolean;
+  onPerformanceModeChange?: (enabled: boolean) => void;
   debugOverlay?: boolean;
   generationMs?: number;
 }
 
-interface Particle { x: number; y: number; vx: number; vy: number; life: number; color: string; size: number; }
+interface Particle { x: number; y: number; vx: number; vy: number; life: number; color: string; size: number; active: boolean; }
 
 const MAX_PARTICLES = 60;
 const BURST_COLORS = ['#FF2A85', '#FFD000', '#10E7A1', '#00E5FF', '#FFFFFF', '#FFAA00'];
@@ -47,7 +48,8 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
   const ownerRef = useRef<Int16Array>(new Int16Array(0));
   const rafRef = useRef<number>(0);
   const animationStartRef = useRef(0);
-  const particlesRef = useRef<Particle[]>([]);
+  const particlesRef = useRef<Particle[]>(Array.from({ length: MAX_PARTICLES }, () => ({ x: 0, y: 0, vx: 0, vy: 0, life: 0, color: '#FFFFFF', size: 2, active: false })));
+  const frameMonitorRef = useRef({ last: 0, average: 16.7, slowSince: 0 });
   const pointerRef = useRef({ down: false, dragging: false, x: 0, y: 0, startX: 0, startY: 0 });
   const lastPanRef = useRef({ x: panOffset.x, y: panOffset.y });
   const fpsLabelRef = useRef<HTMLDivElement>(null);
@@ -194,6 +196,16 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     ctx.clearRect(0, 0, board, board);
     const cell = board / gridSize;
     let active = false;
+    const monitor = frameMonitorRef.current;
+    if (monitor.last) {
+      const delta = now - monitor.last;
+      monitor.average = monitor.average * 0.9 + delta * 0.1;
+      if (monitor.average > 28) {
+        if (!monitor.slowSince) monitor.slowSince = now;
+        if (now - monitor.slowSince > 2000 && !performanceMode) onPerformanceModeChange?.(true);
+      } else monitor.slowSince = 0;
+    }
+    monitor.last = now;
     if (debugOverlay) {
       const stats = fpsStatsRef.current;
       stats.frames++;
@@ -247,18 +259,13 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       }
     }
     const particles = particlesRef.current;
-    for (let i = particles.length - 1; i >= 0; i--) {
+    for (let i = 0; i < particles.length; i++) {
       const p = particles[i];
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.12;
-      p.life -= 0.055;
-      if (p.life <= 0) { particles.splice(i, 1); continue; }
-      ctx.globalAlpha = p.life;
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fill();
+      if (!p.active) continue;
+      p.x += p.vx; p.y += p.vy; p.vy += 0.12; p.life -= 0.055;
+      if (p.life <= 0) { p.active = false; continue; }
+      ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
       active = true;
     }
     ctx.globalAlpha = 1;
@@ -275,15 +282,8 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       ctx.globalAlpha = 1;
       active ||= elapsed < 600;
     }
-    if (showComboPill && comboCount > 1) {
-      ctx.font = '900 12px Fredoka, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillStyle = '#F59E0B';
-      ctx.fillText(`🔥 COMBO x${comboCount}!`, board / 2, 22);
-      active = true;
-    }
     if (active && !rafRef.current) rafRef.current = requestAnimationFrame(tick);
-  }, [gridSize, arrows, escapingArrowId, shakingArrowId, flashBlockedArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, comboCount, drawArrow, performanceMode, debugOverlay, generationMs]);
+  }, [gridSize, arrows, escapingArrowId, shakingArrowId, flashBlockedArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, comboCount, drawArrow, performanceMode, onPerformanceModeChange, debugOverlay, generationMs]);
 
   const tick = useCallback((now: number) => {
     rafRef.current = 0;
@@ -311,10 +311,13 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
           const cx = (head.c + 0.5) * cellSizeRef.current;
           const cy = (head.r + 0.5) * cellSizeRef.current;
           const count = performanceMode ? 6 : 12;
-          for (let i = 0; i < count && particlesRef.current.length < MAX_PARTICLES; i++) {
+          for (let i = 0; i < count; i++) {
+            const particle = particlesRef.current.find(item => !item.active);
+            if (!particle) break;
             const angle = Math.PI * 2 * i / count + (Math.random() - 0.5);
             const speed = Math.random() * 3 + 1.5;
-            particlesRef.current.push({ x: cx, y: cy, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life: 1, color: BURST_COLORS[(Math.random() * BURST_COLORS.length) | 0], size: Math.random() * 4 + 2 });
+            particle.x = cx; particle.y = cy; particle.vx = Math.cos(angle) * speed; particle.vy = Math.sin(angle) * speed;
+            particle.life = 1; particle.color = BURST_COLORS[(Math.random() * BURST_COLORS.length) | 0]; particle.size = Math.random() * 4 + 2; particle.active = true;
           }
         }
       }
@@ -386,7 +389,8 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     transformRef.current.x = x;
     transformRef.current.y = y;
     updateWrapperTransform();
-  }, [updateWrapperTransform]);
+    drawDynamic(performance.now());
+  }, [updateWrapperTransform, drawDynamic]);
 
   const handlePointerUp = useCallback(() => {
     const p = pointerRef.current;
