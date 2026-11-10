@@ -1,77 +1,47 @@
-# Arrow Bloom 🌸🏹
+# Arrow Bloom
 
-A colorful, vibrant arrow-escape logic puzzle game built with React, TypeScript, and Tailwind CSS.
-Features 50 deterministic, guaranteed-solvable levels across 5 whimsical worlds, procedural Web Audio sound synthesis, color-blind accessibility mode, pinch-to-zoom/pan on larger boards, undo/hints, and offline storage.
+Arrow Bloom is a colourful silhouette puzzle game built with React, TypeScript and Vite.
 
----
+## Game content
 
-## 🚀 Running the Game Locally
+- 150 levels arranged into 15 themed collections.
+- New silhouette themes include Deep Sea, Enchanted, Cosmos, Sweet World, Sports, Music, Adventure, Technology, Mythical and Mastery.
+- Level difficulty scales with grid size and arrow-path complexity.
+- Progress is saved locally in the browser or Android app.
 
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+## Run locally
 
-2. **Start the development server:**
-   ```bash
-   npm run dev
-   ```
-   Open your browser at `http://localhost:3000`.
-
-3. **Build production bundle:**
-   ```bash
-   npm run build
-   ```
-
----
-
-## 📱 Converting to an Android App with Capacitor (for Google Play Store)
-
-Because **Arrow Bloom** has zero backend dependencies, works 100% offline, and strictly follows mobile touch guidelines (`touch-action: manipulation`, viewport safe-area insets, and high performance SVG rendering), it is ready to be wrapped as a native Android APK / Android App Bundle (`.aab`) with Capacitor:
-
-### Step 1: Install Capacitor CLI & Core
-In the project directory, run:
 ```bash
-npm install @capacitor/core
-npm install -D @capacitor/cli @capacitor/android
+npm install
+npm run dev
 ```
 
-### Step 2: Initialize Capacitor Configuration
+## Build the web game
+
 ```bash
-npx cap init "Arrow Bloom" "com.arrowbloom.game" --web-dir dist
+npm run lint
+npm run build
 ```
 
-### Step 3: Add Android Platform
+## Android APK
+
+The project uses Capacitor. The first Android setup and local build can be run with:
+
 ```bash
+npm install
 npm run build
 npx cap add android
+npx cap sync android
+cd android
+./gradlew assembleDebug
 ```
 
-### Step 4: Add Splash Screen & Status Bar Plugins (Optional but Recommended)
-```bash
-npm install @capacitor/status-bar @capacitor/splash-screen @capacitor/haptics
-npx cap sync
-```
+The debug APK is generated at `android/app/build/outputs/apk/debug/app-debug.apk`.
 
-### Step 5: Open in Android Studio & Build for Google Play
-```bash
-npx cap open android
-```
-Inside Android Studio:
-1. Go to **Build** > **Generate Signed Bundle / APK**.
-2. Select **Android App Bundle (.aab)** for Google Play.
-3. Select your release keystore key (or generate a new release key).
-4. Select `release` build variant with V2 full APK signing.
-5. Upload the generated `.aab` file to your Google Play Console under **Production** (or **Closed Testing** track).
+## Automatic GitHub build and release
 
----
+Every push to `main` starts the **Android APK** GitHub Actions workflow. It installs dependencies, type-checks the project, builds the web game, syncs the Android project, creates a debug APK, uploads it as a workflow artifact, and publishes a GitHub Release containing the APK.
 
-## 🎮 Game Controls & Keyboard Shortcuts
+You can also start the workflow manually from **Actions → Android APK → Run workflow**.
 
-- **Touch / Mouse Click:** Tap any arrow to set it free.
-- **Arrow Keys:** Cycle focus through arrows on the board.
-- **Enter / Space:** Select/release the focused arrow or start game from home screen.
-- **R:** Restart current level.
-- **U:** Undo last removed arrow.
-- **H:** Reveal a free arrow hint (up to 3 per level).
-- **Esc:** Return to level select or home screen.
+**Signing note:** the automated APK is debug-signed for testing. A Play Store production release requires a private signing keystore and protected GitHub Actions secrets; do not store a keystore or passwords in the repository.
