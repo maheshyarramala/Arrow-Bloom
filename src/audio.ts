@@ -9,9 +9,22 @@ class SoundManager {
   private soundEnabled = true;
   private musicEnabled = true;
   private vibrationEnabled = true;
+  private lastVibrationAt = 0;
+  private activeVoices = new Set<OscillatorNode>();
 
   constructor() {
     // AudioContext will be initialized on first user interaction
+  }
+
+  private createVoice(): OscillatorNode {
+    if (this.activeVoices.size >= 4) {
+      const oldest = this.activeVoices.values().next().value as OscillatorNode | undefined;
+      if (oldest) { try { oldest.stop(); } catch { /* already stopped */ } this.activeVoices.delete(oldest); }
+    }
+    const osc = this.ctx!.createOscillator();
+    this.activeVoices.add(osc);
+    osc.onended = () => this.activeVoices.delete(osc);
+    return osc;
   }
 
   private initCtx() {
@@ -24,6 +37,7 @@ class SoundManager {
     if (this.ctx && this.ctx.state === 'suspended') {
       this.ctx.resume().catch(() => {});
     }
+    if (this.ctx && this.musicEnabled && !this.isBgmPlaying) this.startBGM();
   }
 
   public setPreferences(sound: boolean, music: boolean, vibration: boolean) {
@@ -41,6 +55,9 @@ class SoundManager {
   public vibrate(pattern: number | number[] = 40) {
     if (!this.vibrationEnabled) return;
     try {
+      const now = performance.now();
+      if (now - this.lastVibrationAt < 80) return;
+      this.lastVibrationAt = now;
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
         navigator.vibrate(pattern);
       }
@@ -60,7 +77,7 @@ class SoundManager {
 
     try {
       const now = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
+      const osc = this.createVoice();
       const gain = this.ctx.createGain();
 
       // Pentatonic pitch increments based on combo (max combo 8)
@@ -256,7 +273,7 @@ class SoundManager {
    * Procedural gentle pentatonic background music loop
    */
   public startBGM() {
-    if (!this.musicEnabled || this.isBgmPlaying) return;
+    if (!this.musicEnabled || this.isBgmPlaying || !this.ctx) return;
     this.isBgmPlaying = true;
     this.initCtx();
 

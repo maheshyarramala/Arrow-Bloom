@@ -11,6 +11,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   musicEnabled: false,
   vibrationEnabled: true,
   colorBlindMode: false,
+  performanceMode: typeof navigator !== 'undefined' && ((navigator.hardwareConcurrency || 8) <= 4 || (((navigator as Navigator & { deviceMemory?: number }).deviceMemory || 8) <= 4)),
   theme: 'dark',
 };
 

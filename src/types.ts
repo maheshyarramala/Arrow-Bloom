@@ -60,6 +60,7 @@ export interface GameSettings {
   musicEnabled: boolean;
   vibrationEnabled: boolean;
   colorBlindMode: boolean;
+  performanceMode: boolean;
   theme: 'dark' | 'light';
 }
 
@@ -90,4 +91,5 @@ export interface FloatingScoreItem {
   x: number;
   y: number;
   color: string;
+  createdAt?: number;
 }

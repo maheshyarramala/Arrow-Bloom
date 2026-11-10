@@ -13,11 +13,7 @@ import {
   PlayerProgress,
   ScreenState,
 } from './types.ts';
-import {
-  getLevel,
-  COLLECTIONS,
-  preloadAndVerifyAllLevels,
-} from './levelGenerator.ts';
+import { COLLECTIONS } from './levelGenerator.ts';
 import {
   checkArrowRay,
   getHintArrow,
@@ -28,7 +24,6 @@ import { soundManager } from './audio.ts';
 import {
   loadProgress,
   loadSettings,
-  saveProgress,
   saveSettings,
   updateLevelCompletion,
   resetProgress,
@@ -77,8 +72,16 @@ export default function App() {
   const [progress, setProgress] = useState<PlayerProgress>(loadProgress);
 
   // Active Level Data
-  const [levelConfig, setLevelConfig] = useState<LevelConfig>(() => getLevel(1));
-  const [activeArrows, setActiveArrows] = useState<ArrowData[]>(() => levelConfig.arrows);
+  const EMPTY_LEVEL: LevelConfig = { levelNumber: 1, collectionId: 1, shapeName: '', gridSize: 10, playableMask: [], playableCells: [], arrows: [], solutionOrder: [], stats: { depth: 0, initialFreeCount: 0, coveragePct: 0, trapPct: 0, avgLength: 0 } };
+  const [levelConfig, setLevelConfig] = useState<LevelConfig>(EMPTY_LEVEL);
+  const [activeArrows, setActiveArrows] = useState<ArrowData[]>([]);
+  const [isPreparingLevel, setIsPreparingLevel] = useState(false);
+  const [generationMs, setGenerationMs] = useState(0);
+  const [showPerfOverlay, setShowPerfOverlay] = useState(false);
+  const [isBoardDragging, setIsBoardDragging] = useState(false);
+  const workerRef = useRef<Worker | null>(null);
+  const pendingLevelsRef = useRef(new Map<number, Array<{ resolve: (level: LevelConfig) => void; reject: (error: Error) => void }>>());
+  const levelRequestIdRef = useRef(0);
 
   // Score Reducer
   const [score, dispatchScore] = useReducer(scoreReducer, 0);
@@ -93,7 +96,6 @@ export default function App() {
 
   // Floating score bubbles (max 3, cleaned up after 600ms)
   const [floatingScores, setFloatingScores] = useState<FloatingScoreItem[]>([]);
-  const floatingTimeoutRefs = useRef<number[]>([]);
 
   // Undo History & Hints
   const [undoHistory, setUndoHistory] = useState<ArrowData[]>([]);
@@ -119,17 +121,36 @@ export default function App() {
   const [isGrandFinale, setIsGrandFinale] = useState<boolean>(false);
   const [isNewHighScore, setIsNewHighScore] = useState<boolean>(false);
 
-  // Startup verification
+  // Create one worker; it generates only requested levels and warms the next level.
   useEffect(() => {
-    soundManager.setPreferences(
-      settings.soundEnabled,
-      settings.musicEnabled,
-      settings.vibrationEnabled
-    );
-    setTimeout(() => {
-      preloadAndVerifyAllLevels();
-    }, 150);
+    const worker = new Worker(new URL('./levelWorker.ts', import.meta.url), { type: 'module' });
+    workerRef.current = worker;
+    worker.onmessage = (event: MessageEvent<{ levelNumber: number; level?: LevelConfig; error?: string; generationMs?: number }>) => {
+      const pending = pendingLevelsRef.current.get(event.data.levelNumber);
+      if (!pending) return;
+      pendingLevelsRef.current.delete(event.data.levelNumber);
+      if (event.data.level) { setGenerationMs(event.data.generationMs || 0); pending.forEach(item => item.resolve(event.data.level!)); }
+      else pending.forEach(item => item.reject(new Error(event.data.error || 'Level generation failed')));
+    };
+    worker.onerror = () => {
+      pendingLevelsRef.current.forEach(resolvers => resolvers.forEach(item => item.reject(new Error('Level worker failed'))));
+      pendingLevelsRef.current.clear();
+    };
+    return () => { worker.terminate(); workerRef.current = null; };
   }, []);
+
+  const togglePerfOverlay = useCallback(() => setShowPerfOverlay(value => !value), []);
+  const enablePerformanceMode = useCallback(() => setSettings(current => current.performanceMode ? current : { ...current, performanceMode: true }), []);
+  const handleDraggingChange = useCallback((dragging: boolean) => setIsBoardDragging(dragging), []);
+
+  const requestLevel = useCallback((levelNumber: number) => new Promise<LevelConfig>((resolve, reject) => {
+    const worker = workerRef.current;
+    if (!worker) { reject(new Error('Level worker is not ready')); return; }
+    const waiting = pendingLevelsRef.current.get(levelNumber) || [];
+    waiting.push({ resolve, reject });
+    pendingLevelsRef.current.set(levelNumber, waiting);
+    worker.postMessage({ levelNumber });
+  }), []);
 
   // Sync settings & sound
   useEffect(() => {
@@ -144,7 +165,6 @@ export default function App() {
   // Cleanup floating timers on unmount
   useEffect(() => {
     return () => {
-      floatingTimeoutRefs.current.forEach((t) => clearTimeout(t));
       if (comboHideTimerRef.current) clearTimeout(comboHideTimerRef.current);
     };
   }, []);
@@ -152,33 +172,46 @@ export default function App() {
   const currentCollection =
     COLLECTIONS.find((c) => c.id === levelConfig.collectionId) || COLLECTIONS[0];
 
-  // Start Level
-  const startLevel = useCallback((lvlNum: number, extraHint = false) => {
-    const config = getLevel(lvlNum);
-    setLevelConfig(config);
-    setActiveArrows(config.arrows.map((a) => ({ ...a, cells: [...a.cells] })));
+  // Start Level: wait for the worker without blocking the UI.
+  const startLevel = useCallback(async (lvlNum: number, extraHint = false) => {
+    const requestId = ++levelRequestIdRef.current;
+    setIsPreparingLevel(false);
+    setActiveArrows([]);
+    setLevelConfig(EMPTY_LEVEL);
+    const spinnerTimer = window.setTimeout(() => setIsPreparingLevel(true), 150);
     setCurrentLevelNumber(lvlNum);
-    setHearts(3);
-    setMistakes(0);
-    dispatchScore({ type: 'RESET_SCORE' });
-    setComboCount(0);
-    setShowComboPill(false);
-    lastClearTimeRef.current = 0;
-    setUndoHistory([]);
-    setHintsLeft(extraHint ? 4 : 3);
-    setHintedArrowId(null);
-    setEscapingArrowId(null);
-    setShakingArrowId(null);
-    setFlashBlockedArrowId(null);
-    setFloatingScores([]);
-    setZoomLevel(1);
-    setPanOffset({ x: 0, y: 0 });
-    setShowLevelComplete(false);
-    setShowGameOver(false);
-    setShowCollectionComplete(false);
-    isInteractingRef.current = false;
     setScreen('game');
-  }, []);
+    try {
+      const config = await requestLevel(lvlNum);
+      if (requestId !== levelRequestIdRef.current) return;
+      setLevelConfig(config);
+      setActiveArrows(config.arrows.map((a) => ({ ...a, cells: a.cells })));
+      setHearts(3);
+      setMistakes(0);
+      dispatchScore({ type: 'RESET_SCORE' });
+      setComboCount(0);
+      setShowComboPill(false);
+      lastClearTimeRef.current = 0;
+      setUndoHistory([]);
+      setHintsLeft(extraHint ? 4 : 3);
+      setHintedArrowId(null);
+      setEscapingArrowId(null);
+      setShakingArrowId(null);
+      setFlashBlockedArrowId(null);
+      setFloatingScores([]);
+      setZoomLevel(1);
+      setPanOffset({ x: 0, y: 0 });
+      setShowLevelComplete(false);
+      setShowGameOver(false);
+      setShowCollectionComplete(false);
+      isInteractingRef.current = false;
+    } catch {
+      setScreen('levels');
+    } finally {
+      window.clearTimeout(spinnerTimer);
+      if (requestId === levelRequestIdRef.current) setIsPreparingLevel(false);
+    }
+  }, [requestLevel]);
 
   // Arrow Tap / Click handling
   const handleArrowSelect = useCallback(
@@ -229,14 +262,10 @@ export default function App() {
             x: (head.c + 0.5) * (360 / levelConfig.gridSize),
             y: (head.r + 0.5) * (360 / levelConfig.gridSize),
             color: nextCombo > 1 ? '#FBBF24' : '#10E7A1',
+            createdAt: performance.now(),
           };
 
           setFloatingScores((prev) => [...prev.slice(-2), newFloat]);
-
-          const timer = window.setTimeout(() => {
-            setFloatingScores((prev) => prev.filter((f) => f.id !== newFloatId));
-          }, 600);
-          floatingTimeoutRefs.current.push(timer);
 
           // Add to undo history
           setUndoHistory((hist) => [...hist, arrow]);
@@ -336,6 +365,28 @@ export default function App() {
     ]
   );
 
+  const handleArrowSelectRef = useRef<(arrowId: string) => void>(() => {});
+  handleArrowSelectRef.current = handleArrowSelect;
+  const handleArrowSelectStable = useCallback((arrowId: string) => handleArrowSelectRef.current(arrowId), []);
+
+  const toggleTheme = useCallback(() => {
+    setSettings(current => ({ ...current, theme: current.theme === 'dark' ? 'light' : 'dark' }));
+  }, []);
+  const openSettings = useCallback(() => setScreen('settings'), []);
+  const backToLevels = useCallback(() => setScreen('levels'), []);
+  const zoomIn = useCallback(() => setZoomLevel(current => Math.min(4, current + 0.35)), []);
+  const zoomOut = useCallback(() => {
+    setZoomLevel(current => {
+      const next = Math.max(1, current - 0.35);
+      if (next === 1) setPanOffset({ x: 0, y: 0 });
+      return next;
+    });
+  }, []);
+  const zoomFit = useCallback(() => {
+    setZoomLevel(1);
+    setPanOffset({ x: 0, y: 0 });
+  }, []);
+
   // Undo (Z)
   const handleUndo = useCallback(() => {
     if (undoHistory.length === 0 || escapingArrowId || isInteractingRef.current) return;
@@ -398,6 +449,8 @@ export default function App() {
       <Background
         collection={screen === 'game' ? currentCollection : null}
         theme={settings.theme}
+        performanceMode={settings.performanceMode}
+        paused={isBoardDragging || (screen === 'game' && levelConfig.gridSize >= 20)}
       />
 
       {/* Screen 1: Home Screen */}
@@ -451,11 +504,10 @@ export default function App() {
             collectionName={currentCollection.name}
             score={score}
             theme={settings.theme}
-            onToggleTheme={() =>
-              setSettings((s) => ({ ...s, theme: s.theme === 'dark' ? 'light' : 'dark' }))
-            }
-            onOpenSettings={() => setScreen('settings')}
-            onBack={() => setScreen('levels')}
+            onToggleTheme={toggleTheme}
+            onOpenSettings={openSettings}
+            onBack={backToLevels}
+            onToggleDebug={import.meta.env.DEV ? togglePerfOverlay : undefined}
           />
 
           {/* Sub-header: Hearts & Rainbow Progress Bar */}
@@ -465,6 +517,15 @@ export default function App() {
             initialCount={levelConfig.arrows.length}
             isDarkTheme={isDark}
           />
+
+          {isPreparingLevel && (
+            <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
+              <div className="flex items-center gap-2 rounded-full px-4 py-2 bg-slate-950/85 text-cyan-300 text-xs font-bold border border-cyan-400/30">
+                <span className="w-4 h-4 rounded-full border-2 border-cyan-300/30 border-t-cyan-300 animate-spin" />
+                Preparing level...
+              </div>
+            </div>
+          )}
 
           {/* Interactive Silhouette Board */}
           <Board
@@ -485,7 +546,12 @@ export default function App() {
             panOffset={panOffset}
             onZoomChange={setZoomLevel}
             onPanChange={setPanOffset}
-            onArrowSelect={handleArrowSelect}
+            onArrowSelect={handleArrowSelectStable}
+            performanceMode={settings.performanceMode}
+            onPerformanceModeChange={enablePerformanceMode}
+            onDraggingChange={handleDraggingChange}
+            debugOverlay={import.meta.env.DEV && showPerfOverlay}
+            generationMs={generationMs}
           />
 
           {/* Compact Bottom Bar */}
@@ -496,18 +562,9 @@ export default function App() {
             isDarkTheme={isDark}
             onUndo={handleUndo}
             onHint={handleHint}
-            onZoomIn={() => setZoomLevel((z) => Math.min(4.0, z + 0.35))}
-            onZoomOut={() => {
-              setZoomLevel((z) => {
-                const next = Math.max(1.0, z - 0.35);
-                if (next === 1.0) setPanOffset({ x: 0, y: 0 });
-                return next;
-              });
-            }}
-            onZoomFit={() => {
-              setZoomLevel(1.0);
-              setPanOffset({ x: 0, y: 0 });
-            }}
+            onZoomIn={zoomIn}
+            onZoomOut={zoomOut}
+            onZoomFit={zoomFit}
           />
         </div>
       )}

@@ -570,130 +570,87 @@ export function rasterizeShape(
   shape: ShapeDefinition,
   gridSize: number
 ): { mask: boolean[][]; cells: CellCoord[] } {
-  // Level 50 is full square maze
+  const total = gridSize * gridSize;
   if (shape.id === 'grand_master') {
-    const mask = Array.from({ length: gridSize }, () =>
-      Array.from({ length: gridSize }, () => true)
-    );
-    const cells: CellCoord[] = [];
-    for (let r = 0; r < gridSize; r++) {
-      for (let c = 0; c < gridSize; c++) {
-        cells.push({ r, c });
-      }
-    }
+    const mask = Array.from({ length: gridSize }, () => Array(gridSize).fill(true));
+    const cells: CellCoord[] = new Array(total);
+    for (let i = 0; i < total; i++) cells[i] = { r: (i / gridSize) | 0, c: i % gridSize };
     return { mask, cells };
   }
 
-  const rawMask: boolean[][] = Array.from({ length: gridSize }, () =>
-    Array(gridSize).fill(false)
-  );
-
-  // 1. Initial point-in-polygon sampling
+  const raw = new Uint8Array(total);
   for (let r = 0; r < gridSize; r++) {
     const y = (r + 0.5) / gridSize;
+    const rowOffset = r * gridSize;
     for (let c = 0; c < gridSize; c++) {
       const x = (c + 0.5) / gridSize;
-      let inShape = false;
-      for (const poly of shape.polygons) {
-        if (isPointInPolygon(x, y, poly)) {
-          inShape = true;
-          break;
+      let inside = false;
+      for (let p = 0; p < shape.polygons.length && !inside; p++) {
+        const poly = shape.polygons[p];
+        let hit = false;
+        for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+          const xi = poly[i][0], yi = poly[i][1], xj = poly[j][0], yj = poly[j][1];
+          if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) hit = !hit;
         }
+        inside = hit;
       }
-      rawMask[r][c] = inShape;
+      raw[rowOffset + c] = inside ? 1 : 0;
     }
   }
 
-  // 2. Fill small 1-cell pinholes
-  const filledMask: boolean[][] = rawMask.map((row) => [...row]);
+  const filled = new Uint8Array(raw);
   for (let r = 1; r < gridSize - 1; r++) {
     for (let c = 1; c < gridSize - 1; c++) {
-      if (!filledMask[r][c]) {
-        const neighbors =
-          (rawMask[r - 1][c] ? 1 : 0) +
-          (rawMask[r + 1][c] ? 1 : 0) +
-          (rawMask[r][c - 1] ? 1 : 0) +
-          (rawMask[r][c + 1] ? 1 : 0);
-        if (neighbors >= 3) {
-          filledMask[r][c] = true;
-        }
-      }
+      const idx = r * gridSize + c;
+      if (raw[idx] === 0 && raw[idx - gridSize] + raw[idx + gridSize] + raw[idx - 1] + raw[idx + 1] >= 3) filled[idx] = 1;
     }
   }
 
-  // 3. Find largest 4-connected component
-  const visited: boolean[][] = Array.from({ length: gridSize }, () =>
-    Array(gridSize).fill(false)
-  );
-  let bestComponent: CellCoord[] = [];
-
-  for (let r = 0; r < gridSize; r++) {
-    for (let c = 0; c < gridSize; c++) {
-      if (filledMask[r][c] && !visited[r][c]) {
-        // BFS
-        const comp: CellCoord[] = [];
-        const queue: CellCoord[] = [{ r, c }];
-        visited[r][c] = true;
-
-        while (queue.length > 0) {
-          const curr = queue.shift()!;
-          comp.push(curr);
-
-          const neighbors = [
-            { r: curr.r - 1, c: curr.c },
-            { r: curr.r + 1, c: curr.c },
-            { r: curr.r, c: curr.c - 1 },
-            { r: curr.r, c: curr.c + 1 },
-          ];
-
-          for (const n of neighbors) {
-            if (
-              n.r >= 0 &&
-              n.r < gridSize &&
-              n.c >= 0 &&
-              n.c < gridSize &&
-              filledMask[n.r][n.c] &&
-              !visited[n.r][n.c]
-            ) {
-              visited[n.r][n.c] = true;
-              queue.push(n);
-            }
-          }
-        }
-
-        if (comp.length > bestComponent.length) {
-          bestComponent = comp;
-        }
-      }
+  const visited = new Uint8Array(total);
+  const queue = new Int32Array(total);
+  let best = new Int32Array(0);
+  for (let start = 0; start < total; start++) {
+    if (filled[start] === 0 || visited[start]) continue;
+    let head = 0, tail = 0;
+    queue[tail++] = start;
+    visited[start] = 1;
+    while (head < tail) {
+      const idx = queue[head++];
+      const row = (idx / gridSize) | 0;
+      const col = idx - row * gridSize;
+      let next = idx - gridSize;
+      if (row > 0 && filled[next] && !visited[next]) { visited[next] = 1; queue[tail++] = next; }
+      next = idx + gridSize;
+      if (row + 1 < gridSize && filled[next] && !visited[next]) { visited[next] = 1; queue[tail++] = next; }
+      next = idx - 1;
+      if (col > 0 && filled[next] && !visited[next]) { visited[next] = 1; queue[tail++] = next; }
+      next = idx + 1;
+      if (col + 1 < gridSize && filled[next] && !visited[next]) { visited[next] = 1; queue[tail++] = next; }
     }
+    if (tail > best.length) best = queue.slice(0, tail);
   }
 
-  // Fallback: If disconnected or too small, ensure at least a central block
-  if (bestComponent.length < 8) {
-    bestComponent = [];
-    const mid = Math.floor(gridSize / 2);
-    for (let r = mid - 2; r <= mid + 2; r++) {
-      for (let c = mid - 2; c <= mid + 2; c++) {
-        if (r >= 0 && r < gridSize && c >= 0 && c < gridSize) {
-          bestComponent.push({ r, c });
-        }
-      }
+  if (best.length < 8) {
+    const mid = (gridSize / 2) | 0;
+    const fallback: number[] = [];
+    for (let r = Math.max(0, mid - 2); r <= Math.min(gridSize - 1, mid + 2); r++) {
+      for (let c = Math.max(0, mid - 2); c <= Math.min(gridSize - 1, mid + 2); c++) fallback.push(r * gridSize + c);
     }
+    best = Int32Array.from(fallback);
   }
 
-  const mask: boolean[][] = Array.from({ length: gridSize }, () =>
-    Array(gridSize).fill(false)
-  );
-  bestComponent.forEach(({ r, c }) => {
+  const mask = Array.from({ length: gridSize }, () => Array(gridSize).fill(false));
+  const cells: CellCoord[] = new Array(best.length);
+  for (let i = 0; i < best.length; i++) {
+    const idx = best[i];
+    const r = (idx / gridSize) | 0;
+    const c = idx - r * gridSize;
     mask[r][c] = true;
-  });
-
-  return { mask, cells: bestComponent };
+    cells[i] = { r, c };
+  }
+  return { mask, cells };
 }
 
-/**
- * Generates an SVG path string from normalized polygon points for thumbnail rendering
- */
 export function getShapeThumbnailPath(shape: ShapeDefinition, size = 100): string {
   let pathStr = '';
   shape.polygons.forEach((poly) => {

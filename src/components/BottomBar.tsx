@@ -17,7 +17,7 @@ interface BottomBarProps {
   onZoomFit: () => void;
 }
 
-export const BottomBar: React.FC<BottomBarProps> = ({
+export const BottomBar: React.FC<BottomBarProps> = React.memo(({
   canUndo,
   hintsLeft,
   zoomLevel,
@@ -117,4 +117,4 @@ export const BottomBar: React.FC<BottomBarProps> = ({
       </div>
     </footer>
   );
-};
+});

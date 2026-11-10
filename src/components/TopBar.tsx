@@ -2,7 +2,7 @@
  * Arrow Bloom - Compact Single-Row Game Top Bar
  * back button | shape name & collection | score | theme toggle | settings
  */
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ChevronLeft, Sun, Moon, Settings as SettingsIcon } from 'lucide-react';
 
 interface TopBarProps {
@@ -14,9 +14,10 @@ interface TopBarProps {
   onToggleTheme: () => void;
   onOpenSettings: () => void;
   onBack: () => void;
+  onToggleDebug?: () => void;
 }
 
-export const TopBar: React.FC<TopBarProps> = ({
+export const TopBar: React.FC<TopBarProps> = React.memo(({
   levelNumber,
   shapeName,
   collectionName,
@@ -25,8 +26,28 @@ export const TopBar: React.FC<TopBarProps> = ({
   onToggleTheme,
   onOpenSettings,
   onBack,
+  onToggleDebug,
 }) => {
+  const longPressTimer = useRef<number | null>(null);
+  const cancelLongPress = () => { if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current); longPressTimer.current = null; };
   const isDark = theme === 'dark';
+  const scoreTextRef = useRef<HTMLSpanElement>(null);
+  const displayedScoreRef = useRef(score);
+  useEffect(() => {
+    const from = displayedScoreRef.current;
+    const delta = score - from;
+    const started = performance.now();
+    let frame = 0;
+    const animate = (now: number) => {
+      const progress = Math.min(1, (now - started) / 220);
+      const value = Math.round(from + delta * progress);
+      if (scoreTextRef.current) scoreTextRef.current.textContent = value.toLocaleString();
+      if (progress < 1) frame = requestAnimationFrame(animate);
+      else displayedScoreRef.current = score;
+    };
+    frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
+  }, [score]);
 
   return (
     <header className="w-full flex items-center justify-between px-3 pt-safe pb-1 z-20 shrink-0 gap-2">
@@ -49,7 +70,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           <span className="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded-md bg-pink-500/20 text-pink-500 border border-pink-500/30">
             L{levelNumber}
           </span>
-          <h1 className="text-sm sm:text-base font-black truncate tracking-wide whitespace-nowrap overflow-hidden">
+          <h1 onPointerDown={() => { if (onToggleDebug) longPressTimer.current = window.setTimeout(onToggleDebug, 650); }} onPointerUp={cancelLongPress} onPointerLeave={cancelLongPress} onPointerCancel={cancelLongPress} className="text-sm sm:text-base font-black truncate tracking-wide whitespace-nowrap overflow-hidden">
             {shapeName}
           </h1>
         </div>
@@ -72,7 +93,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               : 'bg-white text-amber-600 border-amber-300 shadow-sm'
           }`}
         >
-          {score.toLocaleString()} pts
+          <span ref={scoreTextRef}>{score.toLocaleString()}</span> pts
         </div>
 
         {/* Theme Toggle (Moon / Sun) */}
@@ -104,4 +125,4 @@ export const TopBar: React.FC<TopBarProps> = ({
       </div>
     </header>
   );
-};
+});

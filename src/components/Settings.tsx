@@ -3,7 +3,7 @@
  */
 import React, { useState } from 'react';
 import { GameSettings } from '../types.ts';
-import { ChevronLeft, Volume2, Music, Smartphone, Eye, Sun, Moon, Trash2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, Volume2, Music, Smartphone, Eye, Sun, Moon, Gauge, Trash2, AlertCircle } from 'lucide-react';
 
 interface SettingsProps {
   settings: GameSettings;
@@ -201,6 +201,22 @@ export const Settings: React.FC<SettingsProps> = ({
           </button>
         </div>
 
+        {/* Performance Mode */}
+        <div className={`rounded-2xl p-4 border flex items-center justify-between shadow-sm ${isDark ? 'bg-slate-900/60 border-white/15' : 'bg-white border-slate-200'}`}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+              <Gauge className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="font-black text-sm md:text-base">Performance Mode</h2>
+              <p className="text-xs opacity-60">Reduce effects for smoother gameplay</p>
+            </div>
+          </div>
+          <button onClick={() => toggle('performanceMode')} aria-pressed={settings.performanceMode} className={`w-12 h-7 rounded-full transition-colors p-1 flex items-center ${settings.performanceMode ? 'bg-emerald-500' : 'bg-black/20'}`}>
+            <div className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform ${settings.performanceMode ? 'translate-x-5' : 'translate-x-0'}`} />
+          </button>
+        </div>
+
         {/* Reset Progress */}
         <div className="mt-2 pt-3 border-t border-white/10 flex flex-col gap-2">
           {!showConfirmReset ? (
@@ -218,7 +234,7 @@ export const Settings: React.FC<SettingsProps> = ({
                 <span>Reset all stars and progress?</span>
               </div>
               <p className="text-[11px] text-white/70">
-                This locks levels 2–50. This cannot be undone.
+                This locks all later levels. This cannot be undone.
               </p>
               <div className="flex gap-2 mt-1">
                 <button
