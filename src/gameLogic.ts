@@ -2,7 +2,6 @@
  * Arrow Bloom - Game Logic Rules (Ray Casting, Touch Tolerance, Scoring & Combo)
  */
 import { ArrowData, CellCoord } from './types.ts';
-import { getRayCells } from './levelGenerator.ts';
 
 export interface RayResult {
   isFree: boolean;
@@ -22,10 +21,8 @@ export function checkArrowRay(
   if (!target) return { isFree: false, rayCells: [] };
   const owner = new Int16Array(gridSize * gridSize);
   owner.fill(-1);
-  const indices = new Map<string, number>();
   for (let i = 0; i < allArrows.length; i++) {
     const arrow = allArrows[i];
-    indices.set(arrow.id, i);
     for (let j = 0; j < arrow.cells.length; j++) {
       const cell = arrow.cells[j];
       owner[cell.r * gridSize + cell.c] = i;
@@ -48,46 +45,6 @@ export function checkArrowRay(
     r += dr; c += dc;
   }
   return { isFree: true, rayCells: [] };
-}
-
-/**
- * Maps tapped coordinate to an arrow id with 4-neighborhood touch tolerance
- */
-export function findTappedArrowId(
-  targetR: number,
-  targetC: number,
-  arrows: ArrowData[],
-  gridSize: number
-): string | null {
-  const cellToArrow = new Map<string, string>();
-  for (const arrow of arrows) {
-    for (const cell of arrow.cells) {
-      cellToArrow.set(`${cell.r},${cell.c}`, arrow.id);
-    }
-  }
-
-  // Direct hit
-  const direct = cellToArrow.get(`${targetR},${targetC}`);
-  if (direct) return direct;
-
-  // 4 neighboring cells tolerance
-  const deltas = [
-    [-1, 0],
-    [1, 0],
-    [0, -1],
-    [0, 1],
-  ];
-
-  for (const [dr, dc] of deltas) {
-    const nr = targetR + dr;
-    const nc = targetC + dc;
-    if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
-      const neighbor = cellToArrow.get(`${nr},${nc}`);
-      if (neighbor) return neighbor;
-    }
-  }
-
-  return null;
 }
 
 /**
