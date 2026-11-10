@@ -76,6 +76,8 @@ export default function App() {
   const [levelConfig, setLevelConfig] = useState<LevelConfig>(EMPTY_LEVEL);
   const [activeArrows, setActiveArrows] = useState<ArrowData[]>([]);
   const [isPreparingLevel, setIsPreparingLevel] = useState(false);
+  const [generationMs, setGenerationMs] = useState(0);
+  const [showPerfOverlay, setShowPerfOverlay] = useState(false);
   const workerRef = useRef<Worker | null>(null);
   const pendingLevelsRef = useRef(new Map<number, Array<(level: LevelConfig) => void>>());
   const levelRequestIdRef = useRef(0);
@@ -123,11 +125,11 @@ export default function App() {
   useEffect(() => {
     const worker = new Worker(new URL('./levelWorker.ts', import.meta.url), { type: 'module' });
     workerRef.current = worker;
-    worker.onmessage = (event: MessageEvent<{ levelNumber: number; level?: LevelConfig; error?: string }>) => {
+    worker.onmessage = (event: MessageEvent<{ levelNumber: number; level?: LevelConfig; error?: string; generationMs?: number }>) => {
       const pending = pendingLevelsRef.current.get(event.data.levelNumber);
       if (!pending) return;
       pendingLevelsRef.current.delete(event.data.levelNumber);
-      if (event.data.level) pending.forEach(resolve => resolve(event.data.level!));
+      if (event.data.level) { setGenerationMs(event.data.generationMs || 0); pending.forEach(resolve => resolve(event.data.level!)); }
       else pending.forEach(() => setIsPreparingLevel(false));
     };
     worker.onerror = () => {
@@ -136,6 +138,8 @@ export default function App() {
     };
     return () => { worker.terminate(); workerRef.current = null; };
   }, []);
+
+  const togglePerfOverlay = useCallback(() => setShowPerfOverlay(value => !value), []);
 
   const requestLevel = useCallback((levelNumber: number) => new Promise<LevelConfig>((resolve, reject) => {
     const worker = workerRef.current;
@@ -484,6 +488,7 @@ export default function App() {
             }
             onOpenSettings={() => setScreen('settings')}
             onBack={() => setScreen('levels')}
+            onToggleDebug={import.meta.env.DEV ? togglePerfOverlay : undefined}
           />
 
           {/* Sub-header: Hearts & Rainbow Progress Bar */}
@@ -524,6 +529,8 @@ export default function App() {
             onPanChange={setPanOffset}
             onArrowSelect={handleArrowSelect}
             performanceMode={settings.performanceMode}
+            debugOverlay={import.meta.env.DEV && showPerfOverlay}
+            generationMs={generationMs}
           />
 
           {/* Compact Bottom Bar */}
