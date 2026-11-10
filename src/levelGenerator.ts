@@ -354,7 +354,7 @@ function buildSingleLevelCandidate(
   const { mask, cells: playableCells } = rasterizeShape(shapeDef, gridSize);
   if (playableCells.length < 8) return null;
 
-  const occupied = new Map<string, string>(); // 'r,c' -> arrowId
+  const occupied = new Int16Array(gridSize * gridSize);\n  occupied.fill(-1); // -1 is empty; otherwise arrow index
   const arrows: ArrowData[] = [];
   const directions: Direction[] = ['up', 'down', 'left', 'right'];
 
@@ -376,12 +376,13 @@ function buildSingleLevelCandidate(
     attempts++;
 
     // Pick empty playable cell for tail
-    const emptyCells = playableCells.filter(
-      (c) => !occupied.has(`${c.r},${c.c}`)
-    );
-    if (emptyCells.length === 0) break;
-
-    const startCell = emptyCells[Math.floor(rng() * emptyCells.length)];
+    let startCell: CellCoord | null = null;
+    const startOffset = Math.floor(rng() * playableCells.length);
+    for (let scan = 0; scan < playableCells.length; scan++) {
+      const candidate = playableCells[(startOffset + scan) % playableCells.length];
+      if (occupied[candidate.r * gridSize + candidate.c] < 0) { startCell = candidate; break; }
+    }
+    if (!startCell) break;
 
     // Determine snake target length
     let targetLen = Math.floor(rng() * (maxLen - minLen + 1)) + minLen;
@@ -390,7 +391,7 @@ function buildSingleLevelCandidate(
     }
 
     const path: CellCoord[] = [startCell];
-    const visited = new Set<string>([`${startCell.r},${startCell.c}`]);
+    const visited = new Uint8Array(gridSize * gridSize);\n    visited[startCell.r * gridSize + startCell.c] = 1;
 
     let currDir: Direction = directions[Math.floor(rng() * directions.length)];
     let stuck = false;
@@ -429,7 +430,7 @@ function buildSingleLevelCandidate(
           !visited.has(key)
         ) {
           path.push({ r: nr, c: nc });
-          visited.add(key);
+          visited[nr * gridSize + nc] = 1;
           currDir = d;
           foundNext = true;
           break;
@@ -456,7 +457,7 @@ function buildSingleLevelCandidate(
     const ray = getRayCells(head, headDir, gridSize);
     let rayHitsAlreadyPlaced = false;
     for (const cell of ray) {
-      if (occupied.has(`${cell.r},${cell.c}`)) {
+      if (occupied[cell.r * gridSize + cell.c] >= 0) {
         rayHitsAlreadyPlaced = true;
         break;
       }
@@ -476,18 +477,16 @@ function buildSingleLevelCandidate(
       order: arrows.length,
     };
 
-    path.forEach((c) => occupied.set(`${c.r},${c.c}`, arrowId));
+    for (let i = 0; i < path.length; i++) occupied[path[i].r * gridSize + path[i].c] = arrows.length;
     arrows.push(newArrow);
     currentCoveredCells += path.length;
   }
 
   // Second pass: fill small leftover holes with 2-3 cell arrows if clear ray exists
   if (currentCoveredCells < targetCoveredCells) {
-    const leftoverEmpty = playableCells.filter(
-      (c) => !occupied.has(`${c.r},${c.c}`)
-    );
-    for (const cell of leftoverEmpty) {
-      if (occupied.has(`${cell.r},${cell.c}`)) continue;
+    for (let leftoverIdx = 0; leftoverIdx < playableCells.length; leftoverIdx++) {
+      const cell = playableCells[leftoverIdx];
+      if (occupied[cell.r * gridSize + cell.c] >= 0) continue;
       // Try 2-cell mini arrows
       for (const d of directions) {
         const [dr, dc] = DIR_DELTA[d];
@@ -499,11 +498,11 @@ function buildSingleLevelCandidate(
           nc >= 0 &&
           nc < gridSize &&
           mask[nr][nc] &&
-          !occupied.has(`${nr},${nc}`)
+          occupied[nr * gridSize + nc] < 0
         ) {
           const miniHead = { r: nr, c: nc };
           const ray = getRayCells(miniHead, d, gridSize);
-          const rayBlocked = ray.some((c) => occupied.has(`${c.r},${c.c}`));
+          let rayBlocked = false;\n          for (let ri = 0; ri < ray.length; ri++) { const rc = ray[ri]; if (occupied[rc.r * gridSize + rc.c] >= 0) { rayBlocked = true; break; } }
           if (!rayBlocked) {
             const arrowId = `a_${levelNumber}_${arrows.length + 1}`;
             const miniArrow: ArrowData = {
