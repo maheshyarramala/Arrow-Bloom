@@ -28,13 +28,13 @@ export const Background: React.FC<BackgroundProps> = ({ collection, theme = 'dar
     4: { gradient: 'from-amber-950 via-slate-950 to-purple-950', first: '#F59E0B', second: '#F43F5E' },
     5: { gradient: 'from-purple-950 via-indigo-950 to-slate-950', first: '#D946EF', second: '#7C3AED' },
   };
-  const selected = themes[colId] || themes[1];
+  const selected = themes[colId];
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-      <div className={`absolute inset-0 bg-gradient-to-br ${selected.gradient}`}>
+      {selected && <div className={`absolute inset-0 bg-gradient-to-br ${selected.gradient}`}>
         <div className={`absolute top-[10%] left-[8%] w-48 h-48 rounded-full ${animationClass}`} style={{ ...animationStyle, background: `radial-gradient(circle, ${selected.first}26 0%, transparent 70%)` }} />
         <div className={`absolute bottom-[20%] right-[10%] w-64 h-64 rounded-full ${animationClass}`} style={{ ...animationStyle, animationDelay: '-2s', background: `radial-gradient(circle, ${selected.second}26 0%, transparent 70%)` }} />
-      </div>
+      </div>}
       {colId === 5 && <div className="absolute inset-0 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:24px_24px] opacity-15" />}
       <div className="absolute inset-0 bg-radial from-transparent via-black/20 to-black/60" />
     </div>
