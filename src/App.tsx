@@ -140,6 +140,7 @@ export default function App() {
   }, []);
 
   const togglePerfOverlay = useCallback(() => setShowPerfOverlay(value => !value), []);
+  const enablePerformanceMode = useCallback(() => setSettings(current => current.performanceMode ? current : { ...current, performanceMode: true }), []);
 
   const requestLevel = useCallback((levelNumber: number) => new Promise<LevelConfig>((resolve, reject) => {
     const worker = workerRef.current;
@@ -529,6 +530,7 @@ export default function App() {
             onPanChange={setPanOffset}
             onArrowSelect={handleArrowSelect}
             performanceMode={settings.performanceMode}
+            onPerformanceModeChange={enablePerformanceMode}
             debugOverlay={import.meta.env.DEV && showPerfOverlay}
             generationMs={generationMs}
           />
