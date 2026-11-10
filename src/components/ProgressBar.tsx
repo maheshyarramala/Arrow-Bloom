@@ -11,7 +11,7 @@ interface ProgressBarProps {
   isDarkTheme?: boolean;
 }
 
-export const ProgressBar: React.FC<ProgressBarProps> = ({
+export const ProgressBar: React.FC<ProgressBarProps> = React.memo(({
   hearts,
   remainingCount,
   initialCount,
@@ -49,4 +49,4 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       </div>
     </div>
   );
-};
+});
