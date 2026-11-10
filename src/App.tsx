@@ -95,7 +95,6 @@ export default function App() {
 
   // Floating score bubbles (max 3, cleaned up after 600ms)
   const [floatingScores, setFloatingScores] = useState<FloatingScoreItem[]>([]);
-  const floatingTimeoutRefs = useRef<number[]>([]);
 
   // Undo History & Hints
   const [undoHistory, setUndoHistory] = useState<ArrowData[]>([]);
@@ -164,7 +163,6 @@ export default function App() {
   // Cleanup floating timers on unmount
   useEffect(() => {
     return () => {
-      floatingTimeoutRefs.current.forEach((t) => clearTimeout(t));
       if (comboHideTimerRef.current) clearTimeout(comboHideTimerRef.current);
     };
   }, []);
@@ -262,14 +260,10 @@ export default function App() {
             x: (head.c + 0.5) * (360 / levelConfig.gridSize),
             y: (head.r + 0.5) * (360 / levelConfig.gridSize),
             color: nextCombo > 1 ? '#FBBF24' : '#10E7A1',
+            createdAt: performance.now(),
           };
 
           setFloatingScores((prev) => [...prev.slice(-2), newFloat]);
-
-          const timer = window.setTimeout(() => {
-            setFloatingScores((prev) => prev.filter((f) => f.id !== newFloatId));
-          }, 600);
-          floatingTimeoutRefs.current.push(timer);
 
           // Add to undo history
           setUndoHistory((hist) => [...hist, arrow]);
