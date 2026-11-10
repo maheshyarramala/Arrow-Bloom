@@ -78,6 +78,7 @@ export default function App() {
   const [isPreparingLevel, setIsPreparingLevel] = useState(false);
   const [generationMs, setGenerationMs] = useState(0);
   const [showPerfOverlay, setShowPerfOverlay] = useState(false);
+  const [isBoardDragging, setIsBoardDragging] = useState(false);
   const workerRef = useRef<Worker | null>(null);
   const pendingLevelsRef = useRef(new Map<number, Array<{ resolve: (level: LevelConfig) => void; reject: (error: Error) => void }>>());
   const levelRequestIdRef = useRef(0);
@@ -140,6 +141,7 @@ export default function App() {
 
   const togglePerfOverlay = useCallback(() => setShowPerfOverlay(value => !value), []);
   const enablePerformanceMode = useCallback(() => setSettings(current => current.performanceMode ? current : { ...current, performanceMode: true }), []);
+  const handleDraggingChange = useCallback((dragging: boolean) => setIsBoardDragging(dragging), []);
 
   const requestLevel = useCallback((levelNumber: number) => new Promise<LevelConfig>((resolve, reject) => {
     const worker = workerRef.current;
@@ -426,7 +428,7 @@ export default function App() {
         collection={screen === 'game' ? currentCollection : null}
         theme={settings.theme}
         performanceMode={settings.performanceMode}
-        paused={screen === 'game' && levelConfig.gridSize >= 20}
+        paused={isBoardDragging || (screen === 'game' && levelConfig.gridSize >= 20)}
       />
 
       {/* Screen 1: Home Screen */}
@@ -527,6 +529,7 @@ export default function App() {
             onArrowSelect={handleArrowSelect}
             performanceMode={settings.performanceMode}
             onPerformanceModeChange={enablePerformanceMode}
+            onDraggingChange={handleDraggingChange}
             debugOverlay={import.meta.env.DEV && showPerfOverlay}
             generationMs={generationMs}
           />
