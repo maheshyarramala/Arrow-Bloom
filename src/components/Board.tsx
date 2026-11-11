@@ -557,6 +557,19 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     onDraggingChange?.(false);
   }, [onDraggingChange]);
 
+  const handleWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const t = transformRef.current;
+    const nextZoom = Math.min(4, Math.max(1, t.zoom * (event.deltaY < 0 ? 1.15 : 0.87)));
+    const maxPan = (sizeRef.current.board * (nextZoom - 1)) / 2 + 50;
+    const x = nextZoom === 1 ? 0 : Math.max(-maxPan, Math.min(maxPan, t.x));
+    const y = nextZoom === 1 ? 0 : Math.max(-maxPan, Math.min(maxPan, t.y));
+    transformRef.current = { zoom: nextZoom, x, y };
+    updateWrapperTransform();
+    onZoomChange(nextZoom);
+    onPanChange({ x, y });
+  }, [onZoomChange, onPanChange, updateWrapperTransform]);
+
   const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
     if (!arrows.length) return;
     if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
