@@ -253,7 +253,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
         return {x:path[segment].x+(path[segment+1].x-path[segment].x)*t,y:path[segment].y+(path[segment+1].y-path[segment].y)*t};
       };
       ctx.save();
-      ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=Math.max(2.4,cell*.30);
+      ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=Math.max(1.6,cell*.21);
       ctx.lineCap='round'; ctx.lineJoin='round'; ctx.globalAlpha=1-progress*.12;
       ctx.beginPath();
       let first=true;
@@ -264,8 +264,8 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       ctx.stroke();
       const movingHead=sample((cells.length-1)*cell+advance);
       ctx.beginPath();
-      ctx.moveTo(movingHead.x+dc*cell*.44,movingHead.y+dr*cell*.44);
-      ctx.lineTo(movingHead.x-dc*cell*.08-dr*cell*.32,movingHead.y-dr*cell*.08+dc*cell*.32);
+      ctx.moveTo(movingHead.x+dc*cell*.34,movingHead.y+dr*cell*.34);
+      ctx.lineTo(movingHead.x-dc*cell*.08-dr*cell*.25,movingHead.y-dr*cell*.08+dc*cell*.25);
       ctx.lineTo(movingHead.x-dc*cell*.08+dr*cell*.32,movingHead.y-dr*cell*.08-dc*cell*.32);
       ctx.closePath();ctx.fill();ctx.restore();
       active ||= progress < 1;
