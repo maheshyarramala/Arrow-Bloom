@@ -332,7 +332,7 @@ export default function App() {
             const nextTap = pendingArrowTapsRef.current.shift();
             if (nextTap) handleArrowSelectRef.current(nextTap);
           }, 40);
-        }, 1000);
+        }, 1200);
       } else {
         // Arrow is BLOCKED!
         setShakingArrowId(arrowId);
