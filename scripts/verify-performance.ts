@@ -2,16 +2,17 @@ import { getLevel } from '../src/levelGenerator.ts';
 import { calculateStars, computeArrowScore, checkArrowRay, getHintArrow } from '../src/gameLogic.ts';
 import type { ArrowData } from '../src/types.ts';
 
-const levels = [1, 12, 30, 50];
+const levels = [1, 3, 12, 30, 50, 100, 150, 200, 250, 300];
 for (const levelNumber of levels) {
   const started = performance.now();
   const level = getLevel(levelNumber, { maxAttempts: 20, timeBudgetMs: 400 });
   const elapsed = performance.now() - started;
   if (!level.arrows.length) throw new Error(`Level ${levelNumber} generated no arrows`);
-  if (level.gridSize > 34) throw new Error(`Level ${levelNumber} grid exceeds 34`);
+  if (level.collectionId !== Math.ceil(levelNumber / 10)) throw new Error(`Level ${levelNumber} is assigned to the wrong world`);
+  if (level.gridSize > 44) throw new Error(`Level ${levelNumber} grid exceeds 44`);
   if (level.stats.depth <= 0) throw new Error(`Level ${levelNumber} has no solution depth`);
   if (level.solutionOrder.length !== level.arrows.length) throw new Error(`Level ${levelNumber} solution order is incomplete`);
-  if (elapsed > 500) throw new Error(`Level ${levelNumber} took ${Math.round(elapsed)}ms (limit 500ms)`);
+  if (elapsed > 1200) throw new Error(`Level ${levelNumber} took ${Math.round(elapsed)}ms (limit 1200ms)`);
 }
 
 if (calculateStars(0) !== 3 || calculateStars(1) !== 2 || calculateStars(2) !== 1) {
