@@ -8,7 +8,7 @@ interface BoardProps {
   arrows: ArrowData[];
   isDarkTheme?: boolean;
   colorBlindMode?: boolean;
-  escapingArrowId: string | null;
+  escapingArrows: Array<{ arrow: ArrowData; startedAt: number; duration: number }>;
   shakingArrowId: string | null;
   flashBlockedArrowId: string | null;
   hintedArrowId: string | null;
@@ -36,7 +36,7 @@ const BURST_COLORS = ['#FF2A85', '#FFD000', '#10E7A1', '#00E5FF', '#FFFFFF', '#F
 export const Board: React.FC<BoardProps> = React.memo((props) => {
   const {
     gridSize, playableMask, arrows, isDarkTheme = true, colorBlindMode = false,
-    escapingArrowId, shakingArrowId, flashBlockedArrowId, hintedArrowId,
+    escapingArrows, shakingArrowId, flashBlockedArrowId, hintedArrowId,
     tutorialArrowId, comboCount, showComboPill, floatingScores, zoomLevel,
     panOffset, onZoomChange, onPanChange, onArrowSelect, performanceMode = false,
     onPerformanceModeChange, onDraggingChange, debugOverlay = false, generationMs = 0,
@@ -58,6 +58,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
   const fpsLabelRef = useRef<HTMLDivElement>(null);
   const fpsStatsRef = useRef({ last: 0, frames: 0, badSince: 0 });
   const cellSizeRef = useRef(1);
+  const escapeGeometryRef = useRef(new Map<string, { path: Array<{x:number;y:number}>; cumulative: Float32Array }>());
 
   const arrowById = useMemo(() => new Map(arrows.map(arrow => [arrow.id, arrow])), [arrows]);
 
@@ -184,12 +185,12 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       const group = arrowsByColor[color];
       for (let i = 0; i < group.length; i++) {
         const arrow = group[i];
-        if (arrow.id !== escapingArrowId && arrow.id !== shakingArrowId) {
+        if (arrow.id !== shakingArrowId) {
           drawArrow(ctx, arrow, cell, 1, 0, 0, isDarkTheme);
         }
       }
     }
-  }, [gridSize, playableMask, isDarkTheme, arrowsByColor, escapingArrowId, shakingArrowId, drawArrow]);
+  }, [gridSize, playableMask, isDarkTheme, arrowsByColor, shakingArrowId, drawArrow]);
 
   const drawDynamic = useCallback((now: number) => {
     const canvas = dynamicRef.current;
@@ -220,49 +221,52 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
         stats.frames = 0; stats.last = now;
       } else if (!stats.last) stats.last = now;
     }
-    if (escapingArrowId) {
-      const arrow = arrowById.get(escapingArrowId);
-      if (arrow) {
-        // Snake-style exit: the head moves first and each body cell follows
-        // one cell-length later, rather than translating the whole arrow at once.
-        const duration = 1000;
-        const elapsed = Math.max(0, now - animationStartRef.current);
-        const progress = Math.min(1, elapsed / duration);
-        const [dr, dc] = DIR_DELTA[arrow.direction];
-        const cells = arrow.cells;
-        const headTravel = board + Math.max(0, cells.length - 1) * cell;
-        const travel = headTravel * progress;
-        const color = PALETTE[arrow.colorIndex % PALETTE.length] || '#FF2A85';
-        ctx.save();
-        ctx.strokeStyle = color;
-        ctx.fillStyle = color;
-        ctx.lineWidth = Math.max(2.4, cell * 0.30);
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.globalAlpha = 1 - progress * 0.12;
-        ctx.beginPath();
-        for (let i = 0; i < cells.length; i++) {
-          const followDelay = (cells.length - 1 - i) * cell;
-          const offset = Math.max(0, travel - followDelay);
-          const x = (cells[i].c + 0.5) * cell + dc * offset;
-          const y = (cells[i].r + 0.5) * cell + dr * offset;
-          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-        const head = cells[cells.length - 1];
-        const hx = (head.c + 0.5) * cell + dc * travel;
-        const hy = (head.r + 0.5) * cell + dr * travel;
-        const px = -dr;
-        const py = dc;
-        ctx.beginPath();
-        ctx.moveTo(hx + dc * cell * 0.44, hy + dr * cell * 0.44);
-        ctx.lineTo(hx - dc * cell * 0.08 + px * cell * 0.32, hy - dr * cell * 0.08 + py * cell * 0.32);
-        ctx.lineTo(hx - dc * cell * 0.08 - px * cell * 0.32, hy - dr * cell * 0.08 - py * cell * 0.32);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-        active ||= progress < 1;
+    for (let animationIndex = 0; animationIndex < escapingArrows.length; animationIndex++) {
+      const animation = escapingArrows[animationIndex];
+      const arrow = animation.arrow;
+      const cells = arrow.cells;
+      if (cells.length < 2) continue;
+      const elapsed = Math.max(0, now - animation.startedAt);
+      const progress = Math.min(1, elapsed / animation.duration);
+      let geometry = escapeGeometryRef.current.get(arrow.id);
+      if (!geometry || geometry.path.length !== cells.length + 1) {
+        const path: Array<{x:number;y:number}> = cells.map(point => ({x:(point.c+.5)*cell,y:(point.r+.5)*cell}));
+        const [headDr,headDc] = DIR_DELTA[arrow.direction];
+        const head = path[path.length-1];
+        path.push({x:head.x+headDc*(board+cell*2),y:head.y+headDr*(board+cell*2)});
+        const cumulative = new Float32Array(path.length);
+        for(let i=1;i<path.length;i++) cumulative[i]=cumulative[i-1]+Math.hypot(path[i].x-path[i-1].x,path[i].y-path[i-1].y);
+        geometry = {path,cumulative};
+        escapeGeometryRef.current.set(arrow.id,geometry);
       }
+      const {path,cumulative} = geometry;
+      const [dr,dc] = DIR_DELTA[arrow.direction];
+      const advance = progress * (board + (cells.length-1)*cell + cell*2);
+      const color = PALETTE[arrow.colorIndex % PALETTE.length] || '#FF2A85';
+      const sample = (distance:number) => {
+        let segment=0;
+        while(segment<cumulative.length-2 && cumulative[segment+1]<distance) segment++;
+        const span=cumulative[segment+1]-cumulative[segment];
+        const t=span>0?Math.max(0,Math.min(1,(distance-cumulative[segment])/span)):0;
+        return {x:path[segment].x+(path[segment+1].x-path[segment].x)*t,y:path[segment].y+(path[segment+1].y-path[segment].y)*t};
+      };
+      ctx.save();
+      ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=Math.max(2.4,cell*.30);
+      ctx.lineCap='round'; ctx.lineJoin='round'; ctx.globalAlpha=1-progress*.12;
+      ctx.beginPath();
+      let first=true;
+      for(let i=0;i<cells.length;i++){
+        const point=sample(i*cell+advance);
+        if(first){ctx.moveTo(point.x,point.y);first=false;}else ctx.lineTo(point.x,point.y);
+      }
+      ctx.stroke();
+      const movingHead=sample((cells.length-1)*cell+advance);
+      ctx.beginPath();
+      ctx.moveTo(movingHead.x+dc*cell*.44,movingHead.y+dr*cell*.44);
+      ctx.lineTo(movingHead.x-dc*cell*.08-dr*cell*.32,movingHead.y-dr*cell*.08+dc*cell*.32);
+      ctx.lineTo(movingHead.x-dc*cell*.08+dr*cell*.32,movingHead.y-dr*cell*.08-dc*cell*.32);
+      ctx.closePath();ctx.fill();ctx.restore();
+      active ||= progress < 1;
     }
     if (shakingArrowId) {
       const arrow = arrowById.get(shakingArrowId);
@@ -325,7 +329,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       ctx.globalAlpha = 1;
     }
     if (active && !rafRef.current) rafRef.current = requestAnimationFrame(tick);
-  }, [gridSize, arrows, escapingArrowId, shakingArrowId, flashBlockedArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, comboCount, drawArrow, performanceMode, onPerformanceModeChange, debugOverlay, generationMs, arrowById]);
+  }, [gridSize, arrows, escapingArrows, shakingArrowId, flashBlockedArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, comboCount, drawArrow, performanceMode, onPerformanceModeChange, debugOverlay, generationMs, arrowById]);
 
   const tick = useCallback((now: number) => {
     rafRef.current = 0;
@@ -344,10 +348,11 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
 
   useEffect(() => { rebuildOwner(); drawStatic(); }, [rebuildOwner, drawStatic]);
   useEffect(() => {
-    if (escapingArrowId || shakingArrowId || hintedArrowId || tutorialArrowId || floatingScores.length || showComboPill) {
+    if (escapingArrows.length || shakingArrowId || hintedArrowId || tutorialArrowId || floatingScores.length || showComboPill) {
       animationStartRef.current = performance.now();
-      if (escapingArrowId) {
-        const arrow = arrows.find(a => a.id === escapingArrowId);
+      if (escapingArrows.length) {
+        const newestAnimation = escapingArrows[escapingArrows.length - 1];
+        const arrow = newestAnimation.arrow;
         if (arrow) {
           const head = arrow.cells[arrow.cells.length - 1];
           const cx = (head.c + 0.5) * cellSizeRef.current;
@@ -366,7 +371,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       if (!rafRef.current) rafRef.current = requestAnimationFrame(tick);
     }
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); rafRef.current = 0; };
-  }, [escapingArrowId, shakingArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, tick, arrows, performanceMode]);
+  }, [escapingArrows, shakingArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, tick, arrows, performanceMode]);
 
   useEffect(() => {
     const observer = new ResizeObserver(() => {
@@ -396,8 +401,10 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     return index >= 0 ? arrows[index]?.id || null : null;
   }, [gridSize, arrows]);
 
+  const tapCandidateRef = useRef<string | null>(null);
+  const tapAmbiguousRef = useRef(false);
   const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0) return;
+    if (event.button !== 0 || pointerRef.current.down) return;
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     const { board } = sizeRef.current;
@@ -405,42 +412,80 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     const x = (event.clientX - rect.left - rect.width / 2 - t.x) / t.zoom + board / 2;
     const y = (event.clientY - rect.top - rect.height / 2 - t.y) / t.zoom + board / 2;
     const cell = board / gridSize;
-    const col = Math.floor(x / cell);
-    const row = Math.floor(y / cell);
-    const target = cellOwnerAt(row, col);
-    if (target) {
-      event.preventDefault();
-      onArrowSelect(target);
-      return;
+    const col = Math.floor(x / cell), row = Math.floor(y / cell);
+    const radius = Math.min(24, Math.max(16, cell * 0.6)) / t.zoom;
+    const radiusCells = Math.max(1, Math.ceil(radius / cell));
+    const candidates = new Set<number>();
+    const owner = ownerRef.current;
+    for (let rr = Math.max(0, row - radiusCells); rr <= Math.min(gridSize - 1, row + radiusCells); rr++) {
+      for (let cc = Math.max(0, col - radiusCells); cc <= Math.min(gridSize - 1, col + radiusCells); cc++) {
+        const idx = owner[rr * gridSize + cc];
+        if (idx >= 0) candidates.add(idx);
+      }
     }
-    pointerRef.current = { down: true, dragging: false, x: event.clientX, y: event.clientY, startX: t.x, startY: t.y };
-    (event.currentTarget as HTMLDivElement).setPointerCapture(event.pointerId);
-  }, [gridSize, cellOwnerAt, onArrowSelect]);
+    let bestId: string | null = null, bestDistance = Infinity, secondDistance = Infinity;
+    const pointSegmentDistance = (px:number, py:number, ax:number, ay:number, bx:number, by:number) => {
+      const vx=bx-ax, vy=by-ay, len=vx*vx+vy*vy;
+      const q=len ? Math.max(0,Math.min(1,((px-ax)*vx+(py-ay)*vy)/len)) : 0;
+      return Math.hypot(px-(ax+q*vx),py-(ay+q*vy));
+    };
+    for (const idx of candidates) {
+      const arrow = arrows[idx];
+      if (!arrow) continue;
+      let distance = Infinity;
+      for (let j=1;j<arrow.cells.length;j++) {
+        const a=arrow.cells[j-1], b=arrow.cells[j];
+        distance=Math.min(distance,pointSegmentDistance(x,y,(a.c+.5)*cell,(a.r+.5)*cell,(b.c+.5)*cell,(b.r+.5)*cell));
+      }
+      const head=arrow.cells[arrow.cells.length-1];
+      distance=Math.min(distance,Math.max(0,Math.hypot(x-(head.c+.5)*cell,y-(head.r+.5)*cell)-cell*0.6));
+      distance*=t.zoom;
+      if(distance<bestDistance){secondDistance=bestDistance;bestDistance=distance;bestId=arrow.id;}
+      else if(distance<secondDistance) secondDistance=distance;
+    }
+    const hitRadius = Math.min(24,Math.max(16,cell*.6));
+    tapAmbiguousRef.current = bestDistance<=hitRadius && secondDistance-bestDistance<=4;
+    tapCandidateRef.current = bestDistance<=hitRadius && !tapAmbiguousRef.current ? bestId : null;
+    if (tapCandidateRef.current) {
+      focusedArrowIndexRef.current = arrows.findIndex(a=>a.id===tapCandidateRef.current);
+      focusActiveRef.current = true;
+      drawDynamic(performance.now());
+    }
+    pointerRef.current = { down:true, dragging:false, x:event.clientX, y:event.clientY, startX:t.x, startY:t.y };
+    try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* pointer may already be cancelled */ }
+  }, [gridSize, arrows, drawDynamic]);
 
   const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     const p = pointerRef.current;
-    if (!p.down || transformRef.current.zoom <= 1) return;
-    const dx = event.clientX - p.x;
-    const dy = event.clientY - p.y;
-    if (Math.abs(dx) + Math.abs(dy) > 3 && !p.dragging) { p.dragging = true; onDraggingChange?.(true); }
-    if (!p.dragging) return;
+    if (!p.down) return;
+    const dx = event.clientX - p.x, dy = event.clientY - p.y;
+    if (Math.hypot(dx,dy) > (event.pointerType === 'mouse' ? 5 : 10) && !p.dragging) {
+      p.dragging = true; tapCandidateRef.current = null; focusActiveRef.current = false; onDraggingChange?.(true);
+    }
+    if (!p.dragging || transformRef.current.zoom <= 1) return;
     const board = sizeRef.current.board;
     const maxPan = (board * (transformRef.current.zoom - 1)) / 2 + 50;
-    const x = Math.max(-maxPan, Math.min(maxPan, p.startX + dx));
-    const y = Math.max(-maxPan, Math.min(maxPan, p.startY + dy));
-    transformRef.current.x = x;
-    transformRef.current.y = y;
-    updateWrapperTransform();
-    drawDynamic(performance.now());
+    transformRef.current.x = Math.max(-maxPan,Math.min(maxPan,p.startX+dx));
+    transformRef.current.y = Math.max(-maxPan,Math.min(maxPan,p.startY+dy));
+    updateWrapperTransform(); drawDynamic(performance.now());
   }, [updateWrapperTransform, drawDynamic, onDraggingChange]);
 
-  const handlePointerUp = useCallback(() => {
+  const handlePointerUp = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     const p = pointerRef.current;
-    if (p.down && p.dragging) onPanChange({ x: transformRef.current.x, y: transformRef.current.y });
+    if (!p.down) return;
+    if (p.dragging) onPanChange({x:transformRef.current.x,y:transformRef.current.y});
+    else if (!tapAmbiguousRef.current && tapCandidateRef.current) onArrowSelect(tapCandidateRef.current);
     if (p.dragging) onDraggingChange?.(false);
-    pointerRef.current.down = false;
-    pointerRef.current.dragging = false;
-  }, [onPanChange, onDraggingChange]);
+    pointerRef.current.down=false; pointerRef.current.dragging=false;
+    tapCandidateRef.current=null; tapAmbiguousRef.current=false; focusActiveRef.current=false;
+    try { if(event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); } catch { /* ignore */ }
+  }, [onPanChange, onDraggingChange, onArrowSelect]);
+
+  const handlePointerCancel = useCallback(() => {
+    pointerRef.current.down=false; pointerRef.current.dragging=false;
+    tapCandidateRef.current=null; tapAmbiguousRef.current=false; focusActiveRef.current=false;
+    onDraggingChange?.(false);
+  }, [onDraggingChange]);
 
   const handleWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -475,7 +520,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
   }, [arrows, onArrowSelect, drawDynamic]);
 
   return (
-    <div ref={containerRef} className="relative flex-1 w-full h-full flex items-center justify-center overflow-hidden select-none outline-none" style={{ touchAction: 'none' }} tabIndex={0} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp} onWheel={handleWheel} onKeyDown={handleKeyDown}>
+    <div ref={containerRef} className="relative flex-1 w-full h-full flex items-center justify-center overflow-hidden select-none outline-none" style={{ touchAction: 'none' }} tabIndex={0} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerCancel} onLostPointerCapture={handlePointerCancel} onWheel={handleWheel} onKeyDown={handleKeyDown}>
       {debugOverlay && <div ref={fpsLabelRef} className="absolute left-2 top-2 z-50 rounded bg-black/80 px-2 py-1 text-[10px] font-mono text-lime-300 pointer-events-none">-- FPS · Gen {generationMs} ms</div>}
       <div ref={wrapperRef} className="relative select-none" style={{ transformOrigin: 'center center', willChange: 'transform' }}>
         <canvas ref={staticRef} className="absolute inset-0 pointer-events-none" />

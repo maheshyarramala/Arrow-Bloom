@@ -25,8 +25,8 @@ export const Home: React.FC<HomeProps> = ({
   onOpenHowToPlay,
   onOpenSettings,
 }) => {
-  const currentLvl = Math.min(150, progress.unlockedLevel);
-  const currentShape = SHAPE_DEFINITIONS[currentLvl] || SHAPE_DEFINITIONS[1];
+  const currentLvl = Math.min(300, progress.unlockedLevel);
+  const currentShape = SHAPE_DEFINITIONS[currentLvl] || SHAPE_DEFINITIONS[((currentLvl - 1) % 150) + 1] || SHAPE_DEFINITIONS[1];
 
   let totalStars = 0;
   let clearedCount = 0;
@@ -93,7 +93,7 @@ export const Home: React.FC<HomeProps> = ({
                 Current Level
               </span>
               <span className="text-xs font-bold opacity-75">
-                {clearedCount} of 150 Solved
+                {clearedCount} of 300 Solved
               </span>
             </div>
 
@@ -129,7 +129,7 @@ export const Home: React.FC<HomeProps> = ({
             }`}
           >
             <Grid className="w-4 h-4 text-cyan-400" />
-            <span>All 150 Levels</span>
+            <span>All 300 Levels</span>
           </button>
 
           <button
@@ -149,7 +149,7 @@ export const Home: React.FC<HomeProps> = ({
         <div className="flex flex-col gap-3 pt-2">
           <div className="flex items-center justify-between px-1">
             <h3 className="text-lg font-black tracking-wide">Collections</h3>
-            <span className="text-xs font-bold opacity-60">5 Themed Worlds</span>
+            <span className="text-xs font-bold opacity-60">30 Themed Worlds</span>
           </div>
 
           <div className="flex flex-col gap-4">

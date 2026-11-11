@@ -148,6 +148,19 @@ COLLECTIONS.push(
   }
 );
 
+// Extend the main campaign to 300 levels with six additional themed worlds.
+for (let id = 16; id <= 30; id++) {
+  const start = (id - 1) * 10 + 1;
+  const hue = (id * 47) % 360;
+  COLLECTIONS.push({
+    id, name: ['Aurora','Neon City','Ancient','Crystal','Volcano','Dreamscape','Oceanic','Clockwork','Wildlands','Legendary','Infinity','Eclipse','Starlight','Obsidian','Final Bloom'][id - 16],
+    theme: 'world-' + id, levels: Array.from({ length: 10 }, (_, i) => start + i),
+    subtitle: 'A new set of winding arrow challenges',
+    gradientDark: 'from-slate-950 via-indigo-950 to-black', gradientLight: 'from-indigo-50 via-sky-100 to-violet-100',
+    accentColor: 'hsl(' + hue + ' 85% 62%)',
+  });
+}
+
 // Seeded PRNG: Mulberry32
 export function createRNG(seed: number) {
   let s = seed >>> 0;
@@ -195,7 +208,7 @@ function hasConfusingUTurn(path: CellCoord[]): boolean {
 
 // Compute level parameters (Grid size, snake lengths)
 export function getLevelParams(level: number) {
-  const collectionIdx = Math.min(14, Math.floor((level - 1) / 10));
+  const collectionIdx = Math.min(29, Math.floor((level - 1) / 10));
   const collection = COLLECTIONS[collectionIdx];
   const step = ((level - 1) % 10) / 9;
   let gridSize: number; let minLen: number; let maxLen: number;
@@ -207,12 +220,12 @@ export function getLevelParams(level: number) {
     else { gridSize = Math.round(26 + step * 8); minLen = 5; maxLen = Math.round(12 + step * 16); }
   } else {
     const tier = collection.id - 6;
-    gridSize = Math.round(28 + step * 10 + Math.min(4, Math.floor(tier / 2)));
+    gridSize = Math.round(28 + step * 10 + Math.min(10, Math.floor(tier / 2)));
     minLen = 5 + Math.floor(tier / 4);
     maxLen = Math.round(18 + step * 12 + tier);
   }
   if (level === 1) { gridSize = 10; minLen = 3; maxLen = 4; }
-  gridSize = Math.min(34, gridSize);
+  gridSize = Math.min(40, gridSize);
   return { collection, gridSize, minLen, maxLen };
 }
 // Ray calculation from head in direction towards grid edge
@@ -369,7 +382,8 @@ function buildSingleLevelCandidate(
   seed: number
 ): LevelConfig | null {
   const rng = createRNG(seed);
-  const shapeDef = SHAPE_DEFINITIONS[levelNumber] || SHAPE_DEFINITIONS[1];
+  const shapeKey = ((levelNumber - 1) % 150) + 1;
+  const shapeDef = SHAPE_DEFINITIONS[levelNumber] || SHAPE_DEFINITIONS[shapeKey] || SHAPE_DEFINITIONS[1];
   const { collection, gridSize, minLen, maxLen } = getLevelParams(levelNumber);
 
   const { mask, cells: playableCells } = rasterizeShape(shapeDef, gridSize);
@@ -598,10 +612,10 @@ function meetsDifficultyTargets(level: number, candidate: LevelConfig): boolean 
 
   // Linear ramp:
   // depth: 3 on level 1 rising to 18 on level 50
-  const requiredDepth = Math.max(2, Math.round(3 + (level / 150) * 14));
+  const requiredDepth = Math.max(2, Math.round(3 + (level / 300) * 14));
 
   // initialFree: <= 25% on level 1, falling to <= 6% on level 50
-  const maxInitialPct = Math.max(0.06, 0.25 - (level / 150) * 0.19);
+  const maxInitialPct = Math.max(0.06, 0.25 - (level / 300) * 0.19);
   const maxInitialCount = Math.max(2, Math.floor(totalArrows * maxInitialPct));
 
   // Traps: >= 25% near-miss traps
@@ -622,7 +636,7 @@ export function getLevel(
   levelNumber: number,
   options: { maxAttempts?: number; timeBudgetMs?: number } = {}
 ): LevelConfig {
-  const safeLevel = Math.max(1, Math.min(150, Math.floor(levelNumber)));
+  const safeLevel = Math.max(1, Math.min(300, Math.floor(levelNumber)));
   if (levelCache.has(safeLevel)) return levelCache.get(safeLevel)!;
 
   const started = performance.now();

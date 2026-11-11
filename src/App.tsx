@@ -103,7 +103,7 @@ export default function App() {
   const [hintedArrowId, setHintedArrowId] = useState<string | null>(null);
 
   // Animations & Interaction lock
-  const [escapingArrowId, setEscapingArrowId] = useState<string | null>(null);
+  const [escapingArrows, setEscapingArrows] = useState<Array<{ arrow: ArrowData; startedAt: number; duration: number }>>([]);
   const [shakingArrowId, setShakingArrowId] = useState<string | null>(null);
   const [flashBlockedArrowId, setFlashBlockedArrowId] = useState<string | null>(null);
   const isInteractingRef = useRef<boolean>(false);
@@ -195,7 +195,11 @@ export default function App() {
       setUndoHistory([]);
       setHintsLeft(extraHint ? 4 : 3);
       setHintedArrowId(null);
-      setEscapingArrowId(null);
+      setEscapingArrows([]);
+      completionCommittedRef.current = false;
+      removedArrowIdsRef.current.clear();
+      escapeTimersRef.current.forEach(timer => window.clearTimeout(timer));
+      escapeTimersRef.current.clear();
       setShakingArrowId(null);
       setFlashBlockedArrowId(null);
       setFloatingScores([]);
@@ -213,157 +217,90 @@ export default function App() {
     }
   }, [requestLevel]);
 
-  // Arrow Tap / Click handling
-  const handleArrowSelect = useCallback(
-    (arrowId: string) => {
-      if (isInteractingRef.current || escapingArrowId || hearts <= 0) return;
+  // Arrow selection: update the logical board immediately; visuals never block input.
+  const activeArrowsRef = useRef<ArrowData[]>(activeArrows);
+  activeArrowsRef.current = activeArrows;
+  const removedArrowIdsRef = useRef<Set<string>>(new Set());
+  const escapeTimersRef = useRef<Map<string, number>>(new Map());
+  const completionCommittedRef = useRef(false);
 
-      const rayResult = checkArrowRay(arrowId, activeArrows, levelConfig.gridSize);
+  const handleArrowSelect = useCallback((arrowId: string) => {
+    const boardNow = activeArrowsRef.current;
+    if (hearts <= 0 || completionCommittedRef.current || removedArrowIdsRef.current.has(arrowId)) return;
+    const arrow = boardNow.find(item => item.id === arrowId);
+    if (!arrow) return;
 
-      if (rayResult.isFree) {
-        // Arrow is FREE!
-        isInteractingRef.current = true;
-        setEscapingArrowId(arrowId);
+    const rayResult = checkArrowRay(arrowId, boardNow, levelConfig.gridSize);
+    if (!rayResult.isFree) {
+      setShakingArrowId(arrowId);
+      setFlashBlockedArrowId(rayResult.blockingArrowId || null);
+      soundManager.playBlocked();
+      setComboCount(0);
+      setShowComboPill(false);
+      setMistakes(value => value + 1);
+      setHearts(value => {
+        const next = Math.max(0, value - 1);
+        if (next === 0) window.setTimeout(() => { soundManager.playLoss(); setShowGameOver(true); }, 450);
+        return next;
+      });
+      window.setTimeout(() => { setShakingArrowId(null); setFlashBlockedArrowId(null); }, 420);
+      return;
+    }
 
-        // Combo check (within 1.2s = 1200ms)
-        const now = performance.now();
-        const diff = now - lastClearTimeRef.current;
-        let nextCombo = 1;
-        if (lastClearTimeRef.current > 0 && diff < 1200) {
-          nextCombo = comboCount + 1;
-        }
-        setComboCount(nextCombo);
-        lastClearTimeRef.current = now;
+    // Remove from the authoritative occupancy immediately, not after animation.
+    removedArrowIdsRef.current.add(arrowId);
+    const nextBoard = boardNow.filter(item => item.id !== arrowId);
+    activeArrowsRef.current = nextBoard;
+    setActiveArrows(nextBoard);
+    const now = performance.now();
+    const animationDuration = Math.min(1900, Math.max(650, 420 + arrow.cells.length * 24));
+    setEscapingArrows(current => [...current.filter(item => item.arrow.id !== arrowId), { arrow, startedAt: now, duration: animationDuration }]);
+    const diff = now - lastClearTimeRef.current;
+    const nextCombo = lastClearTimeRef.current > 0 && diff < 1200 ? comboCount + 1 : 1;
+    setComboCount(nextCombo);
+    lastClearTimeRef.current = now;
+    if (nextCombo > 1) {
+      setShowComboPill(true);
+      if (comboHideTimerRef.current) clearTimeout(comboHideTimerRef.current);
+      comboHideTimerRef.current = window.setTimeout(() => setShowComboPill(false), 700);
+    }
+    soundManager.playPop(nextCombo);
+    const pts = computeArrowScore(arrow.cells.length, nextCombo);
+    dispatchScore({ type: 'ADD_SCORE', points: pts });
+    const head = arrow.cells[arrow.cells.length - 1];
+    const floatItem: FloatingScoreItem = {
+      id: now, text: nextCombo > 1 ? `+${pts} COMBO!` : `+${pts}`,
+      x: (head.c + 0.5) * (360 / levelConfig.gridSize),
+      y: (head.r + 0.5) * (360 / levelConfig.gridSize),
+      color: nextCombo > 1 ? '#FBBF24' : '#10E7A1', createdAt: now,
+    };
+    setFloatingScores(prev => [...prev.slice(-2), floatItem]);
+    setUndoHistory(hist => [...hist, arrow]);
 
-        // Show non-stacking combo pill (auto-hides after 700ms)
-        if (nextCombo > 1) {
-          setShowComboPill(true);
-          if (comboHideTimerRef.current) clearTimeout(comboHideTimerRef.current);
-          comboHideTimerRef.current = window.setTimeout(() => {
-            setShowComboPill(false);
-          }, 700);
-        }
-
-        soundManager.playPop(nextCombo);
-
-        // Score: 10 per cell + combo bonus
-        const arrow = activeArrows.find((a) => a.id === arrowId);
-        const cellCount = arrow?.cells.length || 3;
-        const pts = computeArrowScore(cellCount, nextCombo);
-        dispatchScore({ type: 'ADD_SCORE', points: pts });
-
-        // Spawn small floating "+pts" (Max 3, clean up after 600ms)
-        if (arrow) {
-          const head = arrow.cells[arrow.cells.length - 1];
-          const newFloatId = Date.now() + Math.random();
-          const newFloat: FloatingScoreItem = {
-            id: newFloatId,
-            text: nextCombo > 1 ? `+${pts} COMBO!` : `+${pts}`,
-            x: (head.c + 0.5) * (360 / levelConfig.gridSize),
-            y: (head.r + 0.5) * (360 / levelConfig.gridSize),
-            color: nextCombo > 1 ? '#FBBF24' : '#10E7A1',
-            createdAt: performance.now(),
-          };
-
-          setFloatingScores((prev) => [...prev.slice(-2), newFloat]);
-
-          // Add to undo history
-          setUndoHistory((hist) => [...hist, arrow]);
-        }
-
-        // Slide-out duration
-        setTimeout(() => {
-          setActiveArrows((prev) => {
-            const next = prev.filter((a) => a.id !== arrowId);
-
-            // Win condition: board is empty!
-            if (next.length === 0) {
-              setTimeout(() => {
-                const finalMistakes = mistakes;
-                let finalScore = score + pts;
-                if (finalMistakes === 0) {
-                  finalScore += 500; // Perfect level bonus
-                }
-                const stars = calculateStars(finalMistakes);
-
-                const prevRecord = progress.levelData[currentLevelNumber];
-                const isNewHigh = !prevRecord || finalScore > (prevRecord.highScore || 0);
-                setIsNewHighScore(isNewHigh);
-
-                const nextProg = updateLevelCompletion(
-                  progress,
-                  currentLevelNumber,
-                  stars,
-                  finalScore
-                );
-                setProgress(nextProg);
-
-                soundManager.playWin();
-
-                // Collection complete check (every tenth level through 150)
-                if (currentLevelNumber % 10 === 0) {
-                  const colIdx = Math.floor((currentLevelNumber - 1) / 10);
-                  const completed = COLLECTIONS[colIdx];
-                  const nextCol = COLLECTIONS[colIdx + 1] || null;
-                  const finale = currentLevelNumber === 150;
-
-                  setCompletedCollection(completed);
-                  setNextCollection(nextCol);
-                  setIsGrandFinale(finale);
-                  setShowCollectionComplete(true);
-                } else {
-                  setShowLevelComplete(true);
-                }
-              }, 200);
-            }
-
-            return next;
-          });
-
-          setEscapingArrowId(null);
-          isInteractingRef.current = false;
-        }, 1000);
-      } else {
-        // Arrow is BLOCKED!
-        setShakingArrowId(arrowId);
-        if (rayResult.blockingArrowId) {
-          setFlashBlockedArrowId(rayResult.blockingArrowId);
-        }
-        soundManager.playBlocked();
-
-        setComboCount(0);
-        setShowComboPill(false);
-        setMistakes((m) => m + 1);
-
-        setHearts((h) => {
-          const nextH = Math.max(0, h - 1);
-          if (nextH <= 0) {
-            setTimeout(() => {
-              soundManager.playLoss();
-              setShowGameOver(true);
-            }, 450);
-          }
-          return nextH;
-        });
-
-        setTimeout(() => {
-          setShakingArrowId(null);
-          setFlashBlockedArrowId(null);
-        }, 420);
-      }
-    },
-    [
-      activeArrows,
-      levelConfig.gridSize,
-      escapingArrowId,
-      hearts,
-      comboCount,
-      score,
-      mistakes,
-      currentLevelNumber,
-      progress,
-    ]
-  );
+    const finishAnimation = () => {
+      removedArrowIdsRef.current.delete(arrowId);
+      setEscapingArrows(current => current.filter(item => item.arrow.id !== arrowId));
+      escapeTimersRef.current.delete(arrowId);
+      if (activeArrowsRef.current.length !== 0 || escapeTimersRef.current.size > 0 || completionCommittedRef.current) return;
+      completionCommittedRef.current = true;
+      const finalMistakes = mistakes;
+      let finalScore = score + pts + (finalMistakes === 0 ? 500 : 0);
+      const stars = calculateStars(finalMistakes);
+      const previous = progress.levelData[currentLevelNumber];
+      setIsNewHighScore(!previous || finalScore > (previous.highScore || 0));
+      setProgress(updateLevelCompletion(progress, currentLevelNumber, stars, finalScore));
+      soundManager.playWin();
+      if (currentLevelNumber % 10 === 0) {
+        const index = Math.floor((currentLevelNumber - 1) / 10);
+        setCompletedCollection(COLLECTIONS[index] || null);
+        setNextCollection(COLLECTIONS[index + 1] || null);
+        setIsGrandFinale(currentLevelNumber === 300);
+        setShowCollectionComplete(true);
+      } else setShowLevelComplete(true);
+    };
+    const timer = window.setTimeout(finishAnimation, animationDuration);
+    escapeTimersRef.current.set(arrowId, timer);
+  }, [hearts, levelConfig.gridSize, comboCount, mistakes, score, progress, currentLevelNumber]);
 
   const handleArrowSelectRef = useRef<(arrowId: string) => void>(() => {});
   handleArrowSelectRef.current = handleArrowSelect;
@@ -388,12 +325,19 @@ export default function App() {
 
   // Undo (Z)
   const handleUndo = useCallback(() => {
-    if (undoHistory.length === 0 || escapingArrowId || isInteractingRef.current) return;
+    if (undoHistory.length === 0) return;
     const lastArrow = undoHistory[undoHistory.length - 1];
+    const timer = escapeTimersRef.current.get(lastArrow.id);
+    if (timer !== undefined) window.clearTimeout(timer);
+    escapeTimersRef.current.delete(lastArrow.id);
+    removedArrowIdsRef.current.delete(lastArrow.id);
+    setEscapingArrows(current => current.filter(item => item.arrow.id !== lastArrow.id));
     setUndoHistory((hist) => hist.slice(0, -1));
-    setActiveArrows((prev) => [...prev, lastArrow]);
+    const restored = [...activeArrowsRef.current, lastArrow];
+    activeArrowsRef.current = restored;
+    setActiveArrows(restored);
     soundManager.playClick();
-  }, [undoHistory, escapingArrowId]);
+  }, [undoHistory]);
 
   // Hint (H)
   const handleHint = useCallback(() => {
@@ -570,7 +514,7 @@ export default function App() {
             arrows={activeArrows}
             isDarkTheme={isDark}
             colorBlindMode={settings.colorBlindMode}
-            escapingArrowId={escapingArrowId}
+            escapingArrows={escapingArrows}
             shakingArrowId={shakingArrowId}
             flashBlockedArrowId={flashBlockedArrowId}
             hintedArrowId={hintedArrowId}
