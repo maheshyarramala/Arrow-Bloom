@@ -341,17 +341,20 @@ export default function App() {
 
   // Hint (H)
   const handleHint = useCallback(() => {
-    if (hintsLeft <= 0 || activeArrows.length === 0) return;
-    const target = getHintArrow(activeArrows, levelConfig.solutionOrder, levelConfig.gridSize);
-    if (target) {
-      setHintsLeft((h) => h - 1);
-      setHintedArrowId(target.id);
-      soundManager.playHint();
-      setTimeout(() => {
-        setHintedArrowId(null);
-      }, 2000);
+    const boardNow = activeArrowsRef.current;
+    if (hintsLeft <= 0 || boardNow.length === 0 || isPreparingLevel) return;
+    // Resolve against the authoritative live board so rapid taps/animations
+    // cannot leave Hint looking at a stale React render.
+    const target = getHintArrow(boardNow, levelConfig.solutionOrder, levelConfig.gridSize);
+    if (!target) {
+      soundManager.playBlocked();
+      return;
     }
-  }, [hintsLeft, activeArrows, levelConfig]);
+    setHintsLeft((remaining) => Math.max(0, remaining - 1));
+    setHintedArrowId(target.id);
+    soundManager.playHint();
+    window.setTimeout(() => setHintedArrowId((current) => current === target.id ? null : current), 2800);
+  }, [hintsLeft, levelConfig, isPreparingLevel]);
 
   // Centralize screen changes so overlays never remain above Home or Levels.
   const goHome = useCallback(() => {

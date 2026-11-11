@@ -55,6 +55,8 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
   const focusedArrowIndexRef = useRef(0);
   const focusActiveRef = useRef(false);
   const pointerRef = useRef({ down: false, dragging: false, x: 0, y: 0, startX: 0, startY: 0 });
+  const activePointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchRef = useRef<{ distance: number; zoom: number; centerX: number; centerY: number; panX: number; panY: number } | null>(null);
   const fpsLabelRef = useRef<HTMLDivElement>(null);
   const fpsStatsRef = useRef({ last: 0, frames: 0, badSince: 0 });
   const cellSizeRef = useRef(1);
@@ -111,7 +113,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.strokeStyle = color;
-    ctx.lineWidth = Math.max(2.4, cell * 0.30);
+    ctx.lineWidth = Math.max(1.6, cell * 0.21);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     if (glow && !performanceMode) {
@@ -125,7 +127,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       ctx.globalAlpha *= 0.22;
       ctx.stroke();
       ctx.globalAlpha = alpha;
-      ctx.lineWidth = Math.max(2.4, cell * 0.30);
+      ctx.lineWidth = Math.max(1.6, cell * 0.21);
     }
     ctx.beginPath();
     for (let i = 0; i < cells.length; i++) {
@@ -142,9 +144,9 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     const py = dc;
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.moveTo(hx + dc * cell * 0.44, hy + dr * cell * 0.44);
-    ctx.lineTo(hx - dc * cell * 0.08 + px * cell * 0.32, hy - dr * cell * 0.08 + py * cell * 0.32);
-    ctx.lineTo(hx - dc * cell * 0.08 - px * cell * 0.32, hy - dr * cell * 0.08 - py * cell * 0.32);
+    ctx.moveTo(hx + dc * cell * 0.34, hy + dr * cell * 0.44);
+    ctx.lineTo(hx - dc * cell * 0.08 + px * cell * 0.25, hy - dr * cell * 0.08 + py * cell * 0.32);
+    ctx.lineTo(hx - dc * cell * 0.08 - px * cell * 0.25, hy - dr * cell * 0.08 - py * cell * 0.32);
     ctx.closePath();
     ctx.fill();
     if (colorBlindMode) {
@@ -251,7 +253,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
         return {x:path[segment].x+(path[segment+1].x-path[segment].x)*t,y:path[segment].y+(path[segment+1].y-path[segment].y)*t};
       };
       ctx.save();
-      ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=Math.max(2.4,cell*.30);
+      ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=Math.max(1.6,cell*.21);
       ctx.lineCap='round'; ctx.lineJoin='round'; ctx.globalAlpha=1-progress*.12;
       ctx.beginPath();
       let first=true;
@@ -262,8 +264,8 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       ctx.stroke();
       const movingHead=sample((cells.length-1)*cell+advance);
       ctx.beginPath();
-      ctx.moveTo(movingHead.x+dc*cell*.44,movingHead.y+dr*cell*.44);
-      ctx.lineTo(movingHead.x-dc*cell*.08-dr*cell*.32,movingHead.y-dr*cell*.08+dc*cell*.32);
+      ctx.moveTo(movingHead.x+dc*cell*.34,movingHead.y+dr*cell*.34);
+      ctx.lineTo(movingHead.x-dc*cell*.08-dr*cell*.25,movingHead.y-dr*cell*.08+dc*cell*.25);
       ctx.lineTo(movingHead.x-dc*cell*.08+dr*cell*.32,movingHead.y-dr*cell*.08-dc*cell*.32);
       ctx.closePath();ctx.fill();ctx.restore();
       active ||= progress < 1;
@@ -283,7 +285,25 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       const arrow = arrowById.get(hintId);
       if (arrow) {
         const pulse = performanceMode ? 1 : 0.65 + Math.sin(now / 180) * 0.2;
-        drawArrow(ctx, arrow, cell, 1, 0, 0, true);
+        // Hints must be unmistakable even when the device is in low-power mode.
+        drawArrow(ctx, arrow, cell, 1, 0, 0, true, true);
+        if (hintedArrowId === arrow.id) {
+          const head = arrow.cells[arrow.cells.length - 1];
+          const [dr, dc] = DIR_DELTA[arrow.direction];
+          ctx.save();
+          ctx.globalAlpha = pulse;
+          ctx.strokeStyle = '#FDE047';
+          ctx.lineWidth = Math.max(2, cell * 0.10);
+          ctx.beginPath();
+          ctx.arc((head.c + 0.5) * cell, (head.r + 0.5) * cell, cell * 0.43, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.fillStyle = '#FDE047';
+          ctx.font = `900 ${Math.max(10, cell * 0.38)}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('!', (head.c + 0.5 + dc * 0.58) * cell, (head.r + 0.5 + dr * 0.58) * cell);
+          ctx.restore();
+        }
         if (tutorialArrowId === arrow.id) {
           const head = arrow.cells[arrow.cells.length - 1];
           const [dr, dc] = DIR_DELTA[arrow.direction];
@@ -404,7 +424,29 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
   const tapCandidateRef = useRef<string | null>(null);
   const tapAmbiguousRef = useRef(false);
   const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0 || pointerRef.current.down) return;
+    if (event.button !== 0) return;
+    const points = activePointersRef.current;
+    points.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* ignore */ }
+
+    if (points.size >= 2) {
+      const pair = Array.from(points.values()).slice(0, 2);
+      const dx = pair[1].x - pair[0].x, dy = pair[1].y - pair[0].y;
+      pinchRef.current = {
+        distance: Math.max(1, Math.hypot(dx, dy)), zoom: transformRef.current.zoom,
+        centerX: (pair[0].x + pair[1].x) / 2, centerY: (pair[0].y + pair[1].y) / 2,
+        panX: transformRef.current.x, panY: transformRef.current.y,
+      };
+      pointerRef.current.down = false;
+      pointerRef.current.dragging = false;
+      tapCandidateRef.current = null;
+      tapAmbiguousRef.current = false;
+      focusActiveRef.current = false;
+      onDraggingChange?.(true);
+      return;
+    }
+
+    if (pointerRef.current.down) return;
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     const { board } = sizeRef.current;
@@ -452,10 +494,26 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       drawDynamic(performance.now());
     }
     pointerRef.current = { down:true, dragging:false, x:event.clientX, y:event.clientY, startX:t.x, startY:t.y };
-    try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* pointer may already be cancelled */ }
-  }, [gridSize, arrows, drawDynamic]);
+  }, [gridSize, arrows, drawDynamic, onDraggingChange]);
 
   const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const points = activePointersRef.current;
+    if (points.has(event.pointerId)) points.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pinchRef.current && points.size >= 2) {
+      const pair = Array.from(points.values()).slice(0, 2);
+      const dx = pair[1].x - pair[0].x, dy = pair[1].y - pair[0].y;
+      const centerX = (pair[0].x + pair[1].x) / 2, centerY = (pair[0].y + pair[1].y) / 2;
+      const pinch = pinchRef.current;
+      const nextZoom = Math.max(1, Math.min(4, pinch.zoom * Math.hypot(dx, dy) / pinch.distance));
+      const maxPan = (sizeRef.current.board * (nextZoom - 1)) / 2 + 50;
+      const x = nextZoom === 1 ? 0 : Math.max(-maxPan, Math.min(maxPan, pinch.panX + centerX - pinch.centerX));
+      const y = nextZoom === 1 ? 0 : Math.max(-maxPan, Math.min(maxPan, pinch.panY + centerY - pinch.centerY));
+      transformRef.current = { zoom: nextZoom, x, y };
+      updateWrapperTransform();
+      onZoomChange(nextZoom);
+      onPanChange({ x, y });
+      return;
+    }
     const p = pointerRef.current;
     if (!p.down) return;
     const dx = event.clientX - p.x, dy = event.clientY - p.y;
@@ -468,9 +526,20 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     transformRef.current.x = Math.max(-maxPan,Math.min(maxPan,p.startX+dx));
     transformRef.current.y = Math.max(-maxPan,Math.min(maxPan,p.startY+dy));
     updateWrapperTransform(); drawDynamic(performance.now());
-  }, [updateWrapperTransform, drawDynamic, onDraggingChange]);
+  }, [updateWrapperTransform, drawDynamic, onDraggingChange, onZoomChange, onPanChange]);
 
   const handlePointerUp = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const wasPinching = Boolean(pinchRef.current);
+    activePointersRef.current.delete(event.pointerId);
+    if (wasPinching) {
+      pinchRef.current = null;
+      pointerRef.current.down = false;
+      pointerRef.current.dragging = false;
+      tapCandidateRef.current = null;
+      tapAmbiguousRef.current = false;
+      onDraggingChange?.(false);
+      return;
+    }
     const p = pointerRef.current;
     if (!p.down) return;
     if (p.dragging) onPanChange({x:transformRef.current.x,y:transformRef.current.y});
@@ -478,11 +547,12 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     if (p.dragging) onDraggingChange?.(false);
     pointerRef.current.down=false; pointerRef.current.dragging=false;
     tapCandidateRef.current=null; tapAmbiguousRef.current=false; focusActiveRef.current=false;
-    try { if(event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); } catch { /* ignore */ }
   }, [onPanChange, onDraggingChange, onArrowSelect]);
 
-  const handlePointerCancel = useCallback(() => {
+  const handlePointerCancel = useCallback((event?: React.PointerEvent<HTMLDivElement>) => {
+    if (event) activePointersRef.current.delete(event.pointerId);
     pointerRef.current.down=false; pointerRef.current.dragging=false;
+    pinchRef.current=null;
     tapCandidateRef.current=null; tapAmbiguousRef.current=false; focusActiveRef.current=false;
     onDraggingChange?.(false);
   }, [onDraggingChange]);

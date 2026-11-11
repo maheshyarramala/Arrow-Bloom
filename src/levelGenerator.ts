@@ -395,7 +395,7 @@ function buildSingleLevelCandidate(
   const directions: Direction[] = ['up', 'down', 'left', 'right'];
 
   // Snake generation parameters
-  const targetCoverage = 0.90; // aim for >=90%
+  const targetCoverage = levelNumber <= 2 ? 0.90 : 0.96; // denser boards create more individual arrows
   const targetCoveredCells = Math.floor(playableCells.length * targetCoverage);
 
   let currentCoveredCells = 0;
@@ -421,9 +421,10 @@ function buildSingleLevelCandidate(
     if (!startCell) break;
 
     // Determine snake target length
-    let targetLen = Math.floor(rng() * (maxLen - minLen + 1)) + minLen;
+    const densityScale = levelNumber <= 2 ? 1 : 0.78;
+        let targetLen = Math.max(2, Math.floor((Math.floor(rng() * (maxLen - minLen + 1)) + minLen) * densityScale));
     if (allowMegaSnakes && rng() < 0.12) {
-      targetLen = Math.min(36, Math.floor(rng() * 16) + 20); // 20..36
+      targetLen = Math.min(30, Math.floor(rng() * 12) + 18); // 20..36
     }
 
     const path: CellCoord[] = [startCell];
