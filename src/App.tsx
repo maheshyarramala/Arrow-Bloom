@@ -103,7 +103,7 @@ export default function App() {
   const [hintedArrowId, setHintedArrowId] = useState<string | null>(null);
 
   // Animations & Interaction lock
-  const [escapingArrowId, setEscapingArrowId] = useState<string | null>(null);
+  const [escapingArrows, setEscapingArrows] = useState<Array<{ arrow: ArrowData; startedAt: number; duration: number }>>([]);
   const [shakingArrowId, setShakingArrowId] = useState<string | null>(null);
   const [flashBlockedArrowId, setFlashBlockedArrowId] = useState<string | null>(null);
   const isInteractingRef = useRef<boolean>(false);
@@ -195,7 +195,7 @@ export default function App() {
       setUndoHistory([]);
       setHintsLeft(extraHint ? 4 : 3);
       setHintedArrowId(null);
-      setEscapingArrowId(null);
+      setEscapingArrows([]);
       completionCommittedRef.current = false;
       removedArrowIdsRef.current.clear();
       escapeTimersRef.current.forEach(timer => window.clearTimeout(timer));
@@ -252,9 +252,11 @@ export default function App() {
     const nextBoard = boardNow.filter(item => item.id !== arrowId);
     activeArrowsRef.current = nextBoard;
     setActiveArrows(nextBoard);
-    setEscapingArrowId(arrowId);
+    const animationDuration = Math.min(1900, Math.max(650, 420 + arrow.cells.length * 24));
+    setEscapingArrows(current => [...current.filter(item => item.arrow.id !== arrowId), { arrow, startedAt: nowForAnimation, duration: animationDuration }]);
 
     const now = performance.now();
+    const nowForAnimation = now;
     const diff = now - lastClearTimeRef.current;
     const nextCombo = lastClearTimeRef.current > 0 && diff < 1200 ? comboCount + 1 : 1;
     setComboCount(nextCombo);
@@ -279,7 +281,7 @@ export default function App() {
 
     const finishAnimation = () => {
       removedArrowIdsRef.current.delete(arrowId);
-      setEscapingArrowId(current => current === arrowId ? null : current);
+      setEscapingArrows(current => current.filter(item => item.arrow.id !== arrowId));
       escapeTimersRef.current.delete(arrowId);
       if (activeArrowsRef.current.length !== 0 || completionCommittedRef.current) return;
       completionCommittedRef.current = true;
@@ -298,7 +300,7 @@ export default function App() {
         setShowCollectionComplete(true);
       } else setShowLevelComplete(true);
     };
-    const timer = window.setTimeout(finishAnimation, Math.min(1800, 650 + arrow.cells.length * 18));
+    const timer = window.setTimeout(finishAnimation, animationDuration);
     escapeTimersRef.current.set(arrowId, timer);
   }, [hearts, levelConfig.gridSize, comboCount, mistakes, score, progress, currentLevelNumber]);
 
@@ -507,7 +509,7 @@ export default function App() {
             arrows={activeArrows}
             isDarkTheme={isDark}
             colorBlindMode={settings.colorBlindMode}
-            escapingArrowId={escapingArrowId}
+            escapingArrows={escapingArrows}
             shakingArrowId={shakingArrowId}
             flashBlockedArrowId={flashBlockedArrowId}
             hintedArrowId={hintedArrowId}
