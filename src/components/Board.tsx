@@ -58,6 +58,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
   const fpsLabelRef = useRef<HTMLDivElement>(null);
   const fpsStatsRef = useRef({ last: 0, frames: 0, badSince: 0 });
   const cellSizeRef = useRef(1);
+  const escapeGeometryRef = useRef(new Map<string, { path: Array<{x:number;y:number}>; cumulative: Float32Array }>());
 
   const arrowById = useMemo(() => new Map(arrows.map(arrow => [arrow.id, arrow])), [arrows]);
 
@@ -227,13 +228,19 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       if (cells.length < 2) continue;
       const elapsed = Math.max(0, now - animation.startedAt);
       const progress = Math.min(1, elapsed / animation.duration);
-      const path: Array<{x:number;y:number}> = cells.map(point => ({x:(point.c+.5)*cell,y:(point.r+.5)*cell}));
+      let geometry = escapeGeometryRef.current.get(arrow.id);
+      if (!geometry || geometry.path.length !== cells.length + 1) {
+        const path: Array<{x:number;y:number}> = cells.map(point => ({x:(point.c+.5)*cell,y:(point.r+.5)*cell}));
+        const [headDr,headDc] = DIR_DELTA[arrow.direction];
+        const head = path[path.length-1];
+        path.push({x:head.x+headDc*(board+cell*2),y:head.y+headDr*(board+cell*2)});
+        const cumulative = new Float32Array(path.length);
+        for(let i=1;i<path.length;i++) cumulative[i]=cumulative[i-1]+Math.hypot(path[i].x-path[i-1].x,path[i].y-path[i-1].y);
+        geometry = {path,cumulative};
+        escapeGeometryRef.current.set(arrow.id,geometry);
+      }
+      const {path,cumulative} = geometry;
       const [dr,dc] = DIR_DELTA[arrow.direction];
-      const head = path[path.length-1];
-      const exitLength = board + cell * 2;
-      path.push({x:head.x+dc*exitLength,y:head.y+dr*exitLength});
-      const cumulative = new Float32Array(path.length);
-      for(let i=1;i<path.length;i++) cumulative[i]=cumulative[i-1]+Math.hypot(path[i].x-path[i-1].x,path[i].y-path[i-1].y);
       const advance = progress * (board + (cells.length-1)*cell + cell*2);
       const color = PALETTE[arrow.colorIndex % PALETTE.length] || '#FF2A85';
       const sample = (distance:number) => {
