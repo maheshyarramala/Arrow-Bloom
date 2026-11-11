@@ -421,7 +421,8 @@ function buildSingleLevelCandidate(
     if (!startCell) break;
 
     // Determine snake target length
-    const densityScale = levelNumber <= 2 ? 1 : 0.78;\n    let targetLen = Math.max(2, Math.floor((Math.floor(rng() * (maxLen - minLen + 1)) + minLen) * densityScale));
+    const densityScale = levelNumber <= 2 ? 1 : 0.78;
+        let targetLen = Math.max(2, Math.floor((Math.floor(rng() * (maxLen - minLen + 1)) + minLen) * densityScale));
     if (allowMegaSnakes && rng() < 0.12) {
       targetLen = Math.min(30, Math.floor(rng() * 12) + 18); // 20..36
     }
