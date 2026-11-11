@@ -148,6 +148,38 @@ COLLECTIONS.push(
   }
 );
 
+
+ 
+// Extended campaign: collections 16–30 (levels 151–300).
+const lateWorlds: Array<[string, string, string]> = [
+  ["Ancient Ruins", "Lost temples, relics and forgotten cities", "#D6A15D"],
+  ["Wild Kingdom", "Predators, birds and untamed wilderness", "#84CC16"],
+  ["Machines", "Gears, engines and intricate mechanisms", "#94A3B8"],
+  ["Underworld", "Caves, crystals and volcanic wonders", "#A78BFA"],
+  ["Festivals", "Celebrations, lanterns and colourful traditions", "#F472B6"],
+  ["Arctic", "Icebergs, polar animals and frozen forms", "#67E8F9"],
+  ["Desert", "Dunes, oases and desert landmarks", "#FBBF24"],
+  ["Inventions", "Clever devices and engineering icons", "#38BDF8"],
+  ["Dreamscape", "Surreal symbols and fantasy silhouettes", "#C084FC"],
+  ["Guardians", "Mythic protectors and legendary creatures", "#FB7185"],
+  ["Botanical", "Leaves, flowers and exotic plants", "#4ADE80"],
+  ["Deep Space", "Constellations and distant worlds", "#818CF8"],
+  ["Architecture", "Famous structures and bold geometry", "#F59E0B"],
+  ["Elements", "Fire, water, earth and air", "#22D3EE"],
+  ["Grandmaster", "The ultimate 300-level challenge", "#FDE047"],
+];
+lateWorlds.forEach(([name, subtitle, accentColor], index) => {
+  const id = 16 + index;
+  const start = (id - 1) * 10 + 1;
+  COLLECTIONS.push({
+    id, name, theme: name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+    levels: Array.from({ length: 10 }, (_, i) => start + i),
+    subtitle, accentColor,
+    gradientDark: "from-slate-950 via-indigo-950 to-black",
+    gradientLight: "from-slate-100 via-indigo-100 to-violet-100",
+  });
+});
+
 // Seeded PRNG: Mulberry32
 export function createRNG(seed: number) {
   let s = seed >>> 0;
@@ -195,7 +227,7 @@ function hasConfusingUTurn(path: CellCoord[]): boolean {
 
 // Compute level parameters (Grid size, snake lengths)
 export function getLevelParams(level: number) {
-  const collectionIdx = Math.min(14, Math.floor((level - 1) / 10));
+  const collectionIdx = Math.min(29, Math.floor((level - 1) / 10));
   const collection = COLLECTIONS[collectionIdx];
   const step = ((level - 1) % 10) / 9;
   let gridSize: number; let minLen: number; let maxLen: number;
@@ -212,7 +244,7 @@ export function getLevelParams(level: number) {
     maxLen = Math.round(18 + step * 12 + tier);
   }
   if (level === 1) { gridSize = 10; minLen = 3; maxLen = 4; }
-  gridSize = Math.min(34, gridSize);
+  gridSize = Math.min(44, gridSize);
   return { collection, gridSize, minLen, maxLen };
 }
 // Ray calculation from head in direction towards grid edge
@@ -598,10 +630,10 @@ function meetsDifficultyTargets(level: number, candidate: LevelConfig): boolean 
 
   // Linear ramp:
   // depth: 3 on level 1 rising to 18 on level 50
-  const requiredDepth = Math.max(2, Math.round(3 + (level / 150) * 14));
+  const requiredDepth = Math.max(2, Math.round(3 + (level / 300) * 25));
 
   // initialFree: <= 25% on level 1, falling to <= 6% on level 50
-  const maxInitialPct = Math.max(0.06, 0.25 - (level / 150) * 0.19);
+  const maxInitialPct = Math.max(0.06, 0.25 - (level / 300) * 0.225);
   const maxInitialCount = Math.max(2, Math.floor(totalArrows * maxInitialPct));
 
   // Traps: >= 25% near-miss traps
@@ -622,7 +654,7 @@ export function getLevel(
   levelNumber: number,
   options: { maxAttempts?: number; timeBudgetMs?: number } = {}
 ): LevelConfig {
-  const safeLevel = Math.max(1, Math.min(150, Math.floor(levelNumber)));
+  const safeLevel = Math.max(1, Math.min(300, Math.floor(levelNumber)));
   if (levelCache.has(safeLevel)) return levelCache.get(safeLevel)!;
 
   const started = performance.now();
