@@ -26,7 +26,7 @@ export const Home: React.FC<HomeProps> = ({
   onOpenSettings,
 }) => {
   const currentLvl = Math.min(300, progress.unlockedLevel);
-  const currentShape = SHAPE_DEFINITIONS[currentLvl] || SHAPE_DEFINITIONS[1];
+  const currentShape = SHAPE_DEFINITIONS[currentLvl] || SHAPE_DEFINITIONS[((currentLvl - 1) % 150) + 1] || SHAPE_DEFINITIONS[1];
 
   let totalStars = 0;
   let clearedCount = 0;
