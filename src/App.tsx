@@ -427,23 +427,25 @@ export default function App() {
     setScreen('levels');
   }, []);
 
-  // Keep a history entry inside the app so Android/browser Back navigates screens
-  // instead of immediately closing the WebView while a game is active.
+  const navigationStateRef = useRef({ screen, showLevelComplete, showGameOver, showCollectionComplete });
+  navigationStateRef.current = { screen, showLevelComplete, showGameOver, showCollectionComplete };
+
+  // Keep one guarded history entry so Android/browser Back navigates within
+  // the app instead of closing the WebView from an active game screen.
   useEffect(() => {
     window.history.pushState({ arrowBloom: true }, '');
     const onPopState = () => {
       window.history.pushState({ arrowBloom: true }, '');
-      if (showLevelComplete || showGameOver || showCollectionComplete) {
+      const current = navigationStateRef.current;
+      if (current.showLevelComplete || current.showGameOver || current.showCollectionComplete || current.screen === 'game') {
         goLevels();
-      } else if (screen === 'game') {
-        goLevels();
-      } else if (screen !== 'home') {
+      } else if (current.screen !== 'home') {
         goHome();
       }
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
-  }, [screen, showLevelComplete, showGameOver, showCollectionComplete, goHome, goLevels]);
+  }, [goHome, goLevels]);
 
   // Keyboard Shortcuts (R to restart, Z to undo, H for hint, Esc for back)
   useEffect(() => {
