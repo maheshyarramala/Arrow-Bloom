@@ -396,8 +396,10 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     return index >= 0 ? arrows[index]?.id || null : null;
   }, [gridSize, arrows]);
 
+  const tapCandidateRef = useRef<string | null>(null);
+  const tapAmbiguousRef = useRef(false);
   const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0) return;
+    if (event.button !== 0 || pointerRef.current.down) return;
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
     const { board } = sizeRef.current;
@@ -405,42 +407,80 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     const x = (event.clientX - rect.left - rect.width / 2 - t.x) / t.zoom + board / 2;
     const y = (event.clientY - rect.top - rect.height / 2 - t.y) / t.zoom + board / 2;
     const cell = board / gridSize;
-    const col = Math.floor(x / cell);
-    const row = Math.floor(y / cell);
-    const target = cellOwnerAt(row, col);
-    if (target) {
-      event.preventDefault();
-      onArrowSelect(target);
-      return;
+    const col = Math.floor(x / cell), row = Math.floor(y / cell);
+    const radius = Math.min(24, Math.max(16, cell * 0.6)) / t.zoom;
+    const radiusCells = Math.max(1, Math.ceil(radius / cell));
+    const candidates = new Set<number>();
+    const owner = ownerRef.current;
+    for (let rr = Math.max(0, row - radiusCells); rr <= Math.min(gridSize - 1, row + radiusCells); rr++) {
+      for (let cc = Math.max(0, col - radiusCells); cc <= Math.min(gridSize - 1, col + radiusCells); cc++) {
+        const idx = owner[rr * gridSize + cc];
+        if (idx >= 0) candidates.add(idx);
+      }
     }
-    pointerRef.current = { down: true, dragging: false, x: event.clientX, y: event.clientY, startX: t.x, startY: t.y };
-    (event.currentTarget as HTMLDivElement).setPointerCapture(event.pointerId);
-  }, [gridSize, cellOwnerAt, onArrowSelect]);
+    let bestId: string | null = null, bestDistance = Infinity, secondDistance = Infinity;
+    const pointSegmentDistance = (px:number, py:number, ax:number, ay:number, bx:number, by:number) => {
+      const vx=bx-ax, vy=by-ay, len=vx*vx+vy*vy;
+      const q=len ? Math.max(0,Math.min(1,((px-ax)*vx+(py-ay)*vy)/len)) : 0;
+      return Math.hypot(px-(ax+q*vx),py-(ay+q*vy));
+    };
+    for (const idx of candidates) {
+      const arrow = arrows[idx];
+      if (!arrow) continue;
+      let distance = Infinity;
+      for (let j=1;j<arrow.cells.length;j++) {
+        const a=arrow.cells[j-1], b=arrow.cells[j];
+        distance=Math.min(distance,pointSegmentDistance(x,y,(a.c+.5)*cell,(a.r+.5)*cell,(b.c+.5)*cell,(b.r+.5)*cell));
+      }
+      const head=arrow.cells[arrow.cells.length-1];
+      distance=Math.min(distance,Math.max(0,Math.hypot(x-(head.c+.5)*cell,y-(head.r+.5)*cell)-cell*0.6));
+      distance*=t.zoom;
+      if(distance<bestDistance){secondDistance=bestDistance;bestDistance=distance;bestId=arrow.id;}
+      else if(distance<secondDistance) secondDistance=distance;
+    }
+    const hitRadius = Math.min(24,Math.max(16,cell*.6));
+    tapAmbiguousRef.current = bestDistance<=hitRadius && secondDistance-bestDistance<=4;
+    tapCandidateRef.current = bestDistance<=hitRadius && !tapAmbiguousRef.current ? bestId : null;
+    if (tapCandidateRef.current) {
+      focusedArrowIndexRef.current = arrows.findIndex(a=>a.id===tapCandidateRef.current);
+      focusActiveRef.current = true;
+      drawDynamic(performance.now());
+    }
+    pointerRef.current = { down:true, dragging:false, x:event.clientX, y:event.clientY, startX:t.x, startY:t.y };
+    try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* pointer may already be cancelled */ }
+  }, [gridSize, arrows, drawDynamic]);
 
   const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     const p = pointerRef.current;
-    if (!p.down || transformRef.current.zoom <= 1) return;
-    const dx = event.clientX - p.x;
-    const dy = event.clientY - p.y;
-    if (Math.abs(dx) + Math.abs(dy) > 3 && !p.dragging) { p.dragging = true; onDraggingChange?.(true); }
-    if (!p.dragging) return;
+    if (!p.down) return;
+    const dx = event.clientX - p.x, dy = event.clientY - p.y;
+    if (Math.hypot(dx,dy) > (event.pointerType === 'mouse' ? 5 : 10) && !p.dragging) {
+      p.dragging = true; tapCandidateRef.current = null; focusActiveRef.current = false; onDraggingChange?.(true);
+    }
+    if (!p.dragging || transformRef.current.zoom <= 1) return;
     const board = sizeRef.current.board;
     const maxPan = (board * (transformRef.current.zoom - 1)) / 2 + 50;
-    const x = Math.max(-maxPan, Math.min(maxPan, p.startX + dx));
-    const y = Math.max(-maxPan, Math.min(maxPan, p.startY + dy));
-    transformRef.current.x = x;
-    transformRef.current.y = y;
-    updateWrapperTransform();
-    drawDynamic(performance.now());
+    transformRef.current.x = Math.max(-maxPan,Math.min(maxPan,p.startX+dx));
+    transformRef.current.y = Math.max(-maxPan,Math.min(maxPan,p.startY+dy));
+    updateWrapperTransform(); drawDynamic(performance.now());
   }, [updateWrapperTransform, drawDynamic, onDraggingChange]);
 
-  const handlePointerUp = useCallback(() => {
+  const handlePointerUp = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     const p = pointerRef.current;
-    if (p.down && p.dragging) onPanChange({ x: transformRef.current.x, y: transformRef.current.y });
+    if (!p.down) return;
+    if (p.dragging) onPanChange({x:transformRef.current.x,y:transformRef.current.y});
+    else if (!tapAmbiguousRef.current && tapCandidateRef.current) onArrowSelect(tapCandidateRef.current);
     if (p.dragging) onDraggingChange?.(false);
-    pointerRef.current.down = false;
-    pointerRef.current.dragging = false;
-  }, [onPanChange, onDraggingChange]);
+    pointerRef.current.down=false; pointerRef.current.dragging=false;
+    tapCandidateRef.current=null; tapAmbiguousRef.current=false; focusActiveRef.current=false;
+    try { if(event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); } catch { /* ignore */ }
+  }, [onPanChange, onDraggingChange, onArrowSelect]);
+
+  const handlePointerCancel = useCallback(() => {
+    pointerRef.current.down=false; pointerRef.current.dragging=false;
+    tapCandidateRef.current=null; tapAmbiguousRef.current=false; focusActiveRef.current=false;
+    onDraggingChange?.(false);
+  }, [onDraggingChange]);
 
   const handleWheel = useCallback((event: React.WheelEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -475,7 +515,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
   }, [arrows, onArrowSelect, drawDynamic]);
 
   return (
-    <div ref={containerRef} className="relative flex-1 w-full h-full flex items-center justify-center overflow-hidden select-none outline-none" style={{ touchAction: 'none' }} tabIndex={0} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp} onWheel={handleWheel} onKeyDown={handleKeyDown}>
+    <div ref={containerRef} className="relative flex-1 w-full h-full flex items-center justify-center overflow-hidden select-none outline-none" style={{ touchAction: 'none' }} tabIndex={0} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={handlePointerCancel} onLostPointerCapture={handlePointerCancel} onWheel={handleWheel} onKeyDown={handleKeyDown}>
       {debugOverlay && <div ref={fpsLabelRef} className="absolute left-2 top-2 z-50 rounded bg-black/80 px-2 py-1 text-[10px] font-mono text-lime-300 pointer-events-none">-- FPS · Gen {generationMs} ms</div>}
       <div ref={wrapperRef} className="relative select-none" style={{ transformOrigin: 'center center', willChange: 'transform' }}>
         <canvas ref={staticRef} className="absolute inset-0 pointer-events-none" />
