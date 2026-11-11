@@ -254,7 +254,7 @@ export const CollectionCompleteModal: React.FC<CollectionCompleteModalProps> = (
           </h2>
           <p className="text-xs text-white/80 mt-2 px-2 leading-relaxed">
             {isGameFinale
-              ? 'You have solved all 150 silhouette puzzles! You have mastered the Grand Master Maze!'
+              ? 'You have solved all 300 silhouette puzzles! You have mastered the Grand Master Maze!'
               : `You have cleared all 10 puzzles in ${completedCollection.name}! ${
                   nextCollection ? `Next up: ${nextCollection.name}!` : ''
                 }`}
