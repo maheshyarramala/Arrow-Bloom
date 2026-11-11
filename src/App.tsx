@@ -177,6 +177,7 @@ export default function App() {
     const requestId = ++levelRequestIdRef.current;
     setIsPreparingLevel(false);
     setActiveArrows([]);
+    pendingArrowTapsRef.current = [];
     setLevelConfig(EMPTY_LEVEL);
     const spinnerTimer = window.setTimeout(() => setIsPreparingLevel(true), 150);
     setCurrentLevelNumber(lvlNum);
