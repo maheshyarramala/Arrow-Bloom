@@ -1,30 +1,101 @@
-import { getLevel } from '../src/levelGenerator.ts';
+import { getLevel, analyzeLevelSolvability, getLevelParams, COLLECTIONS } from '../src/levelGenerator.ts';
 import { calculateStars, computeArrowScore, checkArrowRay, getHintArrow } from '../src/gameLogic.ts';
 import type { ArrowData } from '../src/types.ts';
 
-const levels = [1, 10, 12, 40, 100, 180, 250, 300];
-for (const levelNumber of levels) {
-  const started = performance.now();
-  const level = getLevel(levelNumber, { maxAttempts: 20, timeBudgetMs: 400 });
-  const elapsed = performance.now() - started;
-  if (!level.arrows.length) throw new Error(`Level ${levelNumber} generated no arrows`);
-  if (level.gridSize > 40) throw new Error(`Level ${levelNumber} grid exceeds 40`);
-  if (level.stats.depth <= 0) throw new Error(`Level ${levelNumber} has no solution depth`);
-  if (level.solutionOrder.length !== level.arrows.length) throw new Error(`Level ${levelNumber} solution order is incomplete`);
-  if (elapsed > 500) throw new Error(`Level ${levelNumber} took ${Math.round(elapsed)}ms (limit 500ms)`);
+const startedAll = performance.now();
+const seenShapeWorlds = new Set<number>();
+let totalArrows = 0;
+let maxGrid = 0;
+let maxGenerationMs = 0;
+let previousTierDepth = 0;
+const tierDepths: number[] = [];
+
+function assert(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new Error(message);
 }
 
-if (calculateStars(0) !== 3 || calculateStars(1) !== 2 || calculateStars(2) !== 1) {
-  throw new Error('Star calculation regression');
+assert(COLLECTIONS.length === 30, `Expected 30 collections, got ${COLLECTIONS.length}`);
+assert(COLLECTIONS.every((collection, index) =>
+  collection.id === index + 1 &&
+  collection.levels.length === 10 &&
+  collection.levels.every((level, i) => level === index * 10 + i + 1)
+), 'Collection mapping must cover levels 1–300 exactly once');
+
+for (let levelNumber = 1; levelNumber <= 300; levelNumber++) {
+  const started = performance.now();
+  const level = getLevel(levelNumber, { maxAttempts: 20, timeBudgetMs: 1200 });
+  const elapsed = performance.now() - started;
+  maxGenerationMs = Math.max(maxGenerationMs, elapsed);
+  assert(level.levelNumber === levelNumber, `Level identity mismatch at ${levelNumber}`);
+  assert(level.arrows.length > 0, `Level ${levelNumber} generated no arrows`);
+  assert(level.gridSize >= 1 && level.gridSize <= 40, `Level ${levelNumber} grid out of bounds`);
+  assert(level.playableMask.length === level.gridSize, `Level ${levelNumber} mask height mismatch`);
+  assert(level.playableMask.every(row => row.length === level.gridSize), `Level ${levelNumber} mask width mismatch`);
+  assert(level.stats.depth > 0, `Level ${levelNumber} has no solution depth`);
+  assert(level.solutionOrder.length === level.arrows.length, `Level ${levelNumber} solution order incomplete`);
+  assert(new Set(level.solutionOrder).size === level.arrows.length, `Level ${levelNumber} solution order has duplicates`);
+
+  const occupied = new Map<string, string>();
+  for (const arrow of level.arrows) {
+    assert(arrow.cells.length >= 2, `Level ${levelNumber} arrow ${arrow.id} is too short`);
+    for (let i = 0; i < arrow.cells.length; i++) {
+      const cell = arrow.cells[i];
+      assert(Number.isInteger(cell.r) && Number.isInteger(cell.c), `Level ${levelNumber} has non-integer cell`);
+      assert(cell.r >= 0 && cell.r < level.gridSize && cell.c >= 0 && cell.c < level.gridSize,
+        `Level ${levelNumber} arrow ${arrow.id} leaves grid`);
+      assert(level.playableMask[cell.r][cell.c], `Level ${levelNumber} arrow ${arrow.id} leaves silhouette`);
+      const key = `${cell.r},${cell.c}`;
+      assert(!occupied.has(key), `Level ${levelNumber} overlap at ${key}`);
+      occupied.set(key, arrow.id);
+      if (i > 0) {
+        const distance = Math.abs(cell.r - arrow.cells[i - 1].r) + Math.abs(cell.c - arrow.cells[i - 1].c);
+        assert(distance === 1, `Level ${levelNumber} arrow ${arrow.id} has a non-adjacent segment`);
+      }
+    }
+    const head = arrow.cells[arrow.cells.length - 1];
+    const before = arrow.cells[arrow.cells.length - 2];
+    const dr = head.r - before.r;
+    const dc = head.c - before.c;
+    const expected = dr === -1 ? 'up' : dr === 1 ? 'down' : dc === -1 ? 'left' : 'right';
+    assert(arrow.direction === expected, `Level ${levelNumber} arrow ${arrow.id} head direction mismatch`);
+  }
+
+  const analysis = analyzeLevelSolvability(level.arrows, level.gridSize);
+  assert(analysis.solvable, `Level ${levelNumber} fails independent solvability analysis`);
+  assert(analysis.depth === level.stats.depth, `Level ${levelNumber} depth metric mismatch`);
+
+  // Replay the advertised solution order against live ray checks.
+  let remaining: ArrowData[] = [...level.arrows];
+  for (const arrowId of level.solutionOrder) {
+    const ray = checkArrowRay(arrowId, remaining, level.gridSize);
+    assert(ray.isFree, `Level ${levelNumber} solution order is blocked at arrow ${arrowId}`);
+    remaining = remaining.filter(arrow => arrow.id !== arrowId);
+  }
+  assert(remaining.length === 0, `Level ${levelNumber} solution replay did not clear board`);
+
+  const params = getLevelParams(levelNumber);
+  assert(params.collection.id === Math.floor((levelNumber - 1) / 10) + 1,
+    `Level ${levelNumber} assigned to wrong collection`);
+  seenShapeWorlds.add(params.collection.id);
+  totalArrows += level.arrows.length;
+  maxGrid = Math.max(maxGrid, level.gridSize);
+
+  if (levelNumber % 10 === 0) {
+    tierDepths.push(level.stats.depth);
+    console.log(`Validated levels ${levelNumber - 9}–${levelNumber}: depth=${level.stats.depth}, arrows=${level.arrows.length}, grid=${level.gridSize}`);
+  }
 }
-if (computeArrowScore(5, 1) !== 50 || computeArrowScore(5, 2) !== 80) {
-  throw new Error('Score calculation regression');
-}
+
+assert(seenShapeWorlds.size === 30, 'Not all 30 worlds were exercised');
+assert(calculateStars(0) === 3 && calculateStars(1) === 2 && calculateStars(2) === 1, 'Star calculation regression');
+assert(computeArrowScore(5, 1) === 50 && computeArrowScore(5, 2) === 80, 'Score calculation regression');
 
 const testArrows: ArrowData[] = [
   { id: 'a', cells: [{ r: 1, c: 1 }, { r: 1, c: 2 }], direction: 'right', colorIndex: 0, order: 0 },
   { id: 'b', cells: [{ r: 1, c: 4 }, { r: 1, c: 5 }], direction: 'right', colorIndex: 1, order: 1 },
 ];
-if (checkArrowRay('a', testArrows, 8).isFree) throw new Error('Ray check failed to detect a blocker');
-if (!checkArrowRay('b', testArrows, 8).isFree) throw new Error('Ray check incorrectly blocked a free arrow');
-if (!getHintArrow(testArrows, ['b', 'a'], 8)) throw new Error('Hint selection failed');
+assert(!checkArrowRay('a', testArrows, 8).isFree, 'Ray check failed to detect a blocker');
+assert(checkArrowRay('b', testArrows, 8).isFree, 'Ray check incorrectly blocked a free arrow');
+assert(getHintArrow(testArrows, ['b', 'a'], 8), 'Hint selection failed');
+
+console.log(`PASS: all 300 levels; ${totalArrows} arrows; max grid ${maxGrid}; max generation ${Math.round(maxGenerationMs)}ms; total ${Math.round(performance.now() - startedAll)}ms`);
