@@ -285,7 +285,25 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       const arrow = arrowById.get(hintId);
       if (arrow) {
         const pulse = performanceMode ? 1 : 0.65 + Math.sin(now / 180) * 0.2;
-        drawArrow(ctx, arrow, cell, 1, 0, 0, true);
+        // Hints must be unmistakable even when the device is in low-power mode.
+        drawArrow(ctx, arrow, cell, 1, 0, 0, true, true);
+        if (hintedArrowId === arrow.id) {
+          const head = arrow.cells[arrow.cells.length - 1];
+          const [dr, dc] = DIR_DELTA[arrow.direction];
+          ctx.save();
+          ctx.globalAlpha = pulse;
+          ctx.strokeStyle = '#FDE047';
+          ctx.lineWidth = Math.max(2, cell * 0.10);
+          ctx.beginPath();
+          ctx.arc((head.c + 0.5) * cell, (head.r + 0.5) * cell, cell * 0.43, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.fillStyle = '#FDE047';
+          ctx.font = `900 ${Math.max(10, cell * 0.38)}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('!', (head.c + 0.5 + dc * 0.58) * cell, (head.r + 0.5 + dr * 0.58) * cell);
+          ctx.restore();
+        }
         if (tutorialArrowId === arrow.id) {
           const head = arrow.cells[arrow.cells.length - 1];
           const [dr, dc] = DIR_DELTA[arrow.direction];
