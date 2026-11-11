@@ -612,10 +612,10 @@ function meetsDifficultyTargets(level: number, candidate: LevelConfig): boolean 
 
   // Linear ramp:
   // depth: 3 on level 1 rising to 18 on level 50
-  const requiredDepth = Math.max(2, Math.round(3 + (level / 150) * 14));
+  const requiredDepth = Math.max(2, Math.round(3 + (level / 300) * 14));
 
   // initialFree: <= 25% on level 1, falling to <= 6% on level 50
-  const maxInitialPct = Math.max(0.06, 0.25 - (level / 150) * 0.19);
+  const maxInitialPct = Math.max(0.06, 0.25 - (level / 300) * 0.19);
   const maxInitialCount = Math.max(2, Math.floor(totalArrows * maxInitialPct));
 
   // Traps: >= 25% near-miss traps
