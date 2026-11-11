@@ -322,7 +322,7 @@ export default function App() {
 
           setEscapingArrowId(null);
           isInteractingRef.current = false;
-        }, 450);
+        }, 1000);
       } else {
         // Arrow is BLOCKED!
         setShakingArrowId(arrowId);
@@ -410,6 +410,41 @@ export default function App() {
     }
   }, [hintsLeft, activeArrows, levelConfig]);
 
+  // Centralize screen changes so overlays never remain above Home or Levels.
+  const goHome = useCallback(() => {
+    setShowLevelComplete(false);
+    setShowGameOver(false);
+    setShowCollectionComplete(false);
+    setIsPreparingLevel(false);
+    setScreen('home');
+  }, []);
+
+  const goLevels = useCallback(() => {
+    setShowLevelComplete(false);
+    setShowGameOver(false);
+    setShowCollectionComplete(false);
+    setIsPreparingLevel(false);
+    setScreen('levels');
+  }, []);
+
+  // Keep a history entry inside the app so Android/browser Back navigates screens
+  // instead of immediately closing the WebView while a game is active.
+  useEffect(() => {
+    window.history.pushState({ arrowBloom: true }, '');
+    const onPopState = () => {
+      window.history.pushState({ arrowBloom: true }, '');
+      if (showLevelComplete || showGameOver || showCollectionComplete) {
+        goLevels();
+      } else if (screen === 'game') {
+        goLevels();
+      } else if (screen !== 'home') {
+        goHome();
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, [screen, showLevelComplete, showGameOver, showCollectionComplete, goHome, goLevels]);
+
   // Keyboard Shortcuts (R to restart, Z to undo, H for hint, Esc for back)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -422,14 +457,14 @@ export default function App() {
       } else if (e.key === 'h' || e.key === 'H') {
         if (screen === 'game') handleHint();
       } else if (e.key === 'Escape') {
-        if (screen === 'game') setScreen('levels');
-        else if (screen !== 'home') setScreen('home');
+        if (screen === 'game') goLevels();
+        else if (screen !== 'home') goHome();
       }
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [screen, currentLevelNumber, startLevel, handleUndo, handleHint]);
+  }, [screen, currentLevelNumber, startLevel, handleUndo, handleHint, goHome, goLevels]);
 
   // Tutorial target: Level 1 free arrow glow
   const tutorialArrowId =
@@ -471,7 +506,7 @@ export default function App() {
           progress={progress}
           isDarkTheme={isDark}
           onSelectLevel={(lvl) => startLevel(lvl)}
-          onBack={() => setScreen('home')}
+          onBack={goHome}
         />
       )}
 
@@ -491,7 +526,7 @@ export default function App() {
 
       {/* Screen 4: How To Play Screen */}
       {screen === 'how-to-play' && (
-        <HowToPlay onClose={() => setScreen('home')} />
+        <HowToPlay onClose={goHome} />
       )}
 
       {/* Screen 5: Game Screen */}
@@ -506,7 +541,7 @@ export default function App() {
             theme={settings.theme}
             onToggleTheme={toggleTheme}
             onOpenSettings={openSettings}
-            onBack={backToLevels}
+            onBack={goLevels}
             onToggleDebug={import.meta.env.DEV ? togglePerfOverlay : undefined}
           />
 
@@ -581,7 +616,7 @@ export default function App() {
           hasNextLevel={currentLevelNumber < 150}
           onNextLevel={() => startLevel(currentLevelNumber + 1)}
           onReplay={() => startLevel(currentLevelNumber)}
-          onHome={() => setScreen('home')}
+          onHome={goHome}
         />
       )}
 
@@ -590,7 +625,7 @@ export default function App() {
           levelNumber={currentLevelNumber}
           onRetry={() => startLevel(currentLevelNumber)}
           onFreeHintRetry={() => startLevel(currentLevelNumber, true)}
-          onHome={() => setScreen('home')}
+          onHome={goHome}
         />
       )}
 
