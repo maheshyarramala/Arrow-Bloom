@@ -190,7 +190,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
         }
       }
     }
-  }, [gridSize, playableMask, isDarkTheme, arrowsByColor, escapingArrowId, shakingArrowId, drawArrow]);
+  }, [gridSize, playableMask, isDarkTheme, arrowsByColor, shakingArrowId, drawArrow]);
 
   const drawDynamic = useCallback((now: number) => {
     const canvas = dynamicRef.current;
