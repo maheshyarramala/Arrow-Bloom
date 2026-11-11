@@ -196,6 +196,10 @@ export default function App() {
       setHintsLeft(extraHint ? 4 : 3);
       setHintedArrowId(null);
       setEscapingArrowId(null);
+      completionCommittedRef.current = false;
+      removedArrowIdsRef.current.clear();
+      escapeTimersRef.current.forEach(timer => window.clearTimeout(timer));
+      escapeTimersRef.current.clear();
       setShakingArrowId(null);
       setFlashBlockedArrowId(null);
       setFloatingScores([]);
@@ -218,10 +222,11 @@ export default function App() {
   activeArrowsRef.current = activeArrows;
   const removedArrowIdsRef = useRef<Set<string>>(new Set());
   const escapeTimersRef = useRef<Map<string, number>>(new Map());
+  const completionCommittedRef = useRef(false);
 
   const handleArrowSelect = useCallback((arrowId: string) => {
     const boardNow = activeArrowsRef.current;
-    if (hearts <= 0 || removedArrowIdsRef.current.has(arrowId)) return;
+    if (hearts <= 0 || completionCommittedRef.current || removedArrowIdsRef.current.has(arrowId)) return;
     const arrow = boardNow.find(item => item.id === arrowId);
     if (!arrow) return;
 
@@ -276,7 +281,8 @@ export default function App() {
       removedArrowIdsRef.current.delete(arrowId);
       setEscapingArrowId(current => current === arrowId ? null : current);
       escapeTimersRef.current.delete(arrowId);
-      if (activeArrowsRef.current.length !== 0) return;
+      if (activeArrowsRef.current.length !== 0 || completionCommittedRef.current) return;
+      completionCommittedRef.current = true;
       const finalMistakes = mistakes;
       let finalScore = score + pts + (finalMistakes === 0 ? 500 : 0);
       const stars = calculateStars(finalMistakes);
