@@ -300,12 +300,12 @@ export default function App() {
 
                 soundManager.playWin();
 
-                // Collection complete check (every tenth level through 150)
+                // Collection complete check (every tenth level through 300)
                 if (currentLevelNumber % 10 === 0) {
                   const colIdx = Math.floor((currentLevelNumber - 1) / 10);
                   const completed = COLLECTIONS[colIdx];
                   const nextCol = COLLECTIONS[colIdx + 1] || null;
-                  const finale = currentLevelNumber === 150;
+                  const finale = currentLevelNumber === 300;
 
                   setCompletedCollection(completed);
                   setNextCollection(nextCol);
