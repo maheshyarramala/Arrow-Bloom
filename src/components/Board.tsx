@@ -8,7 +8,7 @@ interface BoardProps {
   arrows: ArrowData[];
   isDarkTheme?: boolean;
   colorBlindMode?: boolean;
-  escapingArrowId: string | null;
+  escapingArrows: Array<{ arrow: ArrowData; startedAt: number; duration: number }>;
   shakingArrowId: string | null;
   flashBlockedArrowId: string | null;
   hintedArrowId: string | null;
@@ -36,7 +36,7 @@ const BURST_COLORS = ['#FF2A85', '#FFD000', '#10E7A1', '#00E5FF', '#FFFFFF', '#F
 export const Board: React.FC<BoardProps> = React.memo((props) => {
   const {
     gridSize, playableMask, arrows, isDarkTheme = true, colorBlindMode = false,
-    escapingArrowId, shakingArrowId, flashBlockedArrowId, hintedArrowId,
+    escapingArrows, shakingArrowId, flashBlockedArrowId, hintedArrowId,
     tutorialArrowId, comboCount, showComboPill, floatingScores, zoomLevel,
     panOffset, onZoomChange, onPanChange, onArrowSelect, performanceMode = false,
     onPerformanceModeChange, onDraggingChange, debugOverlay = false, generationMs = 0,
@@ -184,7 +184,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       const group = arrowsByColor[color];
       for (let i = 0; i < group.length; i++) {
         const arrow = group[i];
-        if (arrow.id !== escapingArrowId && arrow.id !== shakingArrowId) {
+        if (arrow.id !== shakingArrowId) {
           drawArrow(ctx, arrow, cell, 1, 0, 0, isDarkTheme);
         }
       }
@@ -220,49 +220,46 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
         stats.frames = 0; stats.last = now;
       } else if (!stats.last) stats.last = now;
     }
-    if (escapingArrowId) {
-      const arrow = arrowById.get(escapingArrowId);
-      if (arrow) {
-        // Snake-style exit: the head moves first and each body cell follows
-        // one cell-length later, rather than translating the whole arrow at once.
-        const duration = 1000;
-        const elapsed = Math.max(0, now - animationStartRef.current);
-        const progress = Math.min(1, elapsed / duration);
-        const [dr, dc] = DIR_DELTA[arrow.direction];
-        const cells = arrow.cells;
-        const headTravel = board + Math.max(0, cells.length - 1) * cell;
-        const travel = headTravel * progress;
-        const color = PALETTE[arrow.colorIndex % PALETTE.length] || '#FF2A85';
-        ctx.save();
-        ctx.strokeStyle = color;
-        ctx.fillStyle = color;
-        ctx.lineWidth = Math.max(2.4, cell * 0.30);
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.globalAlpha = 1 - progress * 0.12;
-        ctx.beginPath();
-        for (let i = 0; i < cells.length; i++) {
-          const followDelay = (cells.length - 1 - i) * cell;
-          const offset = Math.max(0, travel - followDelay);
-          const x = (cells[i].c + 0.5) * cell + dc * offset;
-          const y = (cells[i].r + 0.5) * cell + dr * offset;
-          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-        const head = cells[cells.length - 1];
-        const hx = (head.c + 0.5) * cell + dc * travel;
-        const hy = (head.r + 0.5) * cell + dr * travel;
-        const px = -dr;
-        const py = dc;
-        ctx.beginPath();
-        ctx.moveTo(hx + dc * cell * 0.44, hy + dr * cell * 0.44);
-        ctx.lineTo(hx - dc * cell * 0.08 + px * cell * 0.32, hy - dr * cell * 0.08 + py * cell * 0.32);
-        ctx.lineTo(hx - dc * cell * 0.08 - px * cell * 0.32, hy - dr * cell * 0.08 - py * cell * 0.32);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-        active ||= progress < 1;
+    for (let animationIndex = 0; animationIndex < escapingArrows.length; animationIndex++) {
+      const animation = escapingArrows[animationIndex];
+      const arrow = animation.arrow;
+      const cells = arrow.cells;
+      if (cells.length < 2) continue;
+      const elapsed = Math.max(0, now - animation.startedAt);
+      const progress = Math.min(1, elapsed / animation.duration);
+      const path: Array<{x:number;y:number}> = cells.map(point => ({x:(point.c+.5)*cell,y:(point.r+.5)*cell}));
+      const [dr,dc] = DIR_DELTA[arrow.direction];
+      const head = path[path.length-1];
+      const exitLength = board + cell * 2;
+      path.push({x:head.x+dc*exitLength,y:head.y+dr*exitLength});
+      const cumulative = new Float32Array(path.length);
+      for(let i=1;i<path.length;i++) cumulative[i]=cumulative[i-1]+Math.hypot(path[i].x-path[i-1].x,path[i].y-path[i-1].y);
+      const advance = progress * (board + (cells.length-1)*cell + cell*2);
+      const color = PALETTE[arrow.colorIndex % PALETTE.length] || '#FF2A85';
+      const sample = (distance:number) => {
+        let segment=0;
+        while(segment<cumulative.length-2 && cumulative[segment+1]<distance) segment++;
+        const span=cumulative[segment+1]-cumulative[segment];
+        const t=span>0?Math.max(0,Math.min(1,(distance-cumulative[segment])/span)):0;
+        return {x:path[segment].x+(path[segment+1].x-path[segment].x)*t,y:path[segment].y+(path[segment+1].y-path[segment].y)*t};
+      };
+      ctx.save();
+      ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=Math.max(2.4,cell*.30);
+      ctx.lineCap='round'; ctx.lineJoin='round'; ctx.globalAlpha=1-progress*.12;
+      ctx.beginPath();
+      let first=true;
+      for(let i=0;i<cells.length;i++){
+        const point=sample(i*cell+advance);
+        if(first){ctx.moveTo(point.x,point.y);first=false;}else ctx.lineTo(point.x,point.y);
       }
+      ctx.stroke();
+      const movingHead=sample((cells.length-1)*cell+advance);
+      ctx.beginPath();
+      ctx.moveTo(movingHead.x+dc*cell*.44,movingHead.y+dr*cell*.44);
+      ctx.lineTo(movingHead.x-dc*cell*.08-dr*cell*.32,movingHead.y-dr*cell*.08+dc*cell*.32);
+      ctx.lineTo(movingHead.x-dc*cell*.08+dr*cell*.32,movingHead.y-dr*cell*.08-dc*cell*.32);
+      ctx.closePath();ctx.fill();ctx.restore();
+      active ||= progress < 1;
     }
     if (shakingArrowId) {
       const arrow = arrowById.get(shakingArrowId);
@@ -325,7 +322,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       ctx.globalAlpha = 1;
     }
     if (active && !rafRef.current) rafRef.current = requestAnimationFrame(tick);
-  }, [gridSize, arrows, escapingArrowId, shakingArrowId, flashBlockedArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, comboCount, drawArrow, performanceMode, onPerformanceModeChange, debugOverlay, generationMs, arrowById]);
+  }, [gridSize, arrows, escapingArrows, shakingArrowId, flashBlockedArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, comboCount, drawArrow, performanceMode, onPerformanceModeChange, debugOverlay, generationMs, arrowById]);
 
   const tick = useCallback((now: number) => {
     rafRef.current = 0;
@@ -344,10 +341,11 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
 
   useEffect(() => { rebuildOwner(); drawStatic(); }, [rebuildOwner, drawStatic]);
   useEffect(() => {
-    if (escapingArrowId || shakingArrowId || hintedArrowId || tutorialArrowId || floatingScores.length || showComboPill) {
+    if (escapingArrows.length || shakingArrowId || hintedArrowId || tutorialArrowId || floatingScores.length || showComboPill) {
       animationStartRef.current = performance.now();
-      if (escapingArrowId) {
-        const arrow = arrows.find(a => a.id === escapingArrowId);
+      if (escapingArrows.length) {
+        const newestAnimation = escapingArrows[escapingArrows.length - 1];
+        const arrow = newestAnimation.arrow;
         if (arrow) {
           const head = arrow.cells[arrow.cells.length - 1];
           const cx = (head.c + 0.5) * cellSizeRef.current;
@@ -366,7 +364,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       if (!rafRef.current) rafRef.current = requestAnimationFrame(tick);
     }
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); rafRef.current = 0; };
-  }, [escapingArrowId, shakingArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, tick, arrows, performanceMode]);
+  }, [escapingArrows, shakingArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, tick, arrows, performanceMode]);
 
   useEffect(() => {
     const observer = new ResizeObserver(() => {
