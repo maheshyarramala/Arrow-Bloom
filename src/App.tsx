@@ -373,7 +373,6 @@ export default function App() {
     setSettings(current => ({ ...current, theme: current.theme === 'dark' ? 'light' : 'dark' }));
   }, []);
   const openSettings = useCallback(() => setScreen('settings'), []);
-  const backToLevels = useCallback(() => setScreen('levels'), []);
   const zoomIn = useCallback(() => setZoomLevel(current => Math.min(4, current + 0.35)), []);
   const zoomOut = useCallback(() => {
     setZoomLevel(current => {
@@ -643,7 +642,7 @@ export default function App() {
               startLevel(currentLevelNumber + 1);
             }
           }}
-          onHome={() => setScreen('home')}
+          onHome={goHome}
         />
       )}
     </main>
