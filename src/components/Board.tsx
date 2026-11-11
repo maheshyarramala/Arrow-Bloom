@@ -223,10 +223,44 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     if (escapingArrowId) {
       const arrow = arrowById.get(escapingArrowId);
       if (arrow) {
+        // Snake-style exit: the head moves first and each body cell follows
+        // one cell-length later, rather than translating the whole arrow at once.
+        const duration = 1000;
         const elapsed = Math.max(0, now - animationStartRef.current);
-        const progress = Math.min(1, elapsed / 450);
+        const progress = Math.min(1, elapsed / duration);
         const [dr, dc] = DIR_DELTA[arrow.direction];
-        drawArrow(ctx, arrow, cell, 1 - progress, dc * cell * 28 * progress, dr * cell * 28 * progress);
+        const cells = arrow.cells;
+        const headTravel = board + Math.max(0, cells.length - 1) * cell;
+        const travel = headTravel * progress;
+        const color = PALETTE[arrow.colorIndex % PALETTE.length] || '#FF2A85';
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color;
+        ctx.lineWidth = Math.max(2.4, cell * 0.30);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.globalAlpha = 1 - progress * 0.12;
+        ctx.beginPath();
+        for (let i = 0; i < cells.length; i++) {
+          const followDelay = (cells.length - 1 - i) * cell;
+          const offset = Math.max(0, travel - followDelay);
+          const x = (cells[i].c + 0.5) * cell + dc * offset;
+          const y = (cells[i].r + 0.5) * cell + dr * offset;
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+        const head = cells[cells.length - 1];
+        const hx = (head.c + 0.5) * cell + dc * travel;
+        const hy = (head.r + 0.5) * cell + dr * travel;
+        const px = -dr;
+        const py = dc;
+        ctx.beginPath();
+        ctx.moveTo(hx + dc * cell * 0.44, hy + dr * cell * 0.44);
+        ctx.lineTo(hx - dc * cell * 0.08 + px * cell * 0.32, hy - dr * cell * 0.08 + py * cell * 0.32);
+        ctx.lineTo(hx - dc * cell * 0.08 - px * cell * 0.32, hy - dr * cell * 0.08 - py * cell * 0.32);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
         active ||= progress < 1;
       }
     }
