@@ -50,6 +50,8 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
   const ownerRef = useRef<Int16Array>(new Int16Array(0));
   const rafRef = useRef<number>(0);
   const animationStartRef = useRef(0);
+  const escapeStartRef = useRef(0);
+  const previousEscapingRef = useRef<string | null>(null);
   const particlesRef = useRef<Particle[]>(Array.from({ length: MAX_PARTICLES }, () => ({ x: 0, y: 0, vx: 0, vy: 0, life: 0, color: '#FFFFFF', size: 2, active: false })));
   const frameMonitorRef = useRef({ last: 0, average: 16.7, slowSince: 0 });
   const focusedArrowIndexRef = useRef(0);
@@ -226,7 +228,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
         // Head-first snake motion: every point follows the arrow's actual
         // winding path, then continues straight out from the head.
         const duration = 1200;
-        const elapsed = Math.max(0, now - animationStartRef.current);
+        const elapsed = Math.max(0, now - escapeStartRef.current);
         const progress = Math.min(1, elapsed / duration);
         const cells = arrow.cells;
         const [dr, dc] = DIR_DELTA[arrow.direction];
@@ -361,6 +363,8 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
   useEffect(() => {
     if (escapingArrowId || shakingArrowId || hintedArrowId || tutorialArrowId || floatingScores.length || showComboPill) {
       animationStartRef.current = performance.now();
+      if (escapingArrowId && previousEscapingRef.current !== escapingArrowId) escapeStartRef.current = performance.now();
+      previousEscapingRef.current = escapingArrowId;
       if (escapingArrowId) {
         const arrow = arrows.find(a => a.id === escapingArrowId);
         if (arrow) {
