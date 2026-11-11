@@ -252,11 +252,9 @@ export default function App() {
     const nextBoard = boardNow.filter(item => item.id !== arrowId);
     activeArrowsRef.current = nextBoard;
     setActiveArrows(nextBoard);
-    const animationDuration = Math.min(1900, Math.max(650, 420 + arrow.cells.length * 24));
-    setEscapingArrows(current => [...current.filter(item => item.arrow.id !== arrowId), { arrow, startedAt: nowForAnimation, duration: animationDuration }]);
-
     const now = performance.now();
-    const nowForAnimation = now;
+    const animationDuration = Math.min(1900, Math.max(650, 420 + arrow.cells.length * 24));
+    setEscapingArrows(current => [...current.filter(item => item.arrow.id !== arrowId), { arrow, startedAt: now, duration: animationDuration }]);
     const diff = now - lastClearTimeRef.current;
     const nextCombo = lastClearTimeRef.current > 0 && diff < 1200 ? comboCount + 1 : 1;
     setComboCount(nextCombo);
@@ -329,8 +327,15 @@ export default function App() {
   const handleUndo = useCallback(() => {
     if (undoHistory.length === 0) return;
     const lastArrow = undoHistory[undoHistory.length - 1];
+    const timer = escapeTimersRef.current.get(lastArrow.id);
+    if (timer !== undefined) window.clearTimeout(timer);
+    escapeTimersRef.current.delete(lastArrow.id);
+    removedArrowIdsRef.current.delete(lastArrow.id);
+    setEscapingArrows(current => current.filter(item => item.arrow.id !== lastArrow.id));
     setUndoHistory((hist) => hist.slice(0, -1));
-    setActiveArrows((prev) => [...prev, lastArrow]);
+    const restored = [...activeArrowsRef.current, lastArrow];
+    activeArrowsRef.current = restored;
+    setActiveArrows(restored);
     soundManager.playClick();
   }, [undoHistory]);
 
