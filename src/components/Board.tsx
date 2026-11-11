@@ -361,6 +361,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
 
   useEffect(() => { rebuildOwner(); drawStatic(); }, [rebuildOwner, drawStatic]);
   useEffect(() => {
+    if (!escapingArrowId) previousEscapingRef.current = null;
     if (escapingArrowId || shakingArrowId || hintedArrowId || tutorialArrowId || floatingScores.length || showComboPill) {
       animationStartRef.current = performance.now();
       if (escapingArrowId && previousEscapingRef.current !== escapingArrowId) escapeStartRef.current = performance.now();
