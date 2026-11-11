@@ -281,7 +281,7 @@ export default function App() {
       removedArrowIdsRef.current.delete(arrowId);
       setEscapingArrows(current => current.filter(item => item.arrow.id !== arrowId));
       escapeTimersRef.current.delete(arrowId);
-      if (activeArrowsRef.current.length !== 0 || completionCommittedRef.current) return;
+      if (activeArrowsRef.current.length !== 0 || escapeTimersRef.current.size > 0 || completionCommittedRef.current) return;
       completionCommittedRef.current = true;
       const finalMistakes = mistakes;
       let finalScore = score + pts + (finalMistakes === 0 ? 500 : 0);
