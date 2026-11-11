@@ -106,7 +106,8 @@ export default function App() {
   const [escapingArrowId, setEscapingArrowId] = useState<string | null>(null);
   const [shakingArrowId, setShakingArrowId] = useState<string | null>(null);
   const [flashBlockedArrowId, setFlashBlockedArrowId] = useState<string | null>(null);
-  const isInteractingRef = useRef<boolean>(false);\n  const pendingArrowTapsRef = useRef<string[]>([]);
+  const isInteractingRef = useRef<boolean>(false);
+  const pendingArrowTapsRef = useRef<string[]>([]);
 
   // Zoom & Pan state
   const [zoomLevel, setZoomLevel] = useState<number>(1);
@@ -307,7 +308,7 @@ export default function App() {
 
                 soundManager.playWin();
 
-                // Collection complete check (every tenth level through 150)
+                // Collection complete check (every tenth level through 300)
                 if (currentLevelNumber % 10 === 0) {
                   const colIdx = Math.floor((currentLevelNumber - 1) / 10);
                   const completed = COLLECTIONS[colIdx];
