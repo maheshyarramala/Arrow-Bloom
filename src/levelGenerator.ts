@@ -413,7 +413,7 @@ function buildSingleLevelCandidate(
   const directions: Direction[] = ['up', 'down', 'left', 'right'];
 
   // Snake generation parameters
-  const targetCoverage = 0.90; // aim for >=90%
+  const targetCoverage = levelNumber >= 3 ? 0.93 : 0.78; // tutorial breathing room, then denser boards
   const targetCoveredCells = Math.floor(playableCells.length * targetCoverage);
 
   let currentCoveredCells = 0;
@@ -630,10 +630,10 @@ function meetsDifficultyTargets(level: number, candidate: LevelConfig): boolean 
 
   // Linear ramp:
   // depth: 3 on level 1 rising to 18 on level 50
-  const requiredDepth = Math.max(2, Math.round(3 + (level / 300) * 25));
+  const requiredDepth = Math.max(3, Math.round(4 + (level / 300) * 26));
 
   // initialFree: <= 25% on level 1, falling to <= 6% on level 50
-  const maxInitialPct = Math.max(0.06, 0.25 - (level / 300) * 0.225);
+  const maxInitialPct = Math.max(0.05, 0.18 - (level / 300) * 0.13);
   const maxInitialCount = Math.max(2, Math.floor(totalArrows * maxInitialPct));
 
   // Traps: >= 25% near-miss traps
