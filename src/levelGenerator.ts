@@ -244,6 +244,10 @@ export function getLevelParams(level: number) {
     maxLen = Math.round(18 + step * 12 + tier);
   }
   if (level === 1) { gridSize = 10; minLen = 3; maxLen = 4; }
+  if (level >= 3) {
+    minLen = Math.max(4, minLen);
+    maxLen += level < 20 ? 2 : level < 80 ? 3 : 4;
+  }
   gridSize = Math.min(44, gridSize);
   return { collection, gridSize, minLen, maxLen };
 }
