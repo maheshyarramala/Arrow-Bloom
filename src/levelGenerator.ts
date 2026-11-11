@@ -173,6 +173,26 @@ export function getDirFromDelta(dr: number, dc: number): Direction {
   return 'right';
 }
 
+/**
+ * Reject confusing U/square-loop arrows: three consecutive straight runs
+ * where the third run reverses the first (A -> perpendicular -> opposite A).
+ * Other bends and ordinary zig-zags remain allowed.
+ */
+function hasConfusingUTurn(path: CellCoord[]): boolean {
+  const runs: Direction[] = [];
+  for (let i = 1; i < path.length; i++) {
+    const d = getDirFromDelta(path[i].r - path[i - 1].r, path[i].c - path[i - 1].c);
+    if (runs[runs.length - 1] !== d) runs.push(d);
+  }
+  const opposite: Record<Direction, Direction> = {
+    up: 'down', down: 'up', left: 'right', right: 'left',
+  };
+  for (let i = 0; i + 2 < runs.length; i++) {
+    if (opposite[runs[i]] === runs[i + 2]) return true;
+  }
+  return false;
+}
+
 // Compute level parameters (Grid size, snake lengths)
 export function getLevelParams(level: number) {
   const collectionIdx = Math.min(14, Math.floor((level - 1) / 10));
@@ -464,6 +484,9 @@ function buildSingleLevelCandidate(
     if (rayHitsAlreadyPlaced) {
       continue;
     }
+
+    // Keep square/U-shaped arrows out of generated levels; they are visually confusing.
+    if (hasConfusingUTurn(path)) continue;
 
     // ACCEPT arrow!
     const arrowId = `a_${levelNumber}_${arrows.length + 1}`;
