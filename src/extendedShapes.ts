@@ -1,5 +1,5 @@
 /**
- * Additional Arrow Bloom silhouettes (levels 51–150).
+ * Additional Arrow Bloom silhouettes (levels 51–300).
  * Each entry is a deterministic geometric variation of a hand-authored base silhouette.
  */
 import { SHAPE_DEFINITIONS } from './shapes.ts';
