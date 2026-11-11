@@ -106,7 +106,7 @@ export default function App() {
   const [escapingArrowId, setEscapingArrowId] = useState<string | null>(null);
   const [shakingArrowId, setShakingArrowId] = useState<string | null>(null);
   const [flashBlockedArrowId, setFlashBlockedArrowId] = useState<string | null>(null);
-  const isInteractingRef = useRef<boolean>(false);
+  const isInteractingRef = useRef<boolean>(false);\n  const pendingArrowTapsRef = useRef<string[]>([]);
 
   // Zoom & Pan state
   const [zoomLevel, setZoomLevel] = useState<number>(1);
@@ -216,7 +216,13 @@ export default function App() {
   // Arrow Tap / Click handling
   const handleArrowSelect = useCallback(
     (arrowId: string) => {
-      if (isInteractingRef.current || escapingArrowId || hearts <= 0) return;
+      if (hearts <= 0) return;
+      // Queue rapid follow-up taps while the current snake animation completes.
+      // Each queued target is revalidated against the updated board before moving.
+      if (isInteractingRef.current || escapingArrowId) {
+        if (!pendingArrowTapsRef.current.includes(arrowId)) pendingArrowTapsRef.current.push(arrowId);
+        return;
+      }
 
       const rayResult = checkArrowRay(arrowId, activeArrows, levelConfig.gridSize);
 
@@ -305,7 +311,7 @@ export default function App() {
                   const colIdx = Math.floor((currentLevelNumber - 1) / 10);
                   const completed = COLLECTIONS[colIdx];
                   const nextCol = COLLECTIONS[colIdx + 1] || null;
-                  const finale = currentLevelNumber === 150;
+                  const finale = currentLevelNumber === 300;
 
                   setCompletedCollection(completed);
                   setNextCollection(nextCol);
@@ -322,6 +328,10 @@ export default function App() {
 
           setEscapingArrowId(null);
           isInteractingRef.current = false;
+          window.setTimeout(() => {
+            const nextTap = pendingArrowTapsRef.current.shift();
+            if (nextTap) handleArrowSelectRef.current(nextTap);
+          }, 40);
         }, 1000);
       } else {
         // Arrow is BLOCKED!
@@ -614,7 +624,7 @@ export default function App() {
           score={score}
           mistakes={mistakes}
           isNewHigh={isNewHighScore}
-          hasNextLevel={currentLevelNumber < 150}
+          hasNextLevel={currentLevelNumber < 300}
           onNextLevel={() => startLevel(currentLevelNumber + 1)}
           onReplay={() => startLevel(currentLevelNumber)}
           onHome={goHome}
