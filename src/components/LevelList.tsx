@@ -36,7 +36,7 @@ export const LevelList: React.FC<LevelListProps> = ({
           <ChevronLeft className="w-6 h-6" />
         </button>
 
-        <h1 className="text-xl md:text-2xl font-black tracking-wide">All 150 Levels</h1>
+        <h1 className="text-xl md:text-2xl font-black tracking-wide">All 300 Levels</h1>
 
         {/* Total Stars Counter */}
         <div
@@ -48,7 +48,7 @@ export const LevelList: React.FC<LevelListProps> = ({
         >
           <Star className="w-4 h-4 fill-amber-400 text-amber-300" />
           <span>
-            {Object.values(progress.levelData).reduce((sum, l) => sum + (l.stars || 0), 0)} / 150
+            {Object.values(progress.levelData).reduce((sum, l) => sum + (l.stars || 0), 0)} / 900
           </span>
         </div>
       </header>
