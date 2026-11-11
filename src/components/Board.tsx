@@ -223,15 +223,35 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     if (escapingArrowId) {
       const arrow = arrowById.get(escapingArrowId);
       if (arrow) {
-        // Snake-style exit: the head moves first and each body cell follows
-        // one cell-length later, rather than translating the whole arrow at once.
-        const duration = 1000;
+        // Head-first snake motion: every point follows the arrow's actual
+        // winding path, then continues straight out from the head.
+        const duration = 1200;
         const elapsed = Math.max(0, now - animationStartRef.current);
         const progress = Math.min(1, elapsed / duration);
-        const [dr, dc] = DIR_DELTA[arrow.direction];
         const cells = arrow.cells;
-        const headTravel = board + Math.max(0, cells.length - 1) * cell;
-        const travel = headTravel * progress;
+        const [dr, dc] = DIR_DELTA[arrow.direction];
+        const cumulative = new Array<number>(cells.length).fill(0);
+        for (let i = 1; i < cells.length; i++) {
+          const dx = cells[i].c - cells[i - 1].c;
+          const dy = cells[i].r - cells[i - 1].r;
+          cumulative[i] = cumulative[i - 1] + Math.hypot(dx, dy) * cell;
+        }
+        const pathLength = cumulative[cells.length - 1] || 0;
+        const travel = (board + pathLength + cell) * progress;
+        const pointAt = (distance: number) => {
+          if (distance >= pathLength) {
+            const extra = distance - pathLength;
+            const head = cells[cells.length - 1];
+            return { x: (head.c + 0.5) * cell + dc * extra, y: (head.r + 0.5) * cell + dr * extra };
+          }
+          let segment = 1;
+          while (segment < cumulative.length - 1 && cumulative[segment] < distance) segment++;
+          const from = cells[segment - 1];
+          const to = cells[segment];
+          const span = Math.max(1, cumulative[segment] - cumulative[segment - 1]);
+          const t = Math.max(0, Math.min(1, (distance - cumulative[segment - 1]) / span));
+          return { x: (from.c + 0.5 + (to.c - from.c) * t) * cell, y: (from.r + 0.5 + (to.r - from.r) * t) * cell };
+        };
         const color = PALETTE[arrow.colorIndex % PALETTE.length] || '#FF2A85';
         ctx.save();
         ctx.strokeStyle = color;
@@ -242,22 +262,17 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
         ctx.globalAlpha = 1 - progress * 0.12;
         ctx.beginPath();
         for (let i = 0; i < cells.length; i++) {
-          const followDelay = (cells.length - 1 - i) * cell;
-          const offset = Math.max(0, travel - followDelay);
-          const x = (cells[i].c + 0.5) * cell + dc * offset;
-          const y = (cells[i].r + 0.5) * cell + dr * offset;
-          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          const point = pointAt(cumulative[i] + travel);
+          if (i === 0) ctx.moveTo(point.x, point.y); else ctx.lineTo(point.x, point.y);
         }
         ctx.stroke();
-        const head = cells[cells.length - 1];
-        const hx = (head.c + 0.5) * cell + dc * travel;
-        const hy = (head.r + 0.5) * cell + dr * travel;
+        const tip = pointAt(pathLength + travel);
         const px = -dr;
         const py = dc;
         ctx.beginPath();
-        ctx.moveTo(hx + dc * cell * 0.44, hy + dr * cell * 0.44);
-        ctx.lineTo(hx - dc * cell * 0.08 + px * cell * 0.32, hy - dr * cell * 0.08 + py * cell * 0.32);
-        ctx.lineTo(hx - dc * cell * 0.08 - px * cell * 0.32, hy - dr * cell * 0.08 - py * cell * 0.32);
+        ctx.moveTo(tip.x + dc * cell * 0.44, tip.y + dr * cell * 0.44);
+        ctx.lineTo(tip.x - dc * cell * 0.08 + px * cell * 0.32, tip.y - dr * cell * 0.08 + py * cell * 0.32);
+        ctx.lineTo(tip.x - dc * cell * 0.08 - px * cell * 0.32, tip.y - dr * cell * 0.08 - py * cell * 0.32);
         ctx.closePath();
         ctx.fill();
         ctx.restore();
