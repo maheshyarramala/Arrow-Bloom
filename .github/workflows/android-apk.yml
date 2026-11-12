@@ -54,9 +54,14 @@ jobs:
       - name: Apply Arrow Bloom app icon and branding
         run: npm run android:icons
 
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
       - name: Build debug APK
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
 
       - name: Prepare named APK for release
         run: |
