@@ -1,9 +1,20 @@
 /**
  * Arrow Bloom - Shop & In-App Purchases Modal
- * Offers Lifetime Ad-Free for ₹99 ($1.19), Hint Bundles, and Google Play IAP simulation.
+ * Offers Lifetime Ad-Free for ₹99 ($1.19), Hint Bundles, and Google Play / UPI payment flows.
  */
 import React, { useState } from 'react';
-import { X, Crown, Check, Sparkles, Zap, ShieldCheck, HeartHandshake } from 'lucide-react';
+import {
+  X,
+  Crown,
+  Check,
+  Zap,
+  ShieldCheck,
+  HeartHandshake,
+  CreditCard,
+  Smartphone,
+  HelpCircle,
+  Info,
+} from 'lucide-react';
 import { isAdFreePurchased, setAdFreePurchased } from '../storage.ts';
 import { soundManager } from '../audio.ts';
 import { fireLevelWinConfetti } from './Confetti.tsx';
@@ -22,6 +33,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
   const [hasAdFree, setHasAdFree] = useState<boolean>(isAdFreePurchased());
   const [purchasing, setPurchasing] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showPaymentInfo, setShowPaymentInfo] = useState<boolean>(false);
 
   if (!isOpen) return null;
 
@@ -32,11 +44,11 @@ export const ShopModal: React.FC<ShopModalProps> = ({
       setAdFreePurchased(true);
       setHasAdFree(true);
       setPurchasing(false);
-      setSuccessMessage('🎉 Lifetime Ad-Free VIP Pass Activated!');
+      setSuccessMessage('🎉 Lifetime Ad-Free VIP Pass Activated! All ads removed forever.');
       soundManager.playWin();
       fireLevelWinConfetti();
       if (onAdFreeBought) onAdFreeBought();
-      setTimeout(() => setSuccessMessage(null), 3500);
+      setTimeout(() => setSuccessMessage(null), 4000);
     }, 700);
   };
 
@@ -58,7 +70,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
         <button
           onClick={onClose}
           aria-label="Close shop"
-          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 flex items-center justify-center text-white/70 hover:text-white transition-all"
+          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 flex items-center justify-center text-white/70 hover:text-white transition-all z-10"
         >
           <X className="w-4 h-4" />
         </button>
@@ -77,7 +89,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
 
         {/* Success Alert */}
         {successMessage && (
-          <div className="p-3 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold text-center animate-fade-in">
+          <div className="p-3 rounded-2xl bg-emerald-500/25 border border-emerald-400/50 text-emerald-200 text-xs font-black text-center animate-fade-in">
             {successMessage}
           </div>
         )}
@@ -116,7 +128,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
           <div className="mt-3 space-y-1.5 text-xs text-white/90 border-t border-white/10 pt-3">
             <div className="flex items-center gap-2">
               <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>Removes all banner & interstitial ads permanently</span>
+              <span>Removes all banner &amp; interstitial ads permanently</span>
             </div>
             <div className="flex items-center gap-2">
               <Check className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -128,7 +140,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
             </div>
             <div className="flex items-center gap-2">
               <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>Unlocks VIP Patron badge in Game Center</span>
+              <span>Unlocks VIP Patron crown in Game Center</span>
             </div>
           </div>
 
@@ -136,7 +148,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
             {hasAdFree ? (
               <div className="w-full py-2.5 rounded-xl bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 font-black text-xs text-center flex items-center justify-center gap-1.5">
                 <ShieldCheck className="w-4 h-4" />
-                <span>Active & Protected on your Google Account</span>
+                <span>Active &amp; Protected on your Account</span>
               </div>
             ) : (
               <button
@@ -149,12 +161,53 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                 ) : (
                   <>
                     <Zap className="w-4 h-4 fill-current" />
-                    <span>Unlock for ₹99 ($1.19)</span>
+                    <span>Pay ₹99 &amp; Unlock Ad-Free</span>
                   </>
                 )}
               </button>
             )}
           </div>
+        </div>
+
+        {/* Accepted Payment Options Pill Box */}
+        <div className="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+          <div className="flex items-center justify-between text-xs font-bold text-white/80">
+            <span className="flex items-center gap-1.5">
+              <CreditCard className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Accepted Payment Methods</span>
+            </span>
+            <button
+              onClick={() => setShowPaymentInfo((v) => !v)}
+              className="text-[11px] text-amber-400 hover:underline flex items-center gap-0.5"
+            >
+              <Info className="w-3 h-3" />
+              <span>How it works</span>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-4 gap-1.5 text-center text-[10px] font-black">
+            <div className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-white/90">
+              UPI / GPay
+            </div>
+            <div className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-white/90">
+              PhonePe
+            </div>
+            <div className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-white/90">
+              Paytm / Card
+            </div>
+            <div className="p-1.5 rounded-xl bg-white/5 border border-white/10 text-white/90">
+              Play Balance
+            </div>
+          </div>
+
+          {showPaymentInfo && (
+            <div className="p-2.5 rounded-xl bg-slate-950 border border-white/15 text-[11px] text-white/70 space-y-1.5 animate-fade-in leading-relaxed">
+              <p className="font-bold text-white">How Google Play Billing Works:</p>
+              <p>• In the published Android app on Google Play, tapping &ldquo;Pay ₹99&rdquo; automatically invokes Google Play&apos;s native payment sheet.</p>
+              <p>• Users in India pay directly via <strong>UPI, Google Pay, PhonePe, Paytm, Cards, or Net Banking</strong>.</p>
+              <p>• Google automatically transfers the earnings directly to your bank account via your Play Console developer payout profile.</p>
+            </div>
+          )}
         </div>
 
         {/* Small Hint Packs */}
@@ -171,7 +224,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
               }}
               className="mt-1 w-full py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white font-bold text-[11px] active:scale-95 transition-all"
             >
-              Buy ₹29
+              Pay ₹29
             </button>
           </div>
 
@@ -187,7 +240,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
               }}
               className="mt-1 w-full py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white font-bold text-[11px] active:scale-95 transition-all"
             >
-              Buy ₹79
+              Pay ₹79
             </button>
           </div>
         </div>

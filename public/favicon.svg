@@ -1,24 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
   <defs>
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stopColor="#1E1B4B" />
-      <stop offset="50%" stopColor="#0F172A" />
-      <stop offset="100%" stopColor="#020617" />
+    <linearGradient id="favBloomBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#EC4899" />
+      <stop offset="50%" stopColor="#F43F5E" />
+      <stop offset="100%" stopColor="#4F46E5" />
     </linearGradient>
-    <linearGradient id="arrowGrad" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" stopColor="#FF2A85" />
-      <stop offset="35%" stopColor="#FF7A00" />
-      <stop offset="70%" stopColor="#FFD000" />
-      <stop offset="100%" stopColor="#00E5FF" />
-    </linearGradient>
-    <linearGradient id="rimGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stopColor="#FF2A85" stopOpacity="0.8" />
-      <stop offset="100%" stopColor="#00E5FF" stopOpacity="0.8" />
+    <linearGradient id="favPetal" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stopColor="#FFFFFF" />
+      <stop offset="60%" stopColor="#FFE4E6" />
+      <stop offset="100%" stopColor="#FDA4AF" />
     </linearGradient>
   </defs>
-  <rect x="24" y="24" width="464" height="464" rx="108" fill="url(#bgGrad)" stroke="url(#rimGrad)" stroke-width="12" />
-  <path d="M 128 356 L 128 220 C 128 190 150 168 180 168 L 290 168 C 320 168 344 190 344 220 L 344 140" fill="none" stroke="url(#arrowGrad)" stroke-width="44" stroke-linecap="round" stroke-linejoin="round" />
-  <polygon points="344,72 270,172 418,172" fill="url(#arrowGrad)" stroke="#FFFFFF" stroke-width="6" />
-  <circle cx="344" cy="144" r="14" fill="#FFFFFF" />
-  <path d="M 120 110 Q 120 130 100 130 Q 120 130 120 150 Q 120 130 140 130 Q 120 130 120 110 Z" fill="#FFF" />
+
+  <rect x="24" y="24" width="464" height="464" rx="108" fill="url(#favBloomBg)" stroke="#FFFFFF" stroke-opacity="0.4" stroke-width="10" />
+
+  <g transform="translate(256, 256)">
+    <!-- 5 Petals -->
+    <g transform="rotate(0)"><path d="M 0,-15 C -44,-45 -54,-100 -24,-130 C -8,-146 0,-132 0,-132 C 0,-132 8,-146 24,-130 C 54,-100 44,-45 0,-15 Z" fill="url(#favPetal)" stroke="#FFFFFF" stroke-width="3" /></g>
+    <g transform="rotate(72)"><path d="M 0,-15 C -44,-45 -54,-100 -24,-130 C -8,-146 0,-132 0,-132 C 0,-132 8,-146 24,-130 C 54,-100 44,-45 0,-15 Z" fill="url(#favPetal)" stroke="#FFFFFF" stroke-width="3" /></g>
+    <g transform="rotate(144)"><path d="M 0,-15 C -44,-45 -54,-100 -24,-130 C -8,-146 0,-132 0,-132 C 0,-132 8,-146 24,-130 C 54,-100 44,-45 0,-15 Z" fill="url(#favPetal)" stroke="#FFFFFF" stroke-width="3" /></g>
+    <g transform="rotate(216)"><path d="M 0,-15 C -44,-45 -54,-100 -24,-130 C -8,-146 0,-132 0,-132 C 0,-132 8,-146 24,-130 C 54,-100 44,-45 0,-15 Z" fill="url(#favPetal)" stroke="#FFFFFF" stroke-width="3" /></g>
+    <g transform="rotate(288)"><path d="M 0,-15 C -44,-45 -54,-100 -24,-130 C -8,-146 0,-132 0,-132 C 0,-132 8,-146 24,-130 C 54,-100 44,-45 0,-15 Z" fill="url(#favPetal)" stroke="#FFFFFF" stroke-width="3" /></g>
+
+    <!-- Center Yellow Stamen -->
+    <circle cx="0" cy="0" r="42" fill="#FDE047" stroke="#EA580C" stroke-width="3" />
+    <circle cx="0" cy="0" r="14" fill="#FFFFFF" />
+  </g>
 </svg>
