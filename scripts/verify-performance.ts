@@ -28,7 +28,7 @@ for (let levelNumber = 1; levelNumber <= 300; levelNumber++) {
   maxGenerationMs = Math.max(maxGenerationMs, elapsed);
   assert(level.levelNumber === levelNumber, `Level identity mismatch at ${levelNumber}`);
   assert(level.arrows.length > 0, `Level ${levelNumber} generated no arrows`);
-  assert(level.gridSize >= 1 && level.gridSize <= 40, `Level ${levelNumber} grid out of bounds`);
+  assert(level.gridSize >= 1 && level.gridSize <= 64, `Level ${levelNumber} grid out of bounds`);
   assert(level.playableMask.length === level.gridSize, `Level ${levelNumber} mask height mismatch`);
   assert(level.playableMask.every(row => row.length === level.gridSize), `Level ${levelNumber} mask width mismatch`);
   assert(level.stats.depth > 0, `Level ${levelNumber} has no solution depth`);

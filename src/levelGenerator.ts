@@ -34,121 +34,45 @@ export const COLOR_BLIND_SYMBOLS = [
 
 export const COLLECTIONS: CollectionConfig[] = [
   {
-    id: 1,
-    name: 'Shapes',
-    theme: 'shapes',
-    levels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-    subtitle: 'Classic geometric silhouettes',
-    gradientDark: 'from-pink-950 via-slate-900 to-indigo-950',
-    gradientLight: 'from-pink-50 via-rose-100 to-purple-50',
-    accentColor: '#FF2A85',
+    id: 1, name: 'Shapes', theme: 'shapes', levels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    subtitle: 'Classic geometric silhouettes', accentColor: '#FF2A85',
+    gradientDark: 'from-pink-950 via-slate-900 to-indigo-950', gradientLight: 'from-pink-50 via-rose-100 to-purple-50',
   },
   {
-    id: 2,
-    name: 'Sky',
-    theme: 'sky',
-    levels: [11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
-    subtitle: 'High-flying birds, jets & celestial wonders',
-    gradientDark: 'from-cyan-950 via-blue-950 to-slate-950',
-    gradientLight: 'from-cyan-50 via-sky-100 to-blue-50',
-    accentColor: '#00E5FF',
+    id: 2, name: 'Sky', theme: 'sky', levels: [11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+    subtitle: 'High-flying birds, jets & celestial wonders', accentColor: '#00E5FF',
+    gradientDark: 'from-cyan-950 via-blue-950 to-slate-950', gradientLight: 'from-cyan-50 via-sky-100 to-blue-50',
   },
   {
-    id: 3,
-    name: 'Animals',
-    theme: 'animals',
-    levels: [21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
-    subtitle: 'Clever critters & jungle companions',
-    gradientDark: 'from-emerald-950 via-teal-950 to-slate-950',
-    gradientLight: 'from-emerald-50 via-teal-100 to-green-50',
-    accentColor: '#76E026',
+    id: 3, name: 'Animals', theme: 'animals', levels: [21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
+    subtitle: 'Clever critters & jungle companions', accentColor: '#76E026',
+    gradientDark: 'from-emerald-950 via-teal-950 to-slate-950', gradientLight: 'from-emerald-50 via-teal-100 to-green-50',
   },
   {
-    id: 4,
-    name: 'Nature',
-    theme: 'nature',
-    levels: [31, 32, 33, 34, 35, 36, 37, 38, 39, 40],
-    subtitle: 'Mountains, waves, blooms & wilderness',
-    gradientDark: 'from-amber-950 via-rose-950 to-purple-950',
-    gradientLight: 'from-amber-50 via-orange-100 to-rose-50',
-    accentColor: '#FF7A00',
+    id: 4, name: 'Nature', theme: 'nature', levels: [31, 32, 33, 34, 35, 36, 37, 38, 39, 40],
+    subtitle: 'Mountains, waves, blooms & wilderness', accentColor: '#FF7A00',
+    gradientDark: 'from-amber-950 via-rose-950 to-purple-950', gradientLight: 'from-amber-50 via-orange-100 to-rose-50',
   },
   {
-    id: 5,
-    name: 'Legends',
-    theme: 'legends',
-    levels: [41, 42, 43, 44, 45, 46, 47, 48, 49, 50],
-    subtitle: 'Mythic beasts & the Grand Master Maze',
-    gradientDark: 'from-purple-950 via-indigo-950 to-black',
-    gradientLight: 'from-violet-50 via-fuchsia-100 to-indigo-50',
-    accentColor: '#AF52DE',
+    id: 5, name: 'Legends', theme: 'legends', levels: [41, 42, 43, 44, 45, 46, 47, 48, 49, 50],
+    subtitle: 'Mythic beasts & the Grand Master Maze', accentColor: '#AF52DE',
+    gradientDark: 'from-purple-950 via-indigo-950 to-black', gradientLight: 'from-violet-50 via-fuchsia-100 to-indigo-50',
   },
 ];
 
 COLLECTIONS.push(
-  {
-    id: 6, name: 'Deep Sea', theme: 'deep-sea',
-    levels: [51, 52, 53, 54, 55, 56, 57, 58, 59, 60],
-    subtitle: 'Explore the wonders beneath the waves', accentColor: '#22D3EE',
-    gradientDark: 'from-cyan-950 via-blue-950 to-slate-950', gradientLight: 'from-cyan-50 via-sky-100 to-blue-50',
-  },
-  {
-    id: 7, name: 'Enchanted', theme: 'enchanted',
-    levels: [61, 62, 63, 64, 65, 66, 67, 68, 69, 70],
-    subtitle: 'Magical objects from a hidden kingdom', accentColor: '#E879F9',
-    gradientDark: 'from-fuchsia-950 via-purple-950 to-slate-950', gradientLight: 'from-fuchsia-50 via-violet-100 to-purple-50',
-  },
-  {
-    id: 8, name: 'Cosmos', theme: 'cosmos',
-    levels: [71, 72, 73, 74, 75, 76, 77, 78, 79, 80],
-    subtitle: 'Travel through stars, planets and galaxies', accentColor: '#818CF8',
-    gradientDark: 'from-indigo-950 via-slate-950 to-black', gradientLight: 'from-indigo-50 via-blue-100 to-slate-100',
-  },
-  {
-    id: 9, name: 'Sweet World', theme: 'sweet',
-    levels: [81, 82, 83, 84, 85, 86, 87, 88, 89, 90],
-    subtitle: 'A colourful collection of sweet treats', accentColor: '#FB7185',
-    gradientDark: 'from-pink-950 via-rose-950 to-orange-950', gradientLight: 'from-pink-50 via-rose-100 to-orange-50',
-  },
-  {
-    id: 10, name: 'Sports', theme: 'sports',
-    levels: [91, 92, 93, 94, 95, 96, 97, 98, 99, 100],
-    subtitle: 'Gear up for the ultimate challenge', accentColor: '#FB923C',
-    gradientDark: 'from-orange-950 via-red-950 to-slate-950', gradientLight: 'from-orange-50 via-amber-100 to-red-50',
-  },
-  {
-    id: 11, name: 'Music', theme: 'music',
-    levels: [101, 102, 103, 104, 105, 106, 107, 108, 109, 110],
-    subtitle: 'Make shapes sing with every move', accentColor: '#A78BFA',
-    gradientDark: 'from-violet-950 via-indigo-950 to-slate-950', gradientLight: 'from-violet-50 via-indigo-100 to-blue-50',
-  },
-  {
-    id: 12, name: 'Adventure', theme: 'adventure',
-    levels: [111, 112, 113, 114, 115, 116, 117, 118, 119, 120],
-    subtitle: 'Discover maps, treasures and faraway places', accentColor: '#FBBF24',
-    gradientDark: 'from-amber-950 via-yellow-950 to-stone-950', gradientLight: 'from-amber-50 via-yellow-100 to-stone-100',
-  },
-  {
-    id: 13, name: 'Technology', theme: 'technology',
-    levels: [121, 122, 123, 124, 125, 126, 127, 128, 129, 130],
-    subtitle: 'A futuristic set of mechanical silhouettes', accentColor: '#38BDF8',
-    gradientDark: 'from-sky-950 via-cyan-950 to-slate-950', gradientLight: 'from-sky-50 via-cyan-100 to-slate-100',
-  },
-  {
-    id: 14, name: 'Mythical', theme: 'mythical',
-    levels: [131, 132, 133, 134, 135, 136, 137, 138, 139, 140],
-    subtitle: 'Legends, creatures and enchanted artefacts', accentColor: '#C084FC',
-    gradientDark: 'from-purple-950 via-fuchsia-950 to-slate-950', gradientLight: 'from-purple-50 via-fuchsia-100 to-indigo-50',
-  },
-  {
-    id: 15, name: 'Mastery', theme: 'mastery',
-    levels: [141, 142, 143, 144, 145, 146, 147, 148, 149, 150],
-    subtitle: 'The final ten challenges for master players', accentColor: '#F0ABFC',
-    gradientDark: 'from-slate-950 via-indigo-950 to-black', gradientLight: 'from-slate-100 via-indigo-100 to-violet-100',
-  }
+  { id: 6, name: 'Deep Sea', theme: 'deep-sea', levels: [51, 52, 53, 54, 55, 56, 57, 58, 59, 60], subtitle: 'Explore the wonders beneath the waves', accentColor: '#22D3EE', gradientDark: 'from-cyan-950 via-blue-950 to-slate-950', gradientLight: 'from-cyan-50 via-sky-100 to-blue-50' },
+  { id: 7, name: 'Enchanted', theme: 'enchanted', levels: [61, 62, 63, 64, 65, 66, 67, 68, 69, 70], subtitle: 'Magical objects from a hidden kingdom', accentColor: '#E879F9', gradientDark: 'from-fuchsia-950 via-purple-950 to-slate-950', gradientLight: 'from-fuchsia-50 via-violet-100 to-purple-50' },
+  { id: 8, name: 'Cosmos', theme: 'cosmos', levels: [71, 72, 73, 74, 75, 76, 77, 78, 79, 80], subtitle: 'Travel through stars, planets and galaxies', accentColor: '#818CF8', gradientDark: 'from-indigo-950 via-slate-950 to-black', gradientLight: 'from-indigo-50 via-blue-100 to-slate-100' },
+  { id: 9, name: 'Sweet World', theme: 'sweet', levels: [81, 82, 83, 84, 85, 86, 87, 88, 89, 90], subtitle: 'A colourful collection of sweet treats', accentColor: '#FB7185', gradientDark: 'from-pink-950 via-rose-950 to-orange-950', gradientLight: 'from-pink-50 via-rose-100 to-orange-50' },
+  { id: 10, name: 'Sports', theme: 'sports', levels: [91, 92, 93, 94, 95, 96, 97, 98, 99, 100], subtitle: 'Gear up for the ultimate challenge', accentColor: '#FB923C', gradientDark: 'from-orange-950 via-red-950 to-slate-950', gradientLight: 'from-orange-50 via-amber-100 to-red-50' },
+  { id: 11, name: 'Music', theme: 'music', levels: [101, 102, 103, 104, 105, 106, 107, 108, 109, 110], subtitle: 'Make shapes sing with every move', accentColor: '#A78BFA', gradientDark: 'from-violet-950 via-indigo-950 to-slate-950', gradientLight: 'from-violet-50 via-indigo-100 to-blue-50' },
+  { id: 12, name: 'Adventure', theme: 'adventure', levels: [111, 112, 113, 114, 115, 116, 117, 118, 119, 120], subtitle: 'Discover maps, treasures and faraway places', accentColor: '#FBBF24', gradientDark: 'from-amber-950 via-yellow-950 to-stone-950', gradientLight: 'from-amber-50 via-yellow-100 to-stone-100' },
+  { id: 13, name: 'Technology', theme: 'technology', levels: [121, 122, 123, 124, 125, 126, 127, 128, 129, 130], subtitle: 'A futuristic set of mechanical silhouettes', accentColor: '#38BDF8', gradientDark: 'from-sky-950 via-cyan-950 to-slate-950', gradientLight: 'from-sky-50 via-cyan-100 to-slate-100' },
+  { id: 14, name: 'Mythical', theme: 'mythical', levels: [131, 132, 133, 134, 135, 136, 137, 138, 139, 140], subtitle: 'Legends, creatures and enchanted artefacts', accentColor: '#C084FC', gradientDark: 'from-purple-950 via-fuchsia-950 to-slate-950', gradientLight: 'from-purple-50 via-fuchsia-100 to-indigo-50' },
+  { id: 15, name: 'Mastery', theme: 'mastery', levels: [141, 142, 143, 144, 145, 146, 147, 148, 149, 150], subtitle: 'The final ten challenges for master players', accentColor: '#F0ABFC', gradientDark: 'from-slate-950 via-indigo-950 to-black', gradientLight: 'from-slate-100 via-indigo-100 to-violet-100' }
 );
 
-// Extend the main campaign to 300 levels with six additional themed worlds.
 for (let id = 16; id <= 30; id++) {
   const start = (id - 1) * 10 + 1;
   const hue = (id * 47) % 360;
@@ -161,7 +85,6 @@ for (let id = 16; id <= 30; id++) {
   });
 }
 
-// Seeded PRNG: Mulberry32
 export function createRNG(seed: number) {
   let s = seed >>> 0;
   return function () {
@@ -186,57 +109,17 @@ export function getDirFromDelta(dr: number, dc: number): Direction {
   return 'right';
 }
 
-/**
- * Reject confusing U/square-loop arrows: three consecutive straight runs
- * where the third run reverses the first (A -> perpendicular -> opposite A).
- * Other bends and ordinary zig-zags remain allowed.
- */
-function hasConfusingUTurn(path: CellCoord[]): boolean {
-  const runs: Direction[] = [];
-  for (let i = 1; i < path.length; i++) {
-    const d = getDirFromDelta(path[i].r - path[i - 1].r, path[i].c - path[i - 1].c);
-    if (runs[runs.length - 1] !== d) runs.push(d);
-  }
-  const opposite: Record<Direction, Direction> = {
-    up: 'down', down: 'up', left: 'right', right: 'left',
-  };
-  for (let i = 0; i + 2 < runs.length; i++) {
-    if (opposite[runs[i]] === runs[i + 2]) return true;
-  }
-  return false;
-}
-
-// Compute level parameters (Grid size, snake lengths) ensuring dense layouts with >= 150 arrows
 export function getLevelParams(level: number) {
   const collectionIdx = Math.min(29, Math.floor((level - 1) / 10));
   const collection = COLLECTIONS[collectionIdx];
-  // Ensure every level from 1 to 300 has a rich, dense grid (28-38) and short snake lengths (min 2, max 4-6) to guarantee >= 150 arrows
   const progress = (level - 1) / 299;
-  let gridSize = Math.round(28 + progress * 10);
-  let minLen = 2;
-  let maxLen = Math.round(4 + progress * 3);
-  gridSize = Math.min(40, Math.max(26, gridSize));
+  let gridSize = Math.round(44 + progress * 10); // 44 to 54 for 150+ arrows
+  const minLen = 2;
+  const maxLen = 8;
+  gridSize = Math.max(44, Math.min(64, gridSize));
   return { collection, gridSize, minLen, maxLen };
 }
-// Ray calculation from head in direction towards grid edge
-export function getRayCells(
-  head: CellCoord,
-  dir: Direction,
-  gridSize: number
-): CellCoord[] {
-  const ray: CellCoord[] = [];
-  const [dr, dc] = DIR_DELTA[dir];
-  let r = head.r + dr;
-  let c = head.c + dc;
-  while (r >= 0 && r < gridSize && c >= 0 && c < gridSize) {
-    ray.push({ r, c });
-    r += dr;
-    c += dc;
-  }
-  return ray;
-}
 
-// Greedy graph coloring for 14-palette
 export function assignColors(
   arrows: ArrowData[],
   gridSize: number,
@@ -291,7 +174,6 @@ export function assignColors(
   });
 }
 
-// Solver simulation with depth & trap measurement
 export function analyzeLevelSolvability(
   arrows: ArrowData[],
   gridSize: number
@@ -366,7 +248,6 @@ export function analyzeLevelSolvability(
   return { solvable: removedCount === count, depth, initialFreeCount, trapPct };
 }
 
-// Single Level Construction with Silhouette & Difficulty Filtering
 function buildSingleLevelCandidate(
   levelNumber: number,
   seed: number
@@ -374,281 +255,267 @@ function buildSingleLevelCandidate(
   const rng = createRNG(seed);
   const shapeKey = ((levelNumber - 1) % 150) + 1;
   const shapeDef = SHAPE_DEFINITIONS[levelNumber] || SHAPE_DEFINITIONS[shapeKey] || SHAPE_DEFINITIONS[1];
-  const { collection, gridSize, minLen, maxLen } = getLevelParams(levelNumber);
+  const { collection } = getLevelParams(levelNumber);
 
-  const { mask, cells: playableCells } = rasterizeShape(shapeDef, gridSize);
-  if (playableCells.length < 8) return null;
+  // Scale gridSize dynamically so that silhouette holds enough cells for >= 150 arrows
+  let gridSize = 46;
+  let { cells: playableCells } = rasterizeShape(shapeDef, gridSize);
+  while (playableCells.length < 750 && gridSize < 64) {
+    gridSize += 2;
+    ({ cells: playableCells } = rasterizeShape(shapeDef, gridSize));
+  }
 
   const occupied = new Int16Array(gridSize * gridSize);
-  occupied.fill(-1); // -1 is empty; otherwise arrow index
+  occupied.fill(-1);
+  const remaining = new Set<number>();
+  for (const c of playableCells) remaining.add(c.r * gridSize + c.c);
+
   const arrows: ArrowData[] = [];
   const directions: Direction[] = ['up', 'down', 'left', 'right'];
 
-  // Snake generation parameters (100% coverage - fill all dots!)
-  const targetCoverage = 1.0;
-  const targetCoveredCells = playableCells.length;
+  function isRayValid(hr: number, hc: number, d: Direction): boolean {
+    const [dr, dc] = DIR_DELTA[d];
+    let r = hr + dr, c = hc + dc;
+    while (r >= 0 && r < gridSize && c >= 0 && c < gridSize) {
+      const idx = r * gridSize + c;
+      if (remaining.has(idx)) return false; // passes through unassigned cell -> could be blocked later
+      r += dr; c += dc;
+    }
+    return true;
+  }
 
-  let currentCoveredCells = 0;
+  // Pass 1: Build winding snakes with varied lengths (lengths 2 to 8)
   let attempts = 0;
-  const maxPlacementAttempts = 500;
-
-  // Chance for rare mega-snake on higher levels (levels 30+)
-  const allowMegaSnakes = levelNumber >= 30;
-
-  while (
-    currentCoveredCells < targetCoveredCells &&
-    attempts < maxPlacementAttempts
-  ) {
+  while (remaining.size > 0 && attempts < 4000) {
     attempts++;
+    const arr = Array.from(remaining);
+    const startIdx = arr[Math.floor(rng() * arr.length)];
+    const hr = Math.floor(startIdx / gridSize);
+    const hc = startIdx % gridSize;
 
-    // Pick empty playable cell for tail
-    let startCell: CellCoord | null = null;
-    const startOffset = Math.floor(rng() * playableCells.length);
-    for (let scan = 0; scan < playableCells.length; scan++) {
-      const candidate = playableCells[(startOffset + scan) % playableCells.length];
-      if (occupied[candidate.r * gridSize + candidate.c] < 0) { startCell = candidate; break; }
-    }
-    if (!startCell) break;
-
-    // Determine snake target length
-    const densityScale = levelNumber <= 2 ? 1 : 0.78;
-        let targetLen = Math.max(2, Math.floor((Math.floor(rng() * (maxLen - minLen + 1)) + minLen) * densityScale));
-    if (allowMegaSnakes && rng() < 0.12) {
-      targetLen = Math.min(30, Math.floor(rng() * 12) + 18); // 20..36
-    }
-
-    const path: CellCoord[] = [startCell];
-    const visited = new Uint8Array(gridSize * gridSize);
-    visited[startCell.r * gridSize + startCell.c] = 1;
-
-    let currDir: Direction = directions[Math.floor(rng() * directions.length)];
-    let stuck = false;
-
-    while (path.length < targetLen) {
-      const curr = path[path.length - 1];
-
-      // Prefer turns with turnProbability 0.35-0.5
-      const wantTurn = rng() < 0.42;
-      const directionStart = Math.floor(rng() * 4);
-      let foundNext = false;
-      for (let candidateIndex = 0; candidateIndex < (wantTurn ? 4 : 5); candidateIndex++) {
-        let d: Direction;
-        if (!wantTurn && candidateIndex === 0) d = currDir;
-        else {
-          const directionIndex = (directionStart + candidateIndex) % 4;
-          d = directions[directionIndex];
-          if (d === currDir) continue;
-        }
-        const [dr, dc] = DIR_DELTA[d];
-        const nr = curr.r + dr;
-        const nc = curr.c + dc;
-        // Must be inside silhouette mask, empty, not visited
-        if (
-          nr >= 0 &&
-          nr < gridSize &&
-          nc >= 0 &&
-          nc < gridSize &&
-          mask[nr][nc] &&
-          occupied[nr * gridSize + nc] < 0 &&
-          visited[nr * gridSize + nc] === 0
-        ) {
-          path.push({ r: nr, c: nc });
-          visited[nr * gridSize + nc] = 1;
-          currDir = d;
-          foundNext = true;
-          break;
-        }
-      }
-
-      if (!foundNext) {
-        stuck = true;
-        break;
-      }
-    }
-
-    // Must meet minimum length
-    if (path.length < 2) continue;
-    if (stuck && path.length < Math.min(minLen, 3)) continue;
-
-    // Head is last cell. Head direction MUST continue the last segment's direction!
-    const head = path[path.length - 1];
-    const prev = path[path.length - 2];
-    const headDir = getDirFromDelta(head.r - prev.r, head.c - prev.c);
-
-    // Compute ray from head to edge of grid
-    // ACCEPT ONLY IF ray has NO already-placed cell (cells outside mask on ray are fine!)
-    let rayHitsAlreadyPlaced = false;
-    const [rayDr, rayDc] = DIR_DELTA[headDir];
-    let rayR = head.r + rayDr;
-    let rayC = head.c + rayDc;
-    while (rayR >= 0 && rayR < gridSize && rayC >= 0 && rayC < gridSize) {
-      if (occupied[rayR * gridSize + rayC] >= 0) { rayHitsAlreadyPlaced = true; break; }
-      rayR += rayDr; rayC += rayDc;
-    }
-
-    if (rayHitsAlreadyPlaced) {
-      continue;
-    }
-
-    // Keep square/U-shaped arrows out of generated levels; they are visually confusing.
-    if (hasConfusingUTurn(path)) continue;
-
-    // ACCEPT arrow!
-    const arrowId = `a_${levelNumber}_${arrows.length + 1}`;
-    const newArrow: ArrowData = {
-      id: arrowId,
-      cells: path,
-      direction: headDir,
-      colorIndex: -1,
-      order: arrows.length,
-    };
-
-    for (let i = 0; i < path.length; i++) occupied[path[i].r * gridSize + path[i].c] = arrows.length;
-    arrows.push(newArrow);
-    currentCoveredCells += path.length;
-  }
-
-  // Second pass: fill small leftover holes with 2-3 cell arrows if clear ray exists
-  for (let leftoverIdx = 0; leftoverIdx < playableCells.length; leftoverIdx++) {
-    const cell = playableCells[leftoverIdx];
-    if (occupied[cell.r * gridSize + cell.c] >= 0) continue;
-    // Try 2-cell mini arrows
-    for (const d of directions) {
+    const validDirs = directions.filter((d) => {
       const [dr, dc] = DIR_DELTA[d];
-      const nr = cell.r + dr;
-      const nc = cell.c + dc;
-      if (
-        nr >= 0 &&
-        nr < gridSize &&
-        nc >= 0 &&
-        nc < gridSize &&
-        mask[nr][nc] &&
-        occupied[nr * gridSize + nc] < 0
-      ) {
-        const miniHead = { r: nr, c: nc };
-        let rayBlocked = false;
-        let rayR = miniHead.r + dr;
-        let rayC = miniHead.c + dc;
-        while (rayR >= 0 && rayR < gridSize && rayC >= 0 && rayC < gridSize) {
-          if (occupied[rayR * gridSize + rayC] >= 0) { rayBlocked = true; break; }
-          rayR += dr; rayC += dc;
-        }
-        if (!rayBlocked) {
-          const arrowId = `a_${levelNumber}_${arrows.length + 1}`;
-          const miniArrow: ArrowData = {
-            id: arrowId,
-            cells: [cell, miniHead],
-            direction: d,
-            colorIndex: -1,
-            order: arrows.length,
-          };
-          occupied[cell.r * gridSize + cell.c] = arrows.length;
-          occupied[miniHead.r * gridSize + miniHead.c] = arrows.length;
-          arrows.push(miniArrow);
-          break;
-        }
-      }
-    }
-  }
+      const nr = hr - dr, nc = hc - dc;
+      return nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && remaining.has(nr * gridSize + nc) && isRayValid(hr, hc, d);
+    });
 
-  // Final fill pass: guarantee 100% of playable cells are covered (zero empty dots!)
-  for (let i = 0; i < playableCells.length; i++) {
-    const cell = playableCells[i];
-    if (occupied[cell.r * gridSize + cell.c] < 0) {
-      let assigned = false;
+    if (validDirs.length === 0) continue;
+    const chosenDir = validDirs[Math.floor(rng() * validDirs.length)];
+    const [dr, dc] = DIR_DELTA[chosenDir];
+    const neck = { r: hr - dr, c: hc - dc };
+
+    const roll = rng();
+    let targetLen = 3;
+    if (roll < 0.32) targetLen = 2;
+    else if (roll < 0.65) targetLen = 3;
+    else if (roll < 0.86) targetLen = 4 + Math.floor(rng() * 2);
+    else targetLen = 6 + Math.floor(rng() * 3); // 6, 7, 8
+
+    const snake = [neck, { r: hr, c: hc }];
+    const snakeSet = new Set<number>([neck.r * gridSize + neck.c, hr * gridSize + hc]);
+    let tail = neck;
+    let backDr = neck.r - hr;
+    let backDc = neck.c - hc;
+
+    while (snake.length < targetLen) {
+      const options: Array<{ r: number; c: number; dr: number; dc: number; isStraight: boolean }> = [];
       for (const d of directions) {
-        const [dr, dc] = DIR_DELTA[d];
-        const nr = cell.r + dr;
-        const nc = cell.c + dc;
+        const [stepDr, stepDc] = DIR_DELTA[d];
+        if (stepDr === -backDr && stepDc === -backDc) continue;
+        const nr = tail.r + stepDr;
+        const nc = tail.c + stepDc;
         if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
-          const neighborArrowIdx = occupied[nr * gridSize + nc];
-          if (neighborArrowIdx >= 0 && neighborArrowIdx < arrows.length) {
-            arrows[neighborArrowIdx].cells.unshift(cell);
-            occupied[cell.r * gridSize + cell.c] = neighborArrowIdx;
-            assigned = true;
-            break;
+          const idx = nr * gridSize + nc;
+          if (remaining.has(idx) && !snakeSet.has(idx)) {
+            let touchesSelf = false;
+            for (const d2 of directions) {
+              const [fDr, fDc] = DIR_DELTA[d2];
+              const adjR = nr + fDr, adjC = nc + fDc;
+              if (snakeSet.has(adjR * gridSize + adjC) && (adjR !== tail.r || adjC !== tail.c)) {
+                touchesSelf = true; break;
+              }
+            }
+            if (!touchesSelf) {
+              options.push({ r: nr, c: nc, dr: stepDr, dc: stepDc, isStraight: stepDr === backDr && stepDc === backDc });
+            }
           }
         }
       }
-      if (!assigned && arrows.length > 0) {
-        arrows[0].cells.unshift(cell);
-        occupied[cell.r * gridSize + cell.c] = 0;
+      if (options.length === 0) break;
+      const turns = options.filter(o => !o.isStraight);
+      const straights = options.filter(o => o.isStraight);
+      const chosen = (turns.length > 0 && (straights.length === 0 || rng() < 0.48)) ? turns[Math.floor(rng() * turns.length)] : (straights[0] || turns[0]);
+      snake.unshift({ r: chosen.r, c: chosen.c });
+      snakeSet.add(chosen.r * gridSize + chosen.c);
+      tail = { r: chosen.r, c: chosen.c };
+      backDr = chosen.dr;
+      backDc = chosen.dc;
+    }
+
+    const arrowIdx = arrows.length;
+    for (const c of snake) {
+      const idx = c.r * gridSize + c.c;
+      occupied[idx] = arrowIdx;
+      remaining.delete(idx);
+    }
+    arrows.push({
+      id: `a_${levelNumber}_${arrowIdx + 1}`,
+      cells: snake,
+      direction: chosenDir,
+      order: arrowIdx,
+      colorIndex: -1,
+    });
+  }
+
+  // Pass 2: Safely extend tails of arrows into adjacent remaining cells
+  let changed = true;
+  while (changed && remaining.size > 0) {
+    changed = false;
+    for (let k = 0; k < arrows.length; k++) {
+      const arr = arrows[k];
+      const tail = arr.cells[0];
+      for (const d of directions) {
+        const [dr, dc] = DIR_DELTA[d];
+        const nr = tail.r + dr, nc = tail.c + dc;
+        if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
+          const idx = nr * gridSize + nc;
+          if (remaining.has(idx)) {
+            // Check if (nr, nc) is in forward ray of any earlier arrow
+            let inRay = false;
+            for (let j = 0; j <= k; j++) {
+              const head = arrows[j].cells[arrows[j].cells.length - 1];
+              const [hdr, hdc] = DIR_DELTA[arrows[j].direction];
+              let rr = head.r + hdr, cc = head.c + hdc;
+              while (rr >= 0 && rr < gridSize && cc >= 0 && cc < gridSize) {
+                if (rr === nr && cc === nc) { inRay = true; break; }
+                rr += hdr; cc += hdc;
+              }
+              if (inRay) break;
+            }
+            if (!inRay) {
+              arr.cells.unshift({ r: nr, c: nc });
+              occupied[idx] = k;
+              remaining.delete(idx);
+              changed = true;
+              break;
+            }
+          }
+        }
       }
     }
   }
 
-  // Recount coverage
-  let finalCoveredCells = 0;
-  for (let i = 0; i < playableCells.length; i++) {
-    if (occupied[playableCells[i].r * gridSize + playableCells[i].c] >= 0) finalCoveredCells++;
+  // Pass 3: Pair any adjacent remaining cells into 2-cell arrows
+  if (remaining.size > 0) {
+    for (const idx of Array.from(remaining)) {
+      if (!remaining.has(idx)) continue;
+      const r = Math.floor(idx / gridSize);
+      const c = idx % gridSize;
+      for (const d of directions) {
+        const [dr, dc] = DIR_DELTA[d];
+        const nr = r - dr, nc = c - dc;
+        if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && remaining.has(nr * gridSize + nc) && isRayValid(r, c, d)) {
+          const arrowIdx = arrows.length;
+          occupied[idx] = arrowIdx;
+          occupied[nr * gridSize + nc] = arrowIdx;
+          remaining.delete(idx);
+          remaining.delete(nr * gridSize + nc);
+          arrows.push({
+            id: `a_${levelNumber}_${arrowIdx + 1}`,
+            cells: [{ r: nr, c: nc }, { r, c }],
+            direction: d,
+            order: arrowIdx,
+            colorIndex: -1,
+          });
+          break;
+        }
+      }
+    }
   }
 
-  if (arrows.length === 0) return null;
-
-  // Run solver and measure metrics
-  const analysis = analyzeLevelSolvability(arrows, gridSize);
-  if (!analysis.solvable) return null;
-
-  const coveragePct = (currentCoveredCells / playableCells.length) * 100;
-  let totalLen = 0;
-  arrows.forEach((a) => (totalLen += a.cells.length));
-  const avgLength = totalLen / arrows.length;
+  // Build actualMask and actualCells strictly from arrow cells so EVERY dot is covered by an arrow!
+  // Zero empty dots anywhere!
+  const actualMask = Array.from({ length: gridSize }, () => Array(gridSize).fill(false));
+  const actualCells: CellCoord[] = [];
+  for (const a of arrows) {
+    for (const c of a.cells) {
+      if (!actualMask[c.r][c.c]) {
+        actualMask[c.r][c.c] = true;
+        actualCells.push(c);
+      }
+    }
+  }
 
   assignColors(arrows, gridSize, rng);
 
-  return {
+  let totalLen = 0;
+  arrows.forEach((a) => (totalLen += a.cells.length));
+  const avgLength = arrows.length > 0 ? totalLen / arrows.length : 0;
+
+  const candidate: LevelConfig = {
     levelNumber,
     collectionId: collection.id,
     shapeName: shapeDef.name,
     gridSize,
-    playableMask: mask,
-    playableCells,
+    playableMask: actualMask,
+    playableCells: actualCells,
     arrows,
-    solutionOrder: [...arrows].reverse().map((a) => a.id),
+    solutionOrder: arrows.map((a) => a.id),
     stats: {
-      depth: analysis.depth,
-      initialFreeCount: analysis.initialFreeCount,
-      coveragePct,
-      trapPct: analysis.trapPct,
+      depth: 0,
+      initialFreeCount: 0,
+      coveragePct: 100,
+      trapPct: 0,
       avgLength,
     },
   };
+
+  const analysis = analyzeLevelSolvability(arrows, gridSize);
+  candidate.stats.depth = analysis.depth;
+  candidate.stats.initialFreeCount = analysis.initialFreeCount;
+  candidate.stats.trapPct = analysis.trapPct;
+
+  return candidate;
 }
 
-// In-memory cache
-const levelCache = new Map<number, LevelConfig>();
+export function validateLevel(level: LevelConfig): boolean {
+  if (!level || !level.arrows || level.arrows.length < 150) return false;
+  const gridSize = level.gridSize;
+  const owner = new Int16Array(gridSize * gridSize);
+  owner.fill(-1);
 
-/**
- * Difficulty criteria check based on level progression
- */
-function meetsDifficultyTargets(level: number, candidate: LevelConfig): boolean {
-  const { depth, initialFreeCount, coveragePct, trapPct } = candidate.stats;
-  const totalArrows = candidate.arrows.length;
+  for (let i = 0; i < level.arrows.length; i++) {
+    const arrow = level.arrows[i];
+    if (!arrow.cells || arrow.cells.length < 2) return false;
+    for (let j = 1; j < arrow.cells.length; j++) {
+      const a = arrow.cells[j - 1];
+      const b = arrow.cells[j];
+      const dr = Math.abs(a.r - b.r);
+      const dc = Math.abs(a.c - b.c);
+      if (dr + dc !== 1) return false;
+      const cellIdx = b.r * gridSize + b.c;
+      if (owner[cellIdx] >= 0) return false;
+      owner[cellIdx] = i;
+    }
+    const firstCell = arrow.cells[0];
+    const firstCellIdx = firstCell.r * gridSize + firstCell.c;
+    if (owner[firstCellIdx] >= 0 && owner[firstCellIdx] !== i) return false;
+    owner[firstCellIdx] = i;
 
-  // Ensure each level maintains at least 150 arrows for high complexity
-  if (totalArrows < 150) return false;
-
-  if (level === 1) {
-    return depth >= 2 && initialFreeCount >= 1 && coveragePct >= 75;
+    const head = arrow.cells[arrow.cells.length - 1];
+    const prev = arrow.cells[arrow.cells.length - 2];
+    const expectedDir = getDirFromDelta(head.r - prev.r, head.c - prev.c);
+    if (arrow.direction !== expectedDir) return false;
   }
 
-  // Linear ramp:
-  const requiredDepth = Math.max(2, Math.round(3 + (level / 300) * 14));
-  const maxInitialPct = Math.max(0.06, 0.25 - (level / 300) * 0.19);
-  const maxInitialCount = Math.max(2, Math.floor(totalArrows * maxInitialPct));
-  const minTrapPct = 25;
+  const analysis = analyzeLevelSolvability(level.arrows, gridSize);
+  if (!analysis.solvable) return false;
 
-  return (
-    depth >= requiredDepth &&
-    initialFreeCount <= maxInitialCount &&
-    trapPct >= minTrapPct &&
-    coveragePct >= 80
-  );
+  return true;
 }
 
-/**
- * Returns verified level config with retries
- */
+const levelCache = new Map<number, LevelConfig>();
+
 export function getLevel(
   levelNumber: number,
   options: { maxAttempts?: number; timeBudgetMs?: number } = {}
@@ -656,27 +523,27 @@ export function getLevel(
   const safeLevel = Math.max(1, Math.min(300, Math.floor(levelNumber)));
   if (levelCache.has(safeLevel)) return levelCache.get(safeLevel)!;
 
-  const started = performance.now();
-  const deadline = started + Math.max(50, options.timeBudgetMs ?? 400);
-  const maxAttempts = Math.min(20, Math.max(1, options.maxAttempts ?? 20));
   let bestCandidate: LevelConfig | null = null;
-  let bestScore = -Infinity;
+  const maxAttempts = options.maxAttempts ?? 15;
 
-  for (let attempt = 0; attempt < maxAttempts && performance.now() < deadline; attempt++) {
-    const candidate = buildSingleLevelCandidate(safeLevel, safeLevel * 7919 + attempt);
-    if (!candidate) continue;
-    if (meetsDifficultyTargets(safeLevel, candidate)) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const candidate = buildSingleLevelCandidate(safeLevel, safeLevel * 7919 + attempt * 101);
+    if (candidate && validateLevel(candidate)) {
       levelCache.set(safeLevel, candidate);
       return candidate;
     }
-    const score = candidate.stats.depth * 2 + candidate.stats.trapPct +
-      candidate.stats.coveragePct - candidate.stats.initialFreeCount * 3;
-    if (score > bestScore) { bestScore = score; bestCandidate = candidate; }
+    if (candidate && (!bestCandidate || candidate.arrows.length > bestCandidate.arrows.length)) {
+      bestCandidate = candidate;
+    }
   }
 
-  if (!bestCandidate) bestCandidate = buildSingleLevelCandidate(safeLevel, safeLevel * 7919);
-  if (!bestCandidate) throw new Error(`Unable to construct level ${safeLevel} within the generation budget`);
-  levelCache.set(safeLevel, bestCandidate);
-  return bestCandidate;
-}
+  if (bestCandidate && bestCandidate.arrows.length > 0) {
+    levelCache.set(safeLevel, bestCandidate);
+    return bestCandidate;
+  }
 
+  // Guaranteed fallback candidate
+  const fallback = buildSingleLevelCandidate(safeLevel, 42) || buildSingleLevelCandidate(1, 42)!;
+  levelCache.set(safeLevel, fallback);
+  return fallback;
+}

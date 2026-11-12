@@ -1,3 +1,8 @@
+/**
+ * Arrow Bloom - Interactive Silhouette Game Board Component
+ * Supports high-resolution crisp rendering at 1x-4x zoom, smooth pinch/pan/wheel,
+ * touch tolerances, and glowing visuals.
+ */
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { ArrowData, FloatingScoreItem } from '../types.ts';
 import { PALETTE, COLOR_BLIND_SYMBOLS, DIR_DELTA } from '../levelGenerator.ts';
@@ -77,8 +82,6 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     }
   }, []);
 
-
-
   const drawArrow = useCallback((
     ctx: CanvasRenderingContext2D, arrow: ArrowData, cell: number, alpha = 1,
     offsetX = 0, offsetY = 0, glow = false, white = false
@@ -93,6 +96,8 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     if (glow && !performanceMode) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = zoomLevel > 1 ? 6 : 3;
       ctx.beginPath();
       for (let i = 0; i < cells.length; i++) {
         const x = (cells[i].c + 0.5) * cell + offsetX;
@@ -102,6 +107,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       ctx.lineWidth += 3;
       ctx.globalAlpha *= 0.22;
       ctx.stroke();
+      ctx.shadowBlur = 0;
       ctx.globalAlpha = alpha;
       ctx.lineWidth = Math.max(1.6, cell * 0.21);
     }
@@ -136,7 +142,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       }
     }
     ctx.restore();
-  }, [colorBlindMode, performanceMode]);
+  }, [colorBlindMode, performanceMode, zoomLevel]);
 
   const drawStatic = useCallback(() => {
     const canvas = staticRef.current;
@@ -261,7 +267,6 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       const arrow = arrowById.get(hintId);
       if (arrow) {
         const pulse = performanceMode ? 1 : 0.65 + Math.sin(now / 180) * 0.2;
-        // Hints must be unmistakable even when the device is in low-power mode.
         drawArrow(ctx, arrow, cell, 1, 0, 0, true, true);
         if (hintedArrowId === arrow.id) {
           const head = arrow.cells[arrow.cells.length - 1];
@@ -327,15 +332,18 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     if (active && !rafRef.current) rafRef.current = requestAnimationFrame(tick);
   }, [gridSize, arrows, escapingArrows, shakingArrowId, flashBlockedArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, comboCount, drawArrow, performanceMode, onPerformanceModeChange, debugOverlay, generationMs, arrowById]);
 
+  // Re-rasterize static & dynamic canvases at dpr * zoomLevel for razor-sharp clarity up to 4x zoom
   const resizeCanvas = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
     const rect = container.getBoundingClientRect();
     const width = Math.max(1, rect.width);
     const height = Math.max(1, rect.height);
-    const board = Math.max(220, Math.min(width - 16, height - 16));
-    // Scale dpr with zoomLevel to ensure razor-sharp rendering when zoomed in
-    const dpr = Math.min(3.5, (window.devicePixelRatio || 1) * Math.max(1, zoomLevel));
+    const board = Math.max(220, Math.min(width - 12, height - 12));
+    const maxDimension = 4096;
+    const baseDpr = Math.min(3.5, window.devicePixelRatio || 1);
+    const zoomFactor = Math.max(1, zoomLevel);
+    const dpr = Math.min(baseDpr * zoomFactor, maxDimension / Math.max(1, board));
     sizeRef.current = { width, height, board, dpr };
     cellSizeRef.current = board / gridSize;
     for (const canvas of [staticRef.current, dynamicRef.current]) {
@@ -370,6 +378,10 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
   }, [arrows, gridSize]);
 
   useEffect(() => { rebuildOwner(); drawStatic(); }, [rebuildOwner, drawStatic]);
+  useEffect(() => {
+    resizeCanvas();
+  }, [zoomLevel, resizeCanvas]);
+
   useEffect(() => {
     if (escapingArrows.length || shakingArrowId || hintedArrowId || tutorialArrowId || floatingScores.length || showComboPill) {
       animationStartRef.current = performance.now();

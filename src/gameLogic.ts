@@ -11,6 +11,7 @@ export interface RayResult {
 
 /**
  * Checks whether an arrow has a completely unobstructed ray to escape off the board.
+ * Correctly checks that other arrows block the ray (an arrow's own body does not block its escape).
  */
 export function checkArrowRay(
   arrowId: string,
@@ -19,6 +20,7 @@ export function checkArrowRay(
 ): RayResult {
   const target = allArrows.find((arrow) => arrow.id === arrowId);
   if (!target) return { isFree: false, rayCells: [] };
+
   const owner = new Int16Array(gridSize * gridSize);
   owner.fill(-1);
   for (let i = 0; i < allArrows.length; i++) {
@@ -28,10 +30,12 @@ export function checkArrowRay(
       owner[cell.r * gridSize + cell.c] = i;
     }
   }
+
   const head = target.cells[target.cells.length - 1];
   const [dr, dc] = target.direction === 'up' ? [-1, 0] : target.direction === 'down' ? [1, 0] : target.direction === 'left' ? [0, -1] : [0, 1];
   let r = head.r + dr;
   let c = head.c + dc;
+
   while (r >= 0 && r < gridSize && c >= 0 && c < gridSize) {
     const occupant = owner[r * gridSize + c];
     if (occupant >= 0 && allArrows[occupant].id !== arrowId) {
@@ -57,7 +61,6 @@ export function getHintArrow(
 ): ArrowData | null {
   if (currentArrows.length === 0) return null;
 
-  // Check in solution order first
   for (const solId of solutionOrder) {
     const arrow = currentArrows.find((a) => a.id === solId);
     if (arrow) {
@@ -66,7 +69,6 @@ export function getHintArrow(
     }
   }
 
-  // Fallback to any free
   for (const arrow of currentArrows) {
     const { isFree } = checkArrowRay(arrow.id, currentArrows, gridSize);
     if (isFree) return arrow;

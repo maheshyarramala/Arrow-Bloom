@@ -425,7 +425,7 @@ export default function App() {
 
   return (
     <main
-      className={`relative w-full h-full flex flex-col overflow-hidden select-none font-['Fredoka',sans-serif] ${
+      className={`relative w-full h-[100dvh] flex flex-col overflow-hidden select-none font-['Fredoka',sans-serif] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] ${
         isDark ? 'text-white' : 'text-slate-800'
       }`}
     >

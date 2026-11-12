@@ -3,7 +3,7 @@ import type { LevelConfig } from './types.ts';
 
 const DB_NAME = 'arrow-bloom-level-cache';
 const STORE = 'levels';
-const GENERATOR_VERSION = 3;
+const GENERATOR_VERSION = 7;
 
 function openCache(): Promise<IDBDatabase | null> {
   return new Promise((resolve) => {
@@ -50,7 +50,7 @@ async function generate(levelNumber: number): Promise<LevelConfig> {
   const started = performance.now();
   const cached = await readCached(levelNumber);
   if (cached) { if (!generationTimes.has(levelNumber)) generationTimes.set(levelNumber, 0); return cached; }
-  const result = getLevel(levelNumber, { maxAttempts: 20, timeBudgetMs: 400 });
+  const result = getLevel(levelNumber, { maxAttempts: 35, timeBudgetMs: 800 });
   generationTimes.set(levelNumber, Math.round(performance.now() - started));
   await writeCached(result);
   return result;
@@ -68,7 +68,6 @@ self.onmessage = async (event: MessageEvent<{ levelNumber: number }>) => {
     const level = await task;
     pending.delete(levelNumber);
     self.postMessage({ levelNumber, level, generationMs: generationTimes.get(levelNumber) ?? Math.round(performance.now() - requestStarted) });
-    // Warm only the immediately following level after returning the requested one.
     if (levelNumber < 300 && !pending.has(levelNumber + 1)) {
       const next = generate(levelNumber + 1).finally(() => pending.delete(levelNumber + 1));
       pending.set(levelNumber + 1, next);
