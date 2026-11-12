@@ -44,6 +44,7 @@ import {
   GameOverModal,
   CollectionCompleteModal,
 } from './components/Popups.tsx';
+import { LevelWinConfetti } from './components/LevelWinConfetti.tsx';
 
 // Score Action & Reducer to ensure score NEVER stays at 0
 type ScoreAction =
@@ -552,7 +553,12 @@ export default function App() {
         </div>
       )}
 
-      {/* Popups */}
+      {/* Popups & Level Win Confetti */}
+      <LevelWinConfetti
+        active={showLevelComplete || showCollectionComplete}
+        colorIndices={levelConfig.arrows.map(a => a.colorIndex)}
+      />
+
       {showLevelComplete && (
         <LevelCompleteModal
           levelNumber={currentLevelNumber}

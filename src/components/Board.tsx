@@ -77,31 +77,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     }
   }, []);
 
-  const resizeCanvas = useCallback(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const rect = container.getBoundingClientRect();
-    const width = Math.max(1, rect.width);
-    const height = Math.max(1, rect.height);
-    const board = Math.max(220, Math.min(width - 16, height - 16));
-    const dpr = Math.min(performanceMode ? 1.5 : 2, window.devicePixelRatio || 1);
-    sizeRef.current = { width, height, board, dpr };
-    cellSizeRef.current = board / gridSize;
-    for (const canvas of [staticRef.current, dynamicRef.current]) {
-      if (!canvas) continue;
-      canvas.width = Math.round(board * dpr);
-      canvas.height = Math.round(board * dpr);
-      canvas.style.width = board + 'px';
-      canvas.style.height = board + 'px';
-    }
-    if (wrapperRef.current) {
-      wrapperRef.current.style.width = board + 'px';
-      wrapperRef.current.style.height = board + 'px';
-    }
-    updateWrapperTransform();
-    drawStatic();
-    drawDynamic(performance.now());
-  }, [gridSize, performanceMode, updateWrapperTransform]);
+
 
   const drawArrow = useCallback((
     ctx: CanvasRenderingContext2D, arrow: ArrowData, cell: number, alpha = 1,
@@ -350,6 +326,33 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     }
     if (active && !rafRef.current) rafRef.current = requestAnimationFrame(tick);
   }, [gridSize, arrows, escapingArrows, shakingArrowId, flashBlockedArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, comboCount, drawArrow, performanceMode, onPerformanceModeChange, debugOverlay, generationMs, arrowById]);
+
+  const resizeCanvas = useCallback(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const width = Math.max(1, rect.width);
+    const height = Math.max(1, rect.height);
+    const board = Math.max(220, Math.min(width - 16, height - 16));
+    // Scale dpr with zoomLevel to ensure razor-sharp rendering when zoomed in
+    const dpr = Math.min(3.5, (window.devicePixelRatio || 1) * Math.max(1, zoomLevel));
+    sizeRef.current = { width, height, board, dpr };
+    cellSizeRef.current = board / gridSize;
+    for (const canvas of [staticRef.current, dynamicRef.current]) {
+      if (!canvas) continue;
+      canvas.width = Math.round(board * dpr);
+      canvas.height = Math.round(board * dpr);
+      canvas.style.width = board + 'px';
+      canvas.style.height = board + 'px';
+    }
+    if (wrapperRef.current) {
+      wrapperRef.current.style.width = board + 'px';
+      wrapperRef.current.style.height = board + 'px';
+    }
+    updateWrapperTransform();
+    drawStatic();
+    drawDynamic(performance.now());
+  }, [gridSize, performanceMode, updateWrapperTransform, zoomLevel, drawStatic, drawDynamic]);
 
   const tick = useCallback((now: number) => {
     rafRef.current = 0;
