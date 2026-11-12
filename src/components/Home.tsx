@@ -62,9 +62,11 @@ export const Home: React.FC<HomeProps> = ({
       {/* Top Header Bar */}
       <header className="w-full max-w-md mx-auto flex items-center justify-between py-3 shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-pink-500 to-rose-400 flex items-center justify-center text-white text-xl shadow-md border border-pink-300/40 shrink-0">
-            🌸
-          </div>
+          <img
+            src="/icon.png"
+            alt="Arrow Bloom Logo"
+            className="w-10 h-10 rounded-2xl shadow-md border border-pink-400/40 shrink-0 object-cover"
+          />
           <div className="flex flex-col">
             <span className="text-lg font-black tracking-tight leading-none">
               Arrow Bloom
@@ -135,8 +137,12 @@ export const Home: React.FC<HomeProps> = ({
       <section className="w-full max-w-md flex flex-col items-center text-center gap-3.5 my-auto py-2">
         {/* Blooming Icon Container */}
         <div className="relative group">
-          <div className="w-28 h-28 rounded-[2.2rem] bg-gradient-to-br from-pink-500 via-rose-500 to-indigo-600 shadow-2xl flex items-center justify-center text-6xl shadow-pink-500/30 border-2 border-white/20 transform hover:scale-105 transition-transform duration-300 select-none">
-            🌸
+          <div className="w-28 h-28 rounded-[2.2rem] shadow-2xl shadow-pink-500/30 border-2 border-white/20 transform hover:scale-105 transition-transform duration-300 overflow-hidden select-none bg-slate-900">
+            <img
+              src="/icon.png"
+              alt="Arrow Bloom"
+              className="w-full h-full object-cover"
+            />
           </div>
           {isVip && (
             <div className="absolute -top-2 -right-2 px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black uppercase shadow-lg border border-yellow-200 flex items-center gap-1 z-10">

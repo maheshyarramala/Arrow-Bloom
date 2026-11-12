@@ -1,14 +1,15 @@
 /**
  * Generates Android mipmap launcher icons, adaptive foregrounds,
- * backgrounds, and web icons from Arrow Bloom's default logo (🌸).
+ * backgrounds, and web icons from Arrow Bloom's official logo.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import sharp from 'sharp';
 
 const ROOT_DIR = process.cwd();
-const ICON_SVG = path.join(ROOT_DIR, 'public', 'icon.svg');
-const FOREGROUND_SVG = path.join(ROOT_DIR, 'public', 'icon-foreground.svg');
+const LOGO_PNG = path.join(ROOT_DIR, 'public', 'logo.png');
+const ICON_PNG = path.join(ROOT_DIR, 'public', 'icon.png');
+const SOURCE_IMAGE = fs.existsSync(LOGO_PNG) ? LOGO_PNG : ICON_PNG;
 const RES_DIR = path.join(ROOT_DIR, 'android', 'app', 'src', 'main', 'res');
 
 const MIPMAP_SIZES = [
@@ -20,16 +21,17 @@ const MIPMAP_SIZES = [
 ];
 
 async function generate() {
-  console.log('🌸 Generating Arrow Bloom Android launcher icons...');
+  console.log(`🌸 Generating Arrow Bloom Android launcher icons from: ${SOURCE_IMAGE}`);
 
-  if (!fs.existsSync(ICON_SVG)) {
-    throw new Error(`icon.svg not found at ${ICON_SVG}`);
+  if (!fs.existsSync(SOURCE_IMAGE)) {
+    throw new Error(`Source logo not found at ${SOURCE_IMAGE}`);
   }
 
-  // 1. Generate Web PWA icons in public/
-  await sharp(ICON_SVG).resize(192, 192).toFile(path.join(ROOT_DIR, 'public', 'icon-192.png'));
-  await sharp(ICON_SVG).resize(512, 512).toFile(path.join(ROOT_DIR, 'public', 'icon-512.png'));
-  console.log('✔ Generated web PWA icons: icon-192.png, icon-512.png');
+  // 1. Generate Web PWA icons & favicons in public/
+  await sharp(SOURCE_IMAGE).resize(192, 192).toFile(path.join(ROOT_DIR, 'public', 'icon-192.png'));
+  await sharp(SOURCE_IMAGE).resize(512, 512).toFile(path.join(ROOT_DIR, 'public', 'icon-512.png'));
+  await sharp(SOURCE_IMAGE).resize(64, 64).toFile(path.join(ROOT_DIR, 'public', 'favicon.png'));
+  console.log('✔ Generated web PWA icons: icon-192.png, icon-512.png, favicon.png');
 
   if (!fs.existsSync(RES_DIR)) {
     console.warn(`Android res directory not found at ${RES_DIR}. Skipping native icons.`);
@@ -41,26 +43,41 @@ async function generate() {
     const dir = path.join(RES_DIR, folder);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
-    // ic_launcher.png (Full squircle with flower)
-    await sharp(ICON_SVG)
+    // ic_launcher.png (Full squircle with flower & shooting arrow)
+    await sharp(SOURCE_IMAGE)
       .resize(iconSize, iconSize)
       .toFile(path.join(dir, 'ic_launcher.png'));
 
     // ic_launcher_round.png
-    await sharp(ICON_SVG)
+    await sharp(SOURCE_IMAGE)
       .resize(iconSize, iconSize)
       .toFile(path.join(dir, 'ic_launcher_round.png'));
 
-    // ic_launcher_foreground.png (Transparent flower for adaptive icon)
-    const fgSource = fs.existsSync(FOREGROUND_SVG) ? FOREGROUND_SVG : ICON_SVG;
-    await sharp(fgSource)
-      .resize(fgSize, fgSize)
+    // ic_launcher_foreground.png (Safe-padded centered logo for adaptive launcher)
+    // Scale source to ~78% of fgSize and pad with transparent margin to prevent clipping
+    const innerSize = Math.round(fgSize * 0.78);
+    const padding = Math.round((fgSize - innerSize) / 2);
+
+    const resizedLogo = await sharp(SOURCE_IMAGE)
+      .resize(innerSize, innerSize, { fit: 'contain' })
+      .toBuffer();
+
+    await sharp({
+      create: {
+        width: fgSize,
+        height: fgSize,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      },
+    })
+      .composite([{ input: resizedLogo, top: padding, left: padding }])
+      .png()
       .toFile(path.join(dir, 'ic_launcher_foreground.png'));
 
     console.log(`✔ Generated ${folder}: ${iconSize}x${iconSize} (icon) & ${fgSize}x${fgSize} (fg)`);
   }
 
-  // 3. Adaptive background drawable (Gradient from pink to rose to indigo)
+  // 3. Adaptive background drawable (Matching deep midnight navy gradient)
   const drawableDir = path.join(RES_DIR, 'drawable');
   if (!fs.existsSync(drawableDir)) fs.mkdirSync(drawableDir, { recursive: true });
 
@@ -68,15 +85,15 @@ async function generate() {
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
     <gradient
-        android:angle="315"
-        android:startColor="#EC4899"
-        android:centerColor="#F43F5E"
-        android:endColor="#4F46E5"
+        android:angle="270"
+        android:startColor="#12163A"
+        android:centerColor="#0B0E28"
+        android:endColor="#060818"
         android:type="linear" />
 </shape>
 `;
   fs.writeFileSync(path.join(drawableDir, 'ic_launcher_background.xml'), bgXml, 'utf-8');
-  console.log('✔ Updated drawable/ic_launcher_background.xml with gradient');
+  console.log('✔ Updated drawable/ic_launcher_background.xml with midnight gradient');
 
   // 4. Remove default Capacitor vector foreground if it overrides mipmaps
   const v24Dir = path.join(RES_DIR, 'drawable-v24');
@@ -91,7 +108,7 @@ async function generate() {
   if (!fs.existsSync(valuesDir)) fs.mkdirSync(valuesDir, { recursive: true });
   const valBgXml = `<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#F43F5E</color>
+    <color name="ic_launcher_background">#0B0E28</color>
 </resources>
 `;
   fs.writeFileSync(path.join(valuesDir, 'ic_launcher_background.xml'), valBgXml, 'utf-8');
@@ -110,7 +127,7 @@ async function generate() {
   fs.writeFileSync(path.join(anydpiDir, 'ic_launcher_round.xml'), adaptiveXml, 'utf-8');
   console.log('✔ Updated mipmap-anydpi-v26/ic_launcher.xml and round.xml');
 
-  console.log('🎉 All Android app icons updated successfully!');
+  console.log('🎉 All Android app icons updated with the new official Arrow Bloom logo!');
 }
 
 generate().catch((err) => {
