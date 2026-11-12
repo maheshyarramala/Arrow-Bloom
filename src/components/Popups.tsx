@@ -1,9 +1,21 @@
 /**
  * Arrow Bloom - Game Popups & Modals (Level Complete, Game Over, Collection Milestone)
- * Includes revealed colorful silhouette celebration on Win!
+ * Includes colorful silhouette celebration on Win, mid-level continuation with free hits,
+ * and rewarded ad integrations.
  */
 import React, { useEffect } from 'react';
-import { Star, RotateCcw, Play, Home, Trophy, Sparkles, HeartCrack, Lightbulb } from 'lucide-react';
+import {
+  Star,
+  RotateCcw,
+  Play,
+  Home,
+  Trophy,
+  Sparkles,
+  HeartCrack,
+  Heart,
+  Crown,
+  Video,
+} from 'lucide-react';
 import { CollectionConfig } from '../types.ts';
 import { SHAPE_DEFINITIONS, getShapeThumbnailPath } from '../shapes.ts';
 import { fireLevelWinConfetti, fireGrandFinaleConfetti } from './Confetti.tsx';
@@ -16,9 +28,11 @@ interface LevelCompleteModalProps {
   mistakes: number;
   isNewHigh: boolean;
   hasNextLevel: boolean;
+  isAdFree?: boolean;
   onNextLevel: () => void;
   onReplay: () => void;
   onHome: () => void;
+  onDoubleScoreAd?: () => void;
 }
 
 export const LevelCompleteModal: React.FC<LevelCompleteModalProps> = ({
@@ -29,9 +43,11 @@ export const LevelCompleteModal: React.FC<LevelCompleteModalProps> = ({
   mistakes,
   isNewHigh,
   hasNextLevel,
+  isAdFree = false,
   onNextLevel,
   onReplay,
   onHome,
+  onDoubleScoreAd,
 }) => {
   const shapeDef = SHAPE_DEFINITIONS[levelNumber];
 
@@ -40,7 +56,7 @@ export const LevelCompleteModal: React.FC<LevelCompleteModalProps> = ({
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-md animate-fade-in select-none">
       <div className="relative w-full max-w-sm rounded-3xl bg-slate-900/95 border-4 border-amber-400/40 p-5 shadow-2xl text-center flex flex-col items-center gap-3 text-white">
         {/* Header Tag */}
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 text-xs font-black uppercase tracking-wider shadow-md">
@@ -121,7 +137,22 @@ export const LevelCompleteModal: React.FC<LevelCompleteModalProps> = ({
           )}
         </div>
 
-        {/* Buttons */}
+        {/* Optional 2x Score Ad Bonus */}
+        {onDoubleScoreAd && (
+          <button
+            onClick={onDoubleScoreAd}
+            className="w-full py-2 px-3 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/40 text-amber-300 font-extrabold text-xs flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+          >
+            {isAdFree ? (
+              <Crown className="w-3.5 h-3.5 text-amber-400 fill-current" />
+            ) : (
+              <Video className="w-3.5 h-3.5" />
+            )}
+            <span>{isAdFree ? 'VIP 2x Score Bonus' : 'Watch 5s Ad for 2x Score'}</span>
+          </button>
+        )}
+
+        {/* Navigation Buttons */}
         <div className="w-full flex flex-col gap-2 mt-1">
           {hasNextLevel ? (
             <button
@@ -137,7 +168,7 @@ export const LevelCompleteModal: React.FC<LevelCompleteModalProps> = ({
               className="w-full py-3 px-5 rounded-2xl bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-black text-base shadow-lg border border-purple-300 flex items-center justify-center gap-2 active:scale-95 transition-transform"
             >
               <Trophy className="w-5 h-5" />
-              <span>Grand Finale Conquered!</span>
+              <span>All 300 Levels Conquered!</span>
             </button>
           )}
 
@@ -165,19 +196,23 @@ export const LevelCompleteModal: React.FC<LevelCompleteModalProps> = ({
 
 interface GameOverModalProps {
   levelNumber: number;
-  onRetry: () => void;
-  onFreeHintRetry: () => void;
+  remainingArrowsCount: number;
+  isAdFree?: boolean;
+  onContinueWithFreeHits: () => void;
+  onRestartFromScratch: () => void;
   onHome: () => void;
 }
 
 export const GameOverModal: React.FC<GameOverModalProps> = ({
   levelNumber,
-  onRetry,
-  onFreeHintRetry,
+  remainingArrowsCount,
+  isAdFree = false,
+  onContinueWithFreeHits,
+  onRestartFromScratch,
   onHome,
 }) => {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fade-in select-none">
       <div className="relative w-full max-w-sm rounded-3xl bg-slate-900/95 border-4 border-rose-500/40 p-5 shadow-2xl text-center flex flex-col items-center gap-3 text-white">
         <div className="w-14 h-14 rounded-full bg-rose-500/20 border-2 border-rose-500/40 flex items-center justify-center">
           <HeartCrack className="w-8 h-8 text-rose-400 animate-pulse" />
@@ -186,32 +221,42 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
         <div>
           <h2 className="text-xl font-black text-white">Out of Hearts!</h2>
           <p className="text-xs text-white/70 mt-1 leading-relaxed">
-            Level {levelNumber} is tricky! Remember to inspect the straight ray from the arrowhead out to the edge.
+            You were doing great on Level {levelNumber}! Only{' '}
+            <strong className="text-amber-300">{remainingArrowsCount} arrows</strong> left.
+            Continue right now without losing your progress!
           </p>
         </div>
 
-        <div className="w-full flex flex-col gap-2 mt-1">
+        <div className="w-full flex flex-col gap-2.5 mt-1">
+          {/* Main Action: Continue with Free Hits (Keeps board where ended!) */}
           <button
-            onClick={onRetry}
-            className="w-full py-3 px-5 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-400 hover:to-pink-500 active:scale-95 text-white font-black text-sm shadow-md border border-rose-300 flex items-center justify-center gap-2 transition-transform"
+            onClick={onContinueWithFreeHits}
+            className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 hover:from-emerald-300 hover:to-cyan-300 active:scale-95 text-slate-950 font-black text-sm shadow-xl border border-emerald-200 flex items-center justify-center gap-2 transition-transform"
           >
-            <RotateCcw className="w-4 h-4" />
-            <span>Try Again</span>
+            <Heart className="w-4 h-4 fill-rose-600 text-rose-600" />
+            <div className="flex flex-col text-left leading-tight">
+              <span className="text-sm font-black">Continue with Free Hits</span>
+              <span className="text-[10px] font-extrabold opacity-85">
+                {isAdFree ? '👑 VIP Instant Free Revive' : '▶ Watch 5s Ad to restore 3 Hearts'}
+              </span>
+            </div>
           </button>
 
+          {/* Secondary Action: Restart from Scratch (clears saved state) */}
           <button
-            onClick={onFreeHintRetry}
-            className="w-full py-2.5 px-4 rounded-2xl bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 font-black text-xs border border-amber-200 flex items-center justify-center gap-1.5 transition-transform shadow-md"
+            onClick={onRestartFromScratch}
+            className="w-full py-2.5 px-4 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white/90 hover:text-white font-bold text-xs border border-white/10 flex items-center justify-center gap-1.5 transition-all"
           >
-            <Lightbulb className="w-4 h-4 fill-current" />
-            <span>Retry with Free Hint</span>
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Restart from Beginning</span>
           </button>
 
+          {/* Home Button */}
           <button
             onClick={onHome}
-            className="w-full py-2 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-white/70 hover:text-white font-bold text-xs transition-all"
+            className="w-full py-2 rounded-xl text-white/60 hover:text-white font-bold text-xs transition-all"
           >
-            Home Menu
+            Save &amp; Return to Menu
           </button>
         </div>
       </div>
@@ -239,7 +284,7 @@ export const CollectionCompleteModal: React.FC<CollectionCompleteModalProps> = (
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fade-in select-none">
       <div className="relative w-full max-w-sm rounded-3xl bg-slate-900/95 border-4 border-yellow-400/60 p-6 shadow-2xl text-center flex flex-col items-center gap-4 text-white">
         <div className="w-18 h-18 rounded-3xl bg-gradient-to-tr from-amber-400 to-yellow-300 flex items-center justify-center shadow-lg border-2 border-yellow-200 transform -rotate-3 animate-bounce">
           <Trophy className="w-9 h-9 text-slate-950" />
@@ -254,7 +299,7 @@ export const CollectionCompleteModal: React.FC<CollectionCompleteModalProps> = (
           </h2>
           <p className="text-xs text-white/80 mt-2 px-2 leading-relaxed">
             {isGameFinale
-              ? 'You have solved all 150 silhouette puzzles! You have mastered the Grand Master Maze!'
+              ? 'You have solved all 300 silhouette puzzles! You have mastered the Grand Master Maze!'
               : `You have cleared all 10 puzzles in ${completedCollection.name}! ${
                   nextCollection ? `Next up: ${nextCollection.name}!` : ''
                 }`}

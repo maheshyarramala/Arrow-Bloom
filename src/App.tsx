@@ -1,9 +1,10 @@
 /**
  * Arrow Bloom - Main Application Controller
- * Handles screen transitions, live score reducer, combo timers, zoom/pan state,
- * and popup milestones.
+ * Handles screen transitions, mid-level resume persistence, Capacitor mobile back-button navigation,
+ * 5-second rewarded video ads, ₹99 Lifetime Ad-Free pass, Google Play Games Hub, and legal pages.
  */
 import React, { useState, useEffect, useCallback, useReducer, useRef } from 'react';
+import { App as CapacitorApp } from '@capacitor/app';
 import {
   ArrowData,
   CollectionConfig,
@@ -27,9 +28,13 @@ import {
   saveSettings,
   updateLevelCompletion,
   resetProgress,
+  saveMidLevelState,
+  loadMidLevelState,
+  clearMidLevelState,
+  isAdFreePurchased,
 } from './storage.ts';
 
-// Components
+// Core Components
 import { Background } from './components/Background.tsx';
 import { TopBar } from './components/TopBar.tsx';
 import { ProgressBar } from './components/ProgressBar.tsx';
@@ -45,8 +50,16 @@ import {
   CollectionCompleteModal,
 } from './components/Popups.tsx';
 import { LevelWinConfetti } from './components/LevelWinConfetti.tsx';
+import { AdModal } from './components/AdModal.tsx';
+import { BannerAd } from './components/BannerAd.tsx';
+import { ShopModal } from './components/ShopModal.tsx';
+import { GameCenterModal } from './components/GameCenterModal.tsx';
+import { LegalPagesModal, LegalTab } from './components/LegalPagesModal.tsx';
+import { DailyMissionsModal } from './components/DailyMissionsModal.tsx';
+import { recordMissionEvent, consumeScoreMultiplier } from './dailyMissions.ts';
+import { saveProgress } from './storage.ts';
 
-// Score Action & Reducer to ensure score NEVER stays at 0
+// Score Reducer
 type ScoreAction =
   | { type: 'ADD_SCORE'; points: number }
   | { type: 'RESET_SCORE' }
@@ -71,9 +84,20 @@ export default function App() {
   const [currentLevelNumber, setCurrentLevelNumber] = useState<number>(1);
   const [settings, setSettings] = useState<GameSettings>(loadSettings);
   const [progress, setProgress] = useState<PlayerProgress>(loadProgress);
+  const [isAdFree, setIsAdFree] = useState<boolean>(isAdFreePurchased);
 
   // Active Level Data
-  const EMPTY_LEVEL: LevelConfig = { levelNumber: 1, collectionId: 1, shapeName: '', gridSize: 10, playableMask: [], playableCells: [], arrows: [], solutionOrder: [], stats: { depth: 0, initialFreeCount: 0, coveragePct: 0, trapPct: 0, avgLength: 0 } };
+  const EMPTY_LEVEL: LevelConfig = {
+    levelNumber: 1,
+    collectionId: 1,
+    shapeName: '',
+    gridSize: 10,
+    playableMask: [],
+    playableCells: [],
+    arrows: [],
+    solutionOrder: [],
+    stats: { depth: 0, initialFreeCount: 0, coveragePct: 0, trapPct: 0, avgLength: 0 },
+  };
   const [levelConfig, setLevelConfig] = useState<LevelConfig>(EMPTY_LEVEL);
   const [activeArrows, setActiveArrows] = useState<ArrowData[]>([]);
   const [isPreparingLevel, setIsPreparingLevel] = useState(false);
@@ -81,7 +105,9 @@ export default function App() {
   const [showPerfOverlay, setShowPerfOverlay] = useState(false);
   const [isBoardDragging, setIsBoardDragging] = useState(false);
   const workerRef = useRef<Worker | null>(null);
-  const pendingLevelsRef = useRef(new Map<number, Array<{ resolve: (level: LevelConfig) => void; reject: (error: Error) => void }>>());
+  const pendingLevelsRef = useRef<
+    Map<number, Array<{ resolve: (level: LevelConfig) => void; reject: (error: Error) => void }>>
+  >(new Map());
   const levelRequestIdRef = useRef(0);
 
   // Score Reducer
@@ -95,7 +121,7 @@ export default function App() {
   const comboHideTimerRef = useRef<number | null>(null);
   const lastClearTimeRef = useRef<number>(0);
 
-  // Floating score bubbles (max 3, cleaned up after 600ms)
+  // Floating score bubbles
   const [floatingScores, setFloatingScores] = useState<FloatingScoreItem[]>([]);
 
   // Undo History & Hints
@@ -103,17 +129,18 @@ export default function App() {
   const [hintsLeft, setHintsLeft] = useState<number>(3);
   const [hintedArrowId, setHintedArrowId] = useState<string | null>(null);
 
-  // Animations & Interaction lock
-  const [escapingArrows, setEscapingArrows] = useState<Array<{ arrow: ArrowData; startedAt: number; duration: number }>>([]);
+  // Animations & Board Interaction
+  const [escapingArrows, setEscapingArrows] = useState<
+    Array<{ arrow: ArrowData; startedAt: number; duration: number }>
+  >([]);
   const [shakingArrowId, setShakingArrowId] = useState<string | null>(null);
   const [flashBlockedArrowId, setFlashBlockedArrowId] = useState<string | null>(null);
-  const isInteractingRef = useRef<boolean>(false);
 
   // Zoom & Pan state
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Popups
+  // Popups & Dialogs
   const [showLevelComplete, setShowLevelComplete] = useState<boolean>(false);
   const [showGameOver, setShowGameOver] = useState<boolean>(false);
   const [showCollectionComplete, setShowCollectionComplete] = useState<boolean>(false);
@@ -122,36 +149,79 @@ export default function App() {
   const [isGrandFinale, setIsGrandFinale] = useState<boolean>(false);
   const [isNewHighScore, setIsNewHighScore] = useState<boolean>(false);
 
-  // Create one worker; it generates only requested levels and warms the next level.
+  // Monetization & Legal Modals
+  const [showShop, setShowShop] = useState<boolean>(false);
+  const [showGameCenter, setShowGameCenter] = useState<boolean>(false);
+  const [showLegal, setShowLegal] = useState<boolean>(false);
+  const [legalInitialTab, setLegalInitialTab] = useState<LegalTab>('privacy');
+  const [showDailyMissions, setShowDailyMissions] = useState<boolean>(false);
+  const [adState, setAdState] = useState<{
+    isOpen: boolean;
+    reason: 'hint' | 'free_hits' | 'double_score' | 'interstitial';
+    onReward?: () => void;
+  }>({
+    isOpen: false,
+    reason: 'hint',
+  });
+
+  // Level worker setup
   useEffect(() => {
     const worker = new Worker(new URL('./levelWorker.ts', import.meta.url), { type: 'module' });
     workerRef.current = worker;
-    worker.onmessage = (event: MessageEvent<{ levelNumber: number; level?: LevelConfig; error?: string; generationMs?: number }>) => {
+    worker.onmessage = (
+      event: MessageEvent<{
+        levelNumber: number;
+        level?: LevelConfig;
+        error?: string;
+        generationMs?: number;
+      }>
+    ) => {
       const pending = pendingLevelsRef.current.get(event.data.levelNumber);
       if (!pending) return;
       pendingLevelsRef.current.delete(event.data.levelNumber);
-      if (event.data.level) { setGenerationMs(event.data.generationMs || 0); pending.forEach(item => item.resolve(event.data.level!)); }
-      else pending.forEach(item => item.reject(new Error(event.data.error || 'Level generation failed')));
+      if (event.data.level) {
+        setGenerationMs(event.data.generationMs || 0);
+        pending.forEach((item) => item.resolve(event.data.level!));
+      } else {
+        pending.forEach((item) =>
+          item.reject(new Error(event.data.error || 'Level generation failed'))
+        );
+      }
     };
     worker.onerror = () => {
-      pendingLevelsRef.current.forEach(resolvers => resolvers.forEach(item => item.reject(new Error('Level worker failed'))));
+      pendingLevelsRef.current.forEach((resolvers) =>
+        resolvers.forEach((item) => item.reject(new Error('Level worker failed')))
+      );
       pendingLevelsRef.current.clear();
     };
-    return () => { worker.terminate(); workerRef.current = null; };
+    return () => {
+      worker.terminate();
+      workerRef.current = null;
+    };
   }, []);
 
-  const togglePerfOverlay = useCallback(() => setShowPerfOverlay(value => !value), []);
-  const enablePerformanceMode = useCallback(() => setSettings(current => current.performanceMode ? current : { ...current, performanceMode: true }), []);
+  const togglePerfOverlay = useCallback(() => setShowPerfOverlay((value) => !value), []);
+  const enablePerformanceMode = useCallback(
+    () => setSettings((current) => (current.performanceMode ? current : { ...current, performanceMode: true })),
+    []
+  );
   const handleDraggingChange = useCallback((dragging: boolean) => setIsBoardDragging(dragging), []);
 
-  const requestLevel = useCallback((levelNumber: number) => new Promise<LevelConfig>((resolve, reject) => {
-    const worker = workerRef.current;
-    if (!worker) { reject(new Error('Level worker is not ready')); return; }
-    const waiting = pendingLevelsRef.current.get(levelNumber) || [];
-    waiting.push({ resolve, reject });
-    pendingLevelsRef.current.set(levelNumber, waiting);
-    worker.postMessage({ levelNumber });
-  }), []);
+  const requestLevel = useCallback(
+    (levelNumber: number) =>
+      new Promise<LevelConfig>((resolve, reject) => {
+        const worker = workerRef.current;
+        if (!worker) {
+          reject(new Error('Level worker is not ready'));
+          return;
+        }
+        const waiting = pendingLevelsRef.current.get(levelNumber) || [];
+        waiting.push({ resolve, reject });
+        pendingLevelsRef.current.set(levelNumber, waiting);
+        worker.postMessage({ levelNumber });
+      }),
+    []
+  );
 
   // Sync settings & sound
   useEffect(() => {
@@ -163,7 +233,6 @@ export default function App() {
     saveSettings(settings);
   }, [settings]);
 
-  // Cleanup floating timers on unmount
   useEffect(() => {
     return () => {
       if (comboHideTimerRef.current) clearTimeout(comboHideTimerRef.current);
@@ -173,147 +242,262 @@ export default function App() {
   const currentCollection =
     COLLECTIONS.find((c) => c.id === levelConfig.collectionId) || COLLECTIONS[0];
 
-  // Start Level: wait for the worker without blocking the UI.
-  const startLevel = useCallback(async (lvlNum: number, extraHint = false) => {
-    const requestId = ++levelRequestIdRef.current;
-    setIsPreparingLevel(false);
-    setActiveArrows([]);
-    setLevelConfig(EMPTY_LEVEL);
-    const spinnerTimer = window.setTimeout(() => setIsPreparingLevel(true), 150);
-    setCurrentLevelNumber(lvlNum);
-    setScreen('game');
-    try {
-      const config = await requestLevel(lvlNum);
-      if (requestId !== levelRequestIdRef.current) return;
-      setLevelConfig(config);
-      setActiveArrows(config.arrows.map((a) => ({ ...a, cells: a.cells })));
-      setHearts(3);
-      setMistakes(0);
-      dispatchScore({ type: 'RESET_SCORE' });
-      setComboCount(0);
-      setShowComboPill(false);
-      lastClearTimeRef.current = 0;
-      setUndoHistory([]);
-      setHintsLeft(extraHint ? 4 : 3);
-      setHintedArrowId(null);
-      setEscapingArrows([]);
-      completionCommittedRef.current = false;
-      removedArrowIdsRef.current.clear();
-      escapeTimersRef.current.forEach(timer => window.clearTimeout(timer));
-      escapeTimersRef.current.clear();
-      setShakingArrowId(null);
-      setFlashBlockedArrowId(null);
-      setFloatingScores([]);
-      setZoomLevel(1);
-      setPanOffset({ x: 0, y: 0 });
-      setShowLevelComplete(false);
-      setShowGameOver(false);
-      setShowCollectionComplete(false);
-      isInteractingRef.current = false;
-    } catch {
-      setScreen('levels');
-    } finally {
-      window.clearTimeout(spinnerTimer);
-      if (requestId === levelRequestIdRef.current) setIsPreparingLevel(false);
-    }
-  }, [requestLevel]);
-
-  // Arrow selection: update the logical board immediately; visuals never block input.
   const activeArrowsRef = useRef<ArrowData[]>(activeArrows);
   activeArrowsRef.current = activeArrows;
   const removedArrowIdsRef = useRef<Set<string>>(new Set());
   const escapeTimersRef = useRef<Map<string, number>>(new Map());
   const completionCommittedRef = useRef(false);
 
-  const handleArrowSelect = useCallback((arrowId: string) => {
-    const boardNow = activeArrowsRef.current;
-    if (hearts <= 0 || completionCommittedRef.current || removedArrowIdsRef.current.has(arrowId)) return;
-    const arrow = boardNow.find(item => item.id === arrowId);
-    if (!arrow) return;
+  // Start Level: Supports Mid-Level Resume Persistence!
+  const startLevel = useCallback(
+    async (lvlNum: number, fromScratch = false, extraHint = false) => {
+      const requestId = ++levelRequestIdRef.current;
+      setIsPreparingLevel(false);
+      setActiveArrows([]);
+      setLevelConfig(EMPTY_LEVEL);
+      const spinnerTimer = window.setTimeout(() => setIsPreparingLevel(true), 150);
+      setCurrentLevelNumber(lvlNum);
+      setScreen('game');
 
-    const rayResult = checkArrowRay(arrowId, boardNow, levelConfig.gridSize);
-    if (!rayResult.isFree) {
-      setShakingArrowId(arrowId);
-      setFlashBlockedArrowId(rayResult.blockingArrowId || null);
-      soundManager.playBlocked();
-      setComboCount(0);
-      setShowComboPill(false);
-      setMistakes(value => value + 1);
-      setHearts(value => {
-        const next = Math.max(0, value - 1);
-        if (next === 0) window.setTimeout(() => { soundManager.playLoss(); setShowGameOver(true); }, 450);
-        return next;
-      });
-      window.setTimeout(() => { setShakingArrowId(null); setFlashBlockedArrowId(null); }, 420);
-      return;
-    }
+      try {
+        const config = await requestLevel(lvlNum);
+        if (requestId !== levelRequestIdRef.current) return;
+        setLevelConfig(config);
 
-    // Remove from the authoritative occupancy immediately, not after animation.
-    removedArrowIdsRef.current.add(arrowId);
-    const nextBoard = boardNow.filter(item => item.id !== arrowId);
-    activeArrowsRef.current = nextBoard;
-    setActiveArrows(nextBoard);
-    const now = performance.now();
-    const animationDuration = Math.min(1900, Math.max(650, 420 + arrow.cells.length * 24));
-    setEscapingArrows(current => [...current.filter(item => item.arrow.id !== arrowId), { arrow, startedAt: now, duration: animationDuration }]);
-    const diff = now - lastClearTimeRef.current;
-    const nextCombo = lastClearTimeRef.current > 0 && diff < 1200 ? comboCount + 1 : 1;
-    setComboCount(nextCombo);
-    lastClearTimeRef.current = now;
-    if (nextCombo > 1) {
-      setShowComboPill(true);
-      if (comboHideTimerRef.current) clearTimeout(comboHideTimerRef.current);
-      comboHideTimerRef.current = window.setTimeout(() => setShowComboPill(false), 700);
-    }
-    soundManager.playPop(nextCombo);
-    const pts = computeArrowScore(arrow.cells.length, nextCombo);
-    dispatchScore({ type: 'ADD_SCORE', points: pts });
-    const head = arrow.cells[arrow.cells.length - 1];
-    const floatItem: FloatingScoreItem = {
-      id: now, text: nextCombo > 1 ? `+${pts} COMBO!` : `+${pts}`,
-      x: (head.c + 0.5) * (360 / levelConfig.gridSize),
-      y: (head.r + 0.5) * (360 / levelConfig.gridSize),
-      color: nextCombo > 1 ? '#FBBF24' : '#10E7A1', createdAt: now,
-    };
-    setFloatingScores(prev => [...prev.slice(-2), floatItem]);
-    setUndoHistory(hist => [...hist, arrow]);
+        // Check if there is an in-progress board saved for this level
+        const savedMidState = fromScratch ? null : loadMidLevelState(lvlNum);
 
-    const finishAnimation = () => {
-      removedArrowIdsRef.current.delete(arrowId);
-      setEscapingArrows(current => current.filter(item => item.arrow.id !== arrowId));
-      escapeTimersRef.current.delete(arrowId);
-      if (activeArrowsRef.current.length !== 0 || escapeTimersRef.current.size > 0 || completionCommittedRef.current) return;
-      completionCommittedRef.current = true;
-      const finalMistakes = mistakes;
-      let finalScore = score + pts + (finalMistakes === 0 ? 500 : 0);
-      const stars = calculateStars(finalMistakes);
-      const previous = progress.levelData[currentLevelNumber];
-      setIsNewHighScore(!previous || finalScore > (previous.highScore || 0));
-      setProgress(updateLevelCompletion(progress, currentLevelNumber, stars, finalScore));
-      soundManager.playWin();
-      if (currentLevelNumber % 10 === 0) {
-        const index = Math.floor((currentLevelNumber - 1) / 10);
-        setCompletedCollection(COLLECTIONS[index] || null);
-        setNextCollection(COLLECTIONS[index + 1] || null);
-        setIsGrandFinale(currentLevelNumber === 300);
-        setShowCollectionComplete(true);
-      } else setShowLevelComplete(true);
-    };
-    const timer = window.setTimeout(finishAnimation, animationDuration);
-    escapeTimersRef.current.set(arrowId, timer);
-  }, [hearts, levelConfig.gridSize, comboCount, mistakes, score, progress, currentLevelNumber]);
+        if (savedMidState && savedMidState.activeArrows && savedMidState.activeArrows.length > 0) {
+          // RESUME EXACTLY WHERE PLAYER LEFT OFF
+          setActiveArrows(savedMidState.activeArrows.map((a) => ({ ...a, cells: a.cells })));
+          activeArrowsRef.current = savedMidState.activeArrows;
+          setHearts(Math.max(1, savedMidState.hearts || 3));
+          setMistakes(savedMidState.mistakes || 0);
+          dispatchScore({ type: 'SET_SCORE', score: savedMidState.score || 0 });
+          setHintsLeft(extraHint ? (savedMidState.hintsLeft || 3) + 1 : savedMidState.hintsLeft || 3);
+        } else {
+          // Fresh board start
+          clearMidLevelState();
+          setActiveArrows(config.arrows.map((a) => ({ ...a, cells: a.cells })));
+          activeArrowsRef.current = config.arrows;
+          setHearts(3);
+          setMistakes(0);
+          dispatchScore({ type: 'RESET_SCORE' });
+          const missionBonusHints = progress.dailyMissions?.bonusHintsBank || 0;
+          setHintsLeft(extraHint ? 4 + missionBonusHints : 3 + missionBonusHints);
+        }
+
+        setComboCount(0);
+        setShowComboPill(false);
+        lastClearTimeRef.current = 0;
+        setUndoHistory([]);
+        setHintedArrowId(null);
+        setEscapingArrows([]);
+        completionCommittedRef.current = false;
+        removedArrowIdsRef.current.clear();
+        escapeTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+        escapeTimersRef.current.clear();
+        setShakingArrowId(null);
+        setFlashBlockedArrowId(null);
+        setFloatingScores([]);
+        setZoomLevel(1);
+        setPanOffset({ x: 0, y: 0 });
+        setShowLevelComplete(false);
+        setShowGameOver(false);
+        setShowCollectionComplete(false);
+      } catch {
+        setScreen('levels');
+      } finally {
+        window.clearTimeout(spinnerTimer);
+        if (requestId === levelRequestIdRef.current) setIsPreparingLevel(false);
+      }
+    },
+    [requestLevel]
+  );
+
+  // Arrow selection
+  const handleArrowSelect = useCallback(
+    (arrowId: string) => {
+      const boardNow = activeArrowsRef.current;
+      if (hearts <= 0 || completionCommittedRef.current || removedArrowIdsRef.current.has(arrowId))
+        return;
+      const arrow = boardNow.find((item) => item.id === arrowId);
+      if (!arrow) return;
+
+      const rayResult = checkArrowRay(arrowId, boardNow, levelConfig.gridSize);
+      if (!rayResult.isFree) {
+        setShakingArrowId(arrowId);
+        setFlashBlockedArrowId(rayResult.blockingArrowId || null);
+        soundManager.playBlocked();
+        setComboCount(0);
+        setShowComboPill(false);
+        setMistakes((value) => value + 1);
+        setHearts((value) => {
+          const next = Math.max(0, value - 1);
+          if (next === 0) {
+            window.setTimeout(() => {
+              soundManager.playLoss();
+              // Persist current board state so "Retry with Free Hits" continues right here!
+              saveMidLevelState({
+                levelNumber: currentLevelNumber,
+                activeArrows: boardNow,
+                score,
+                mistakes: mistakes + 1,
+                hintsLeft,
+                hearts: 0,
+                savedAt: Date.now(),
+              });
+              setShowGameOver(true);
+            }, 450);
+          }
+          return next;
+        });
+        window.setTimeout(() => {
+          setShakingArrowId(null);
+          setFlashBlockedArrowId(null);
+        }, 420);
+        return;
+      }
+
+      // Remove from occupancy immediately
+      removedArrowIdsRef.current.add(arrowId);
+      const nextBoard = boardNow.filter((item) => item.id !== arrowId);
+      activeArrowsRef.current = nextBoard;
+      setActiveArrows(nextBoard);
+
+      const now = performance.now();
+      const animationDuration = Math.min(1900, Math.max(650, 420 + arrow.cells.length * 24));
+      setEscapingArrows((current) => [
+        ...current.filter((item) => item.arrow.id !== arrowId),
+        { arrow, startedAt: now, duration: animationDuration },
+      ]);
+      const diff = now - lastClearTimeRef.current;
+      const nextCombo = lastClearTimeRef.current > 0 && diff < 1200 ? comboCount + 1 : 1;
+      setComboCount(nextCombo);
+      lastClearTimeRef.current = now;
+      if (nextCombo > 1) {
+        setShowComboPill(true);
+        if (comboHideTimerRef.current) clearTimeout(comboHideTimerRef.current);
+        comboHideTimerRef.current = window.setTimeout(() => setShowComboPill(false), 700);
+      }
+      soundManager.playPop(nextCombo);
+      const scoreMultiplier = progress.dailyMissions?.activeScoreMultiplier || 1;
+      const basePts = computeArrowScore(arrow.cells.length, nextCombo);
+      const pts = basePts * scoreMultiplier;
+      dispatchScore({ type: 'ADD_SCORE', points: pts });
+      const nextTotalScore = score + pts;
+
+      // Track mission progress for arrows cleared and combos reached
+      let progNow = progress;
+      const { updatedProgress: pArrows } = recordMissionEvent(progNow, { type: 'ARROWS_CLEARED', count: 1 });
+      progNow = pArrows;
+      if (nextCombo >= 4) {
+        const { updatedProgress: pCombo } = recordMissionEvent(progNow, { type: 'COMBO_REACHED', comboCount: nextCombo });
+        progNow = pCombo;
+      }
+      setProgress(progNow);
+      saveProgress(progNow);
+
+      // Persist mid-level state on every arrow clear
+      if (nextBoard.length > 0) {
+        saveMidLevelState({
+          levelNumber: currentLevelNumber,
+          activeArrows: nextBoard,
+          score: nextTotalScore,
+          mistakes,
+          hintsLeft,
+          hearts,
+          savedAt: Date.now(),
+        });
+      }
+
+      const head = arrow.cells[arrow.cells.length - 1];
+      const floatText =
+        scoreMultiplier > 1
+          ? nextCombo > 1
+            ? `+${pts} (${scoreMultiplier}x COMBO!)`
+            : `+${pts} (${scoreMultiplier}x!)`
+          : nextCombo > 1
+          ? `+${pts} COMBO!`
+          : `+${pts}`;
+
+      const floatItem: FloatingScoreItem = {
+        id: now,
+        text: floatText,
+        x: (head.c + 0.5) * (360 / levelConfig.gridSize),
+        y: (head.r + 0.5) * (360 / levelConfig.gridSize),
+        color: scoreMultiplier > 1 ? '#00E5FF' : nextCombo > 1 ? '#FBBF24' : '#10E7A1',
+        createdAt: now,
+      };
+      setFloatingScores((prev) => [...prev.slice(-2), floatItem]);
+      setUndoHistory((hist) => [...hist, arrow]);
+
+      const finishAnimation = () => {
+        removedArrowIdsRef.current.delete(arrowId);
+        setEscapingArrows((current) => current.filter((item) => item.arrow.id !== arrowId));
+        escapeTimersRef.current.delete(arrowId);
+        if (
+          activeArrowsRef.current.length !== 0 ||
+          escapeTimersRef.current.size > 0 ||
+          completionCommittedRef.current
+        )
+          return;
+
+        // Level Complete: Clear mid-level state
+        clearMidLevelState();
+        completionCommittedRef.current = true;
+        const finalMistakes = mistakes;
+        const finalScore = nextTotalScore + (finalMistakes === 0 ? 500 : 0);
+        const stars = calculateStars(finalMistakes);
+        const previous = progress.levelData[currentLevelNumber];
+        setIsNewHighScore(!previous || finalScore > (previous.highScore || 0));
+
+        // Record daily mission for level cleared & flawless clear, and consume multiplier
+        const { updatedProgress: pWin } = recordMissionEvent(progress, {
+          type: 'LEVEL_CLEARED',
+          levelNumber: currentLevelNumber,
+          mistakes: finalMistakes,
+          stars,
+        });
+        const pConsumed = consumeScoreMultiplier(pWin);
+        const nextSavedProgress = updateLevelCompletion(pConsumed, currentLevelNumber, stars, finalScore);
+        setProgress(nextSavedProgress);
+        soundManager.playWin();
+
+        if (currentLevelNumber % 10 === 0) {
+          const index = Math.floor((currentLevelNumber - 1) / 10);
+          setCompletedCollection(COLLECTIONS[index] || null);
+          setNextCollection(COLLECTIONS[index + 1] || null);
+          setIsGrandFinale(currentLevelNumber === 300);
+          setShowCollectionComplete(true);
+        } else {
+          setShowLevelComplete(true);
+        }
+      };
+      const timer = window.setTimeout(finishAnimation, animationDuration);
+      escapeTimersRef.current.set(arrowId, timer);
+    },
+    [hearts, levelConfig.gridSize, comboCount, mistakes, score, hintsLeft, progress, currentLevelNumber]
+  );
 
   const handleArrowSelectRef = useRef<(arrowId: string) => void>(() => {});
   handleArrowSelectRef.current = handleArrowSelect;
-  const handleArrowSelectStable = useCallback((arrowId: string) => handleArrowSelectRef.current(arrowId), []);
+  const handleArrowSelectStable = useCallback(
+    (arrowId: string) => handleArrowSelectRef.current(arrowId),
+    []
+  );
 
   const toggleTheme = useCallback(() => {
-    setSettings(current => ({ ...current, theme: current.theme === 'dark' ? 'light' : 'dark' }));
+    setSettings((current) => ({
+      ...current,
+      theme: current.theme === 'dark' ? 'light' : 'dark',
+    }));
   }, []);
+
   const openSettings = useCallback(() => setScreen('settings'), []);
-  const zoomIn = useCallback(() => setZoomLevel(current => Math.min(4, current + 0.35)), []);
+  const zoomIn = useCallback(() => setZoomLevel((current) => Math.min(4, current + 0.35)), []);
   const zoomOut = useCallback(() => {
-    setZoomLevel(current => {
+    setZoomLevel((current) => {
       const next = Math.max(1, current - 0.35);
       if (next === 1) setPanOffset({ x: 0, y: 0 });
       return next;
@@ -332,32 +516,130 @@ export default function App() {
     if (timer !== undefined) window.clearTimeout(timer);
     escapeTimersRef.current.delete(lastArrow.id);
     removedArrowIdsRef.current.delete(lastArrow.id);
-    setEscapingArrows(current => current.filter(item => item.arrow.id !== lastArrow.id));
+    setEscapingArrows((current) => current.filter((item) => item.arrow.id !== lastArrow.id));
     setUndoHistory((hist) => hist.slice(0, -1));
     const restored = [...activeArrowsRef.current, lastArrow];
     activeArrowsRef.current = restored;
     setActiveArrows(restored);
     soundManager.playClick();
-  }, [undoHistory]);
 
-  // Hint (H)
-  const handleHint = useCallback(() => {
+    // Update mid-level state
+    saveMidLevelState({
+      levelNumber: currentLevelNumber,
+      activeArrows: restored,
+      score,
+      mistakes,
+      hintsLeft,
+      hearts,
+      savedAt: Date.now(),
+    });
+  }, [undoHistory, currentLevelNumber, score, mistakes, hintsLeft, hearts]);
+
+  // Execute Hint Action
+  const executeHintAction = useCallback(() => {
     const boardNow = activeArrowsRef.current;
-    if (hintsLeft <= 0 || boardNow.length === 0 || isPreparingLevel) return;
-    // Resolve against the authoritative live board so rapid taps/animations
-    // cannot leave Hint looking at a stale React render.
+    if (boardNow.length === 0 || isPreparingLevel) return;
     const target = getHintArrow(boardNow, levelConfig.solutionOrder, levelConfig.gridSize);
     if (!target) {
       soundManager.playBlocked();
       return;
     }
-    setHintsLeft((remaining) => Math.max(0, remaining - 1));
     setHintedArrowId(target.id);
     soundManager.playHint();
-    window.setTimeout(() => setHintedArrowId((current) => current === target.id ? null : current), 2800);
-  }, [hintsLeft, levelConfig, isPreparingLevel]);
+    window.setTimeout(
+      () => setHintedArrowId((current) => (current === target.id ? null : current)),
+      2800
+    );
+  }, [levelConfig, isPreparingLevel]);
 
-  // Centralize screen changes so overlays never remain above Home or Levels.
+  // Hint handler with Rewarded Ad & VIP support
+  const handleHint = useCallback(() => {
+    const boardNow = activeArrowsRef.current;
+    if (boardNow.length === 0 || isPreparingLevel) return;
+
+    if (isAdFree) {
+      // VIP: Instant free hints forever!
+      executeHintAction();
+      return;
+    }
+
+    if (hintsLeft > 0) {
+      // Use standard banked hint
+      setHintsLeft((rem) => {
+        const next = Math.max(0, rem - 1);
+        saveMidLevelState({
+          levelNumber: currentLevelNumber,
+          activeArrows: boardNow,
+          score,
+          mistakes,
+          hintsLeft: next,
+          hearts,
+          savedAt: Date.now(),
+        });
+        return next;
+      });
+      executeHintAction();
+    } else {
+      // Out of hints: Trigger 5-second rewarded video ad!
+      setAdState({
+        isOpen: true,
+        reason: 'hint',
+        onReward: () => {
+          executeHintAction();
+        },
+      });
+    }
+  }, [isAdFree, hintsLeft, isPreparingLevel, executeHintAction, currentLevelNumber, score, mistakes, hearts]);
+
+  // "Continue with Free Hits" on Game Over:
+  // Starts game right where it ended, restores 3 hearts, and plays 5s ad (or instant for VIP)!
+  const handleContinueWithFreeHits = useCallback(() => {
+    const performContinue = () => {
+      setHearts(3);
+      setShowGameOver(false);
+      soundManager.playWin();
+      // Update saved mid-level state with restored hearts
+      saveMidLevelState({
+        levelNumber: currentLevelNumber,
+        activeArrows: activeArrowsRef.current,
+        score,
+        mistakes,
+        hintsLeft,
+        hearts: 3,
+        savedAt: Date.now(),
+      });
+    };
+
+    if (isAdFree) {
+      performContinue();
+    } else {
+      setAdState({
+        isOpen: true,
+        reason: 'free_hits',
+        onReward: performContinue,
+      });
+    }
+  }, [isAdFree, currentLevelNumber, score, mistakes, hintsLeft]);
+
+  // 2x Score Ad Bonus on Level Complete
+  const handleDoubleScoreAd = useCallback(() => {
+    const performDouble = () => {
+      dispatchScore({ type: 'ADD_SCORE', points: score });
+      soundManager.playWin();
+    };
+
+    if (isAdFree) {
+      performDouble();
+    } else {
+      setAdState({
+        isOpen: true,
+        reason: 'double_score',
+        onReward: performDouble,
+      });
+    }
+  }, [isAdFree, score]);
+
+  // Centralized Navigation
   const goHome = useCallback(() => {
     setShowLevelComplete(false);
     setShowGameOver(false);
@@ -367,55 +649,144 @@ export default function App() {
   }, []);
 
   const goLevels = useCallback(() => {
+    // Save mid-level state if active board
+    if (activeArrowsRef.current.length > 0 && hearts > 0) {
+      saveMidLevelState({
+        levelNumber: currentLevelNumber,
+        activeArrows: activeArrowsRef.current,
+        score,
+        mistakes,
+        hintsLeft,
+        hearts,
+        savedAt: Date.now(),
+      });
+    }
     setShowLevelComplete(false);
     setShowGameOver(false);
     setShowCollectionComplete(false);
     setIsPreparingLevel(false);
     setScreen('levels');
-  }, []);
+  }, [currentLevelNumber, score, mistakes, hintsLeft, hearts]);
 
-  const navigationStateRef = useRef({ screen, showLevelComplete, showGameOver, showCollectionComplete });
-  navigationStateRef.current = { screen, showLevelComplete, showGameOver, showCollectionComplete };
+  // Hardware Back Button Handler (Capacitor & Web popstate)
+  // Ensures pressing back navigates UI cleanly rather than killing the app!
+  const stateSnapshotRef = useRef({
+    screen,
+    adOpen: adState.isOpen,
+    showShop,
+    showGameCenter,
+    showLegal,
+    showDailyMissions,
+    showLevelComplete,
+    showGameOver,
+    showCollectionComplete,
+  });
 
-  // Keep one guarded history entry so Android/browser Back navigates within
-  // the app instead of closing the WebView from an active game screen.
+  stateSnapshotRef.current = {
+    screen,
+    adOpen: adState.isOpen,
+    showShop,
+    showGameCenter,
+    showLegal,
+    showDailyMissions,
+    showLevelComplete,
+    showGameOver,
+    showCollectionComplete,
+  };
+
+  const handleBackNavigation = useCallback(() => {
+    const s = stateSnapshotRef.current;
+
+    // 1. Close open full-screen modals first
+    if (s.adOpen) {
+      setAdState((prev) => ({ ...prev, isOpen: false }));
+      return true;
+    }
+    if (s.showDailyMissions) {
+      setShowDailyMissions(false);
+      return true;
+    }
+    if (s.showShop) {
+      setShowShop(false);
+      return true;
+    }
+    if (s.showGameCenter) {
+      setShowGameCenter(false);
+      return true;
+    }
+    if (s.showLegal) {
+      setShowLegal(false);
+      return true;
+    }
+    if (s.showLevelComplete || s.showGameOver || s.showCollectionComplete) {
+      goLevels();
+      return true;
+    }
+
+    // 2. Screen hierarchy navigation
+    if (s.screen === 'game') {
+      goLevels();
+      return true;
+    }
+    if (s.screen === 'levels' || s.screen === 'settings' || s.screen === 'how-to-play') {
+      goHome();
+      return true;
+    }
+
+    // 3. At Home: let default action occur
+    return false;
+  }, [goHome, goLevels]);
+
+  // Register Capacitor native backButton listener
+  useEffect(() => {
+    let backListenerHandle: { remove: () => void } | null = null;
+    CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      const handled = handleBackNavigation();
+      if (!handled && !canGoBack) {
+        // At home screen, exit app if no more history
+        CapacitorApp.exitApp();
+      }
+    }).then((handle) => {
+      backListenerHandle = handle;
+    });
+
+    return () => {
+      if (backListenerHandle) backListenerHandle.remove();
+    };
+  }, [handleBackNavigation]);
+
+  // Web fallback popstate
   useEffect(() => {
     window.history.pushState({ arrowBloom: true }, '');
     const onPopState = () => {
       window.history.pushState({ arrowBloom: true }, '');
-      const current = navigationStateRef.current;
-      if (current.showLevelComplete || current.showGameOver || current.showCollectionComplete || current.screen === 'game') {
-        goLevels();
-      } else if (current.screen !== 'home') {
-        goHome();
-      }
+      handleBackNavigation();
     };
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
-  }, [goHome, goLevels]);
+  }, [handleBackNavigation]);
 
-  // Keyboard Shortcuts (R to restart, Z to undo, H for hint, Esc for back)
+  // Keyboard Shortcuts
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
       if (e.key === 'r' || e.key === 'R') {
-        if (screen === 'game') startLevel(currentLevelNumber);
+        if (screen === 'game') startLevel(currentLevelNumber, true);
       } else if (e.key === 'z' || e.key === 'Z') {
         if (screen === 'game') handleUndo();
       } else if (e.key === 'h' || e.key === 'H') {
         if (screen === 'game') handleHint();
       } else if (e.key === 'Escape') {
-        if (screen === 'game') goLevels();
-        else if (screen !== 'home') goHome();
+        handleBackNavigation();
       }
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [screen, currentLevelNumber, startLevel, handleUndo, handleHint, goHome, goLevels]);
+  }, [screen, currentLevelNumber, startLevel, handleUndo, handleHint, handleBackNavigation]);
 
-  // Tutorial target: Level 1 free arrow glow
+  // Tutorial arrow highlight on Level 1
   const tutorialArrowId =
     currentLevelNumber === 1 && mistakes === 0 && undoHistory.length === 0
       ? getHintArrow(activeArrows, levelConfig.solutionOrder, levelConfig.gridSize)?.id || null
@@ -425,11 +796,11 @@ export default function App() {
 
   return (
     <main
-      className={`relative w-full h-[100dvh] flex flex-col overflow-hidden select-none font-['Fredoka',sans-serif] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] ${
+      className={`relative w-full h-[100dvh] flex flex-col justify-between overflow-hidden select-none font-['Fredoka',sans-serif] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] ${
         isDark ? 'text-white' : 'text-slate-800'
       }`}
     >
-      {/* Themed Dynamic Animated Background */}
+      {/* Dynamic Animated Background */}
       <Background
         collection={screen === 'game' ? currentCollection : null}
         theme={settings.theme}
@@ -446,6 +817,9 @@ export default function App() {
           onOpenLevelList={() => setScreen('levels')}
           onOpenHowToPlay={() => setScreen('how-to-play')}
           onOpenSettings={() => setScreen('settings')}
+          onOpenShop={() => setShowShop(true)}
+          onOpenGameCenter={() => setShowGameCenter(true)}
+          onOpenDailyMissions={() => setShowDailyMissions(true)}
         />
       )}
 
@@ -469,32 +843,38 @@ export default function App() {
             setProgress(fresh);
             soundManager.playClick();
           }}
+          onOpenHowToPlay={() => setScreen('how-to-play')}
+          onOpenLegal={(tab) => {
+            setLegalInitialTab(tab || 'privacy');
+            setShowLegal(true);
+          }}
           onBack={() => setScreen('home')}
         />
       )}
 
       {/* Screen 4: How To Play Screen */}
-      {screen === 'how-to-play' && (
-        <HowToPlay onClose={goHome} />
-      )}
+      {screen === 'how-to-play' && <HowToPlay onClose={goHome} />}
 
       {/* Screen 5: Game Screen */}
       {screen === 'game' && (
         <div className="relative w-full h-full flex flex-col justify-between overflow-hidden z-10">
-          {/* Compact Single-Row Header */}
+          {/* Compact Top Bar */}
           <TopBar
             levelNumber={currentLevelNumber}
             shapeName={levelConfig.shapeName}
             collectionName={currentCollection.name}
             score={score}
             theme={settings.theme}
+            isAdFree={isAdFree}
+            scoreMultiplier={progress.dailyMissions?.activeScoreMultiplier || 1}
             onToggleTheme={toggleTheme}
             onOpenSettings={openSettings}
+            onOpenShop={() => setShowShop(true)}
             onBack={goLevels}
             onToggleDebug={import.meta.env.DEV ? togglePerfOverlay : undefined}
           />
 
-          {/* Sub-header: Hearts & Rainbow Progress Bar */}
+          {/* Hearts & Rainbow Progress Bar */}
           <ProgressBar
             hearts={hearts}
             remainingCount={activeArrows.length}
@@ -511,7 +891,7 @@ export default function App() {
             </div>
           )}
 
-          {/* Interactive Silhouette Board */}
+          {/* High-Resolution Dynamic Scaled Board */}
           <Board
             gridSize={levelConfig.gridSize}
             playableMask={levelConfig.playableMask}
@@ -538,12 +918,13 @@ export default function App() {
             generationMs={generationMs}
           />
 
-          {/* Compact Bottom Bar */}
+          {/* In-Game Bottom Bar */}
           <BottomBar
             canUndo={undoHistory.length > 0}
             hintsLeft={hintsLeft}
             zoomLevel={zoomLevel}
             isDarkTheme={isDark}
+            isAdFree={isAdFree}
             onUndo={handleUndo}
             onHint={handleHint}
             onZoomIn={zoomIn}
@@ -553,12 +934,20 @@ export default function App() {
         </div>
       )}
 
-      {/* Popups & Level Win Confetti */}
-      <LevelWinConfetti
-        active={showLevelComplete || showCollectionComplete}
-        colorIndices={levelConfig.arrows.map(a => a.colorIndex)}
+      {/* Persistent Bottom Banner Ad (Hidden if Lifetime Ad-Free is purchased) */}
+      <BannerAd
+        isAdFree={isAdFree}
+        isDarkTheme={isDark}
+        onOpenShop={() => setShowShop(true)}
       />
 
+      {/* Level Complete Celebration Confetti */}
+      <LevelWinConfetti
+        active={showLevelComplete || showCollectionComplete}
+        colorIndices={levelConfig.arrows.map((a) => a.colorIndex)}
+      />
+
+      {/* Level Complete Modal */}
       {showLevelComplete && (
         <LevelCompleteModal
           levelNumber={currentLevelNumber}
@@ -567,22 +956,28 @@ export default function App() {
           score={score}
           mistakes={mistakes}
           isNewHigh={isNewHighScore}
-          hasNextLevel={currentLevelNumber < 150}
+          hasNextLevel={currentLevelNumber < 300}
+          isAdFree={isAdFree}
           onNextLevel={() => startLevel(currentLevelNumber + 1)}
-          onReplay={() => startLevel(currentLevelNumber)}
+          onReplay={() => startLevel(currentLevelNumber, true)}
           onHome={goHome}
+          onDoubleScoreAd={handleDoubleScoreAd}
         />
       )}
 
+      {/* Game Over Modal (Supports Continuing with Free Hits right where ended!) */}
       {showGameOver && (
         <GameOverModal
           levelNumber={currentLevelNumber}
-          onRetry={() => startLevel(currentLevelNumber)}
-          onFreeHintRetry={() => startLevel(currentLevelNumber, true)}
-          onHome={goHome}
+          remainingArrowsCount={activeArrows.length}
+          isAdFree={isAdFree}
+          onContinueWithFreeHits={handleContinueWithFreeHits}
+          onRestartFromScratch={() => startLevel(currentLevelNumber, true)}
+          onHome={goLevels}
         />
       )}
 
+      {/* Collection Complete Modal */}
       {showCollectionComplete && completedCollection && (
         <CollectionCompleteModal
           completedCollection={completedCollection}
@@ -598,6 +993,53 @@ export default function App() {
           onHome={goHome}
         />
       )}
+
+      {/* 5-Second Rewarded Video Ad Modal */}
+      {adState.isOpen && (
+        <AdModal
+          reason={adState.reason}
+          onReward={() => {
+            if (adState.onReward) adState.onReward();
+          }}
+          onClose={() => setAdState((prev) => ({ ...prev, isOpen: false }))}
+          onOpenShop={() => setShowShop(true)}
+        />
+      )}
+
+      {/* Shop & ₹99 Lifetime Ad-Free Modal */}
+      <ShopModal
+        isOpen={showShop}
+        onClose={() => setShowShop(false)}
+        onAdFreeBought={() => {
+          setIsAdFree(true);
+        }}
+      />
+
+      {/* Google Play Games Center Hub */}
+      <GameCenterModal
+        isOpen={showGameCenter}
+        progress={progress}
+        onClose={() => setShowGameCenter(false)}
+        onOpenShop={() => {
+          setShowGameCenter(false);
+          setShowShop(true);
+        }}
+      />
+
+      {/* Legal, Privacy & Compliance Hub */}
+      <LegalPagesModal
+        isOpen={showLegal}
+        initialTab={legalInitialTab}
+        onClose={() => setShowLegal(false)}
+      />
+
+      {/* Daily Missions & Retention Modal */}
+      <DailyMissionsModal
+        isOpen={showDailyMissions}
+        progress={progress}
+        onUpdateProgress={setProgress}
+        onClose={() => setShowDailyMissions(false)}
+      />
     </main>
   );
 }

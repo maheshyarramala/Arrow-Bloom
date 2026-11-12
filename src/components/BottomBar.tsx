@@ -1,15 +1,16 @@
 /**
  * Arrow Bloom - In-Game Bottom Bar
- * Controls: Undo, Hint (with count badge 3), Zoom +, Zoom -, Fit
+ * Controls: Undo, Hint (with Ad badge when 0 hints left or VIP unlimited), Zoom +, Zoom -, Fit
  */
 import React from 'react';
-import { Undo2, Lightbulb, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { Undo2, Lightbulb, ZoomIn, ZoomOut, Maximize2, Video, Crown } from 'lucide-react';
 
 interface BottomBarProps {
   canUndo: boolean;
   hintsLeft: number;
   zoomLevel: number;
   isDarkTheme?: boolean;
+  isAdFree?: boolean;
   onUndo: () => void;
   onHint: () => void;
   onZoomIn: () => void;
@@ -22,6 +23,7 @@ export const BottomBar: React.FC<BottomBarProps> = React.memo(({
   hintsLeft,
   zoomLevel,
   isDarkTheme = true,
+  isAdFree = false,
   onUndo,
   onHint,
   onZoomIn,
@@ -29,7 +31,7 @@ export const BottomBar: React.FC<BottomBarProps> = React.memo(({
   onZoomFit,
 }) => {
   return (
-    <footer className="w-full max-w-lg mx-auto flex items-center justify-between gap-2 px-3 pb-safe pt-1 z-20 shrink-0">
+    <footer className="w-full max-w-lg mx-auto flex items-center justify-between gap-2 px-3 pb-safe pt-1 z-20 shrink-0 select-none">
       {/* Undo Button */}
       <button
         onClick={onUndo}
@@ -50,25 +52,50 @@ export const BottomBar: React.FC<BottomBarProps> = React.memo(({
         <span>Undo</span>
       </button>
 
-      {/* Hint Button */}
+      {/* Hint Button: Active either with remaining hints OR via Rewarded Ad / VIP */}
       <button
         onClick={onHint}
-        disabled={hintsLeft <= 0}
-        title="Show free arrow hint (H)"
+        title={
+          isAdFree
+            ? 'VIP Free Instant Hint (H)'
+            : hintsLeft > 0
+            ? `Use Hint (${hintsLeft} left)`
+            : 'Watch 5s Ad for Free Hint'
+        }
         aria-label="Use hint"
         className={`flex-1 py-2.5 px-2 rounded-2xl flex items-center justify-center gap-1.5 font-black text-xs md:text-sm transition-all active:scale-95 shadow-md border ${
-          hintsLeft > 0
+          isAdFree
+            ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 border-yellow-200'
+            : hintsLeft > 0
             ? 'bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-slate-950 border-yellow-200'
-            : isDarkTheme
-            ? 'bg-white/5 text-white/30 border-white/5 cursor-not-allowed'
-            : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+            : 'bg-gradient-to-r from-cyan-500 to-teal-400 text-slate-950 border-cyan-200 animate-pulse'
         }`}
       >
-        <Lightbulb className="w-4 h-4 fill-current" />
-        <span>Hint</span>
-        <span className="px-1.5 py-0.2 rounded-full bg-black/25 text-xs font-black">
-          {hintsLeft}
-        </span>
+        {isAdFree ? (
+          <>
+            <Crown className="w-4 h-4 fill-current text-slate-950" />
+            <span>Hint</span>
+            <span className="text-[10px] uppercase font-black px-1.5 py-0.2 rounded bg-black/20">
+              VIP
+            </span>
+          </>
+        ) : hintsLeft > 0 ? (
+          <>
+            <Lightbulb className="w-4 h-4 fill-current" />
+            <span>Hint</span>
+            <span className="px-1.5 py-0.2 rounded-full bg-black/25 text-xs font-black">
+              {hintsLeft}
+            </span>
+          </>
+        ) : (
+          <>
+            <Video className="w-4 h-4" />
+            <span>+Hint</span>
+            <span className="px-1.5 py-0.2 rounded bg-slate-950/20 text-[10px] font-black uppercase">
+              Ad
+            </span>
+          </>
+        )}
       </button>
 
       {/* Zoom Controls Cluster: Zoom -, Zoom +, Fit */}

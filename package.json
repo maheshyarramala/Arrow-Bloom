@@ -14,6 +14,9 @@
     "test:levels": "tsx scripts/verify-performance.ts"
   },
   "dependencies": {
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^7.4.3",
     "@google/genai": "^2.4.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/canvas-confetti": "^1.9.0",
@@ -25,9 +28,7 @@
     "motion": "^12.23.24",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
-    "vite": "^8.3.0",
-    "@capacitor/core": "^7.4.3",
-    "@capacitor/android": "^7.4.3"
+    "vite": "^8.3.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

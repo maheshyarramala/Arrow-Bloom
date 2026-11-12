@@ -1,9 +1,9 @@
 /**
  * Arrow Bloom - Compact Single-Row Game Top Bar
- * back button | shape name & collection | score | theme toggle | settings
+ * back button | shape name & collection | score & active multiplier | VIP/Shop | theme toggle | settings
  */
 import React, { useEffect, useRef } from 'react';
-import { ChevronLeft, Sun, Moon, Settings as SettingsIcon } from 'lucide-react';
+import { ChevronLeft, Sun, Moon, Settings as SettingsIcon, Crown, Zap } from 'lucide-react';
 
 interface TopBarProps {
   levelNumber: number;
@@ -11,8 +11,11 @@ interface TopBarProps {
   collectionName: string;
   score: number;
   theme: 'dark' | 'light';
+  isAdFree?: boolean;
+  scoreMultiplier?: number;
   onToggleTheme: () => void;
   onOpenSettings: () => void;
+  onOpenShop?: () => void;
   onBack: () => void;
   onToggleDebug?: () => void;
 }
@@ -23,16 +26,23 @@ export const TopBar: React.FC<TopBarProps> = React.memo(({
   collectionName,
   score,
   theme,
+  isAdFree = false,
+  scoreMultiplier = 1,
   onToggleTheme,
   onOpenSettings,
+  onOpenShop,
   onBack,
   onToggleDebug,
 }) => {
   const longPressTimer = useRef<number | null>(null);
-  const cancelLongPress = () => { if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current); longPressTimer.current = null; };
+  const cancelLongPress = () => {
+    if (longPressTimer.current !== null) window.clearTimeout(longPressTimer.current);
+    longPressTimer.current = null;
+  };
   const isDark = theme === 'dark';
   const scoreTextRef = useRef<HTMLSpanElement>(null);
   const displayedScoreRef = useRef(score);
+
   useEffect(() => {
     const from = displayedScoreRef.current;
     const delta = score - from;
@@ -50,7 +60,7 @@ export const TopBar: React.FC<TopBarProps> = React.memo(({
   }, [score]);
 
   return (
-    <header className="w-full flex items-center justify-between px-3 pt-safe pb-1 z-20 shrink-0 gap-2">
+    <header className="w-full flex items-center justify-between px-3 pt-safe pb-1 z-20 shrink-0 gap-2 select-none">
       {/* Left: Back Button */}
       <button
         onClick={onBack}
@@ -64,13 +74,21 @@ export const TopBar: React.FC<TopBarProps> = React.memo(({
         <ChevronLeft className="w-5 h-5" />
       </button>
 
-      {/* Center: Title & Collection (Truncated, clamped single-line) */}
+      {/* Center: Title & Collection */}
       <div className="flex-1 min-w-0 flex flex-col items-center justify-center text-center px-1">
         <div className="flex items-center gap-1.5 max-w-full">
           <span className="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded-md bg-pink-500/20 text-pink-500 border border-pink-500/30">
             L{levelNumber}
           </span>
-          <h1 onPointerDown={() => { if (onToggleDebug) longPressTimer.current = window.setTimeout(onToggleDebug, 650); }} onPointerUp={cancelLongPress} onPointerLeave={cancelLongPress} onPointerCancel={cancelLongPress} className="text-sm sm:text-base font-black truncate tracking-wide whitespace-nowrap overflow-hidden">
+          <h1
+            onPointerDown={() => {
+              if (onToggleDebug) longPressTimer.current = window.setTimeout(onToggleDebug, 650);
+            }}
+            onPointerUp={cancelLongPress}
+            onPointerLeave={cancelLongPress}
+            onPointerCancel={cancelLongPress}
+            className="text-sm sm:text-base font-black truncate tracking-wide whitespace-nowrap overflow-hidden"
+          >
             {shapeName}
           </h1>
         </div>
@@ -85,6 +103,17 @@ export const TopBar: React.FC<TopBarProps> = React.memo(({
 
       {/* Right: Live Score & Action Toggles */}
       <div className="flex items-center gap-1.5 shrink-0">
+        {/* Active Multiplier Pill */}
+        {scoreMultiplier > 1 && (
+          <div
+            title={`${scoreMultiplier}x Score Multiplier Active!`}
+            className="px-2 py-1 rounded-xl bg-cyan-400/25 border border-cyan-400/50 text-cyan-300 font-black text-xs flex items-center gap-0.5 animate-pulse"
+          >
+            <Zap className="w-3 h-3 fill-current" />
+            <span>{scoreMultiplier}x</span>
+          </div>
+        )}
+
         {/* Live Score Counter */}
         <div
           className={`px-2.5 py-1 rounded-xl text-xs font-black tabular-nums border ${
@@ -95,6 +124,22 @@ export const TopBar: React.FC<TopBarProps> = React.memo(({
         >
           <span ref={scoreTextRef}>{score.toLocaleString()}</span> pts
         </div>
+
+        {/* VIP / Shop Button */}
+        {onOpenShop && (
+          <button
+            onClick={onOpenShop}
+            aria-label="Shop and VIP"
+            title={isAdFree ? 'VIP Ad-Free Active' : 'Remove Ads for ₹99'}
+            className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-95 border ${
+              isAdFree
+                ? 'bg-amber-400/20 text-amber-400 border-amber-400/40'
+                : 'bg-white/10 text-amber-300 border-white/15 hover:bg-white/20'
+            }`}
+          >
+            <Crown className={`w-4 h-4 ${isAdFree ? 'fill-current' : ''}`} />
+          </button>
+        )}
 
         {/* Theme Toggle (Moon / Sun) */}
         <button

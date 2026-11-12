@@ -71,10 +71,35 @@ export interface LevelProgress {
   cleared: boolean;
 }
 
+export interface DailyMission {
+  id: string; // e.g. 'clear_levels', 'reach_combo', 'arrow_untangler', 'flawless_clear'
+  title: string;
+  description: string;
+  icon: string;
+  target: number;
+  current: number;
+  completed: boolean;
+  claimed: boolean;
+  rewardType: 'extra_hints' | 'score_multiplier';
+  rewardAmount: number;
+  rewardLabel: string;
+}
+
+export interface DailyMissionsProgress {
+  date: string; // 'YYYY-MM-DD'
+  missions: DailyMission[];
+  streakDays: number;
+  lastLoginDate: string;
+  bonusHintsBank: number; // Banked extra hints earned from missions
+  activeScoreMultiplier: number; // e.g. 2 for 2x score
+  multiplierRemainingGames: number; // e.g. 1 game
+}
+
 export interface PlayerProgress {
   unlockedLevel: number;
   levelData: Record<number, LevelProgress>;
   totalScore: number;
+  dailyMissions?: DailyMissionsProgress;
 }
 
 export type ScreenState =
@@ -92,4 +117,45 @@ export interface FloatingScoreItem {
   y: number;
   color: string;
   createdAt?: number;
+}
+
+export interface SavedLevelState {
+  levelNumber: number;
+  activeArrows: ArrowData[];
+  score: number;
+  mistakes: number;
+  hintsLeft: number;
+  hearts: number;
+  savedAt: number;
+}
+
+export interface AdState {
+  isPlaying: boolean;
+  adReason: 'hint' | 'free_hits' | 'double_score' | 'interstitial';
+  duration: number;
+  timeRemaining: number;
+  rewardGranted: boolean;
+  onReward?: () => void;
+  onClose?: () => void;
+}
+
+export interface AchievementItem {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  xpReward: number;
+  unlocked: boolean;
+  progress: number; // 0 to 100
+  target: number;
+  current: number;
+}
+
+export interface GamerProfile {
+  connected: boolean;
+  gamerTag: string;
+  xp: number;
+  level: number;
+  achievements: Record<string, { unlocked: boolean; unlockedAt?: number; progress: number }>;
+  lastSyncedAt?: number;
 }
