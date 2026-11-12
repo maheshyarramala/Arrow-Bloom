@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "android:sync": "npm run build && cap sync android",
+    "android:icons": "tsx scripts/generate-android-icons.ts",
+    "android:sync": "npm run build && cap sync android && npm run android:icons",
     "android:open": "cap open android",
     "test:levels": "tsx scripts/verify-performance.ts"
   },
@@ -31,15 +32,16 @@
     "vite": "^8.3.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.4.3",
+    "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.28.2",
+    "sharp": "^0.35.5",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.21.0",
-    "typescript": "^7.0.2",
-    "@types/express": "^4.17.21",
-    "@capacitor/cli": "^7.4.3"
+    "typescript": "^7.0.2"
   }
 }

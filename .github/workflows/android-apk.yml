@@ -51,15 +51,26 @@ jobs:
       - name: Sync Capacitor Android project
         run: npx cap sync android
 
+      - name: Apply Arrow Bloom app icon and branding
+        run: npm run android:icons
+
       - name: Build debug APK
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
 
+      - name: Prepare named APK for release
+        run: |
+          mkdir -p dist-apk
+          APK_FILE=$(find android/app/build/outputs/apk/debug/ -name "*.apk" | head -n 1)
+          echo "Found generated APK at: $APK_FILE"
+          cp "$APK_FILE" dist-apk/Arrow-Bloom.apk
+          ls -lh dist-apk/
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: arrow-bloom-android-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: Arrow-Bloom-APK
+          path: dist-apk/Arrow-Bloom.apk
           if-no-files-found: error
           retention-days: 30
 
@@ -70,8 +81,13 @@ jobs:
           tag_name: android-build-${{ github.run_number }}
           name: Arrow Bloom Android Build ${{ github.run_number }}
           body: |
-            Automated Android debug APK for Arrow Bloom.
+            Automated Android APK for Arrow Bloom.
 
-            This APK is debug-signed for testing and direct installation. It is not a Play Store production-signed release.
-          files: android/app/build/outputs/apk/debug/app-debug.apk
+            Features:
+            - Custom Arrow Bloom (🌸) icon & splash branding
+            - 300 handcrafted arrow puzzle maze levels
+            - Daily Missions, Streaks & Rewards
+            - ₹99 Lifetime Ad-Free VIP Pass
+            - Google Play Games achievements & leaderboard
+          files: dist-apk/Arrow-Bloom.apk
           make_latest: true

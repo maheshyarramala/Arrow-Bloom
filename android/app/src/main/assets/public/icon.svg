@@ -1,0 +1,139 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient: Pink-500 -> Rose-500 -> Indigo-600 -->
+    <linearGradient id="bloomBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#EC4899" />
+      <stop offset="48%" stopColor="#F43F5E" />
+      <stop offset="100%" stopColor="#4F46E5" />
+    </linearGradient>
+
+    <!-- Beveled Edge Highlight -->
+    <linearGradient id="edgeGleam" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.65" />
+      <stop offset="50%" stopColor="#FFFFFF" stopOpacity="0.15" />
+      <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0.35" />
+    </linearGradient>
+
+    <!-- Petal Main Gradient (Soft Pink to Radiant Rose) -->
+    <linearGradient id="petalGrad" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stopColor="#FFFFFF" />
+      <stop offset="40%" stopColor="#FFE4E6" />
+      <stop offset="80%" stopColor="#FDA4AF" />
+      <stop offset="100%" stopColor="#F43F5E" />
+    </linearGradient>
+
+    <!-- Petal Inner Shadow Gradient -->
+    <radialGradient id="innerCoreGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stopColor="#FFFBEB" />
+      <stop offset="35%" stopColor="#FDE047" />
+      <stop offset="70%" stopColor="#F59E0B" />
+      <stop offset="100%" stopColor="#E11D48" stopOpacity="0" />
+    </radialGradient>
+
+    <!-- Petal Depth Shading -->
+    <linearGradient id="petalBack" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#FB7185" stopOpacity="0.8" />
+      <stop offset="100%" stopColor="#BE123C" stopOpacity="0.9" />
+    </linearGradient>
+
+    <!-- Ambient Shadow Filter -->
+    <filter id="bloomDrop" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#1E1B4B" flood-opacity="0.45" />
+    </filter>
+
+    <filter id="softGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="6" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- 1. The Iconic Squircle Badge (512x512 Canvas) -->
+  <rect x="20" y="20" width="472" height="472" rx="112" fill="url(#bloomBg)" stroke="url(#edgeGleam)" stroke-width="7" />
+
+  <!-- 2. Subtle Radial Light Flare in Upper-Left -->
+  <ellipse cx="160" cy="140" rx="180" ry="140" fill="#FFFFFF" opacity="0.14" />
+
+  <!-- 3. The Blooming Flower (🌸) Emblem -->
+  <g filter="url(#bloomDrop)" transform="translate(256, 256)">
+    <!-- 5 Outer Shadow Petals for 3D Depth -->
+    <g fill="url(#petalBack)" opacity="0.4">
+      <ellipse cx="0" cy="-90" rx="46" ry="68" transform="rotate(0)" />
+      <ellipse cx="0" cy="-90" rx="46" ry="68" transform="rotate(72)" />
+      <ellipse cx="0" cy="-90" rx="46" ry="68" transform="rotate(144)" />
+      <ellipse cx="0" cy="-90" rx="46" ry="68" transform="rotate(216)" />
+      <ellipse cx="0" cy="-90" rx="46" ry="68" transform="rotate(288)" />
+    </g>
+
+    <!-- 5 Main Blooming Cherry Blossom / Lotus Petals -->
+    <!-- Petal 1: Top (0 deg) -->
+    <g transform="rotate(0)">
+      <path d="M 0,-15 C -44,-45 -54,-100 -24,-130 C -8,-146 0,-132 0,-132 C 0,-132 8,-146 24,-130 C 54,-100 44,-45 0,-15 Z" fill="url(#petalGrad)" stroke="#FFFFFF" stroke-width="2.5" />
+    </g>
+
+    <!-- Petal 2: Top Right (72 deg) -->
+    <g transform="rotate(72)">
+      <path d="M 0,-15 C -44,-45 -54,-100 -24,-130 C -8,-146 0,-132 0,-132 C 0,-132 8,-146 24,-130 C 54,-100 44,-45 0,-15 Z" fill="url(#petalGrad)" stroke="#FFFFFF" stroke-width="2.5" />
+    </g>
+
+    <!-- Petal 3: Bottom Right (144 deg) -->
+    <g transform="rotate(144)">
+      <path d="M 0,-15 C -44,-45 -54,-100 -24,-130 C -8,-146 0,-132 0,-132 C 0,-132 8,-146 24,-130 C 54,-100 44,-45 0,-15 Z" fill="url(#petalGrad)" stroke="#FFFFFF" stroke-width="2.5" />
+    </g>
+
+    <!-- Petal 4: Bottom Left (216 deg) -->
+    <g transform="rotate(216)">
+      <path d="M 0,-15 C -44,-45 -54,-100 -24,-130 C -8,-146 0,-132 0,-132 C 0,-132 8,-146 24,-130 C 54,-100 44,-45 0,-15 Z" fill="url(#petalGrad)" stroke="#FFFFFF" stroke-width="2.5" />
+    </g>
+
+    <!-- Petal 5: Top Left (288 deg) -->
+    <g transform="rotate(288)">
+      <path d="M 0,-15 C -44,-45 -54,-100 -24,-130 C -8,-146 0,-132 0,-132 C 0,-132 8,-146 24,-130 C 54,-100 44,-45 0,-15 Z" fill="url(#petalGrad)" stroke="#FFFFFF" stroke-width="2.5" />
+    </g>
+
+    <!-- Center Pistil Core Glow -->
+    <circle cx="0" cy="0" r="54" fill="url(#innerCoreGlow)" />
+
+    <!-- 10 Radiating Golden Pistil Stamen Stamens -->
+    <g stroke="#E11D48" stroke-width="3" stroke-linecap="round">
+      <line x1="0" y1="0" x2="0" y2="-32" />
+      <line x1="0" y1="0" x2="19" y2="-26" />
+      <line x1="0" y1="0" x2="30" y2="-10" />
+      <line x1="0" y1="0" x2="30" y2="10" />
+      <line x1="0" y1="0" x2="19" y2="26" />
+      <line x1="0" y1="0" x2="0" y2="32" />
+      <line x1="0" y1="0" x2="-19" y2="26" />
+      <line x1="0" y1="0" x2="-30" y2="10" />
+      <line x1="0" y1="0" x2="-30" y2="-10" />
+      <line x1="0" y1="0" x2="-19" y2="-26" />
+    </g>
+
+    <!-- Golden Stamen Tips -->
+    <g fill="#FDE047" stroke="#EA580C" stroke-width="1.5">
+      <circle cx="0" cy="-33" r="5.5" />
+      <circle cx="20" cy="-27" r="5.5" />
+      <circle cx="31" cy="-10" r="5.5" />
+      <circle cx="31" cy="10" r="5.5" />
+      <circle cx="20" cy="27" r="5.5" />
+      <circle cx="0" cy="33" r="5.5" />
+      <circle cx="-20" cy="27" r="5.5" />
+      <circle cx="-31" cy="10" r="5.5" />
+      <circle cx="-31" cy="-10" r="5.5" />
+      <circle cx="-20" cy="-27" r="5.5" />
+    </g>
+
+    <!-- Center Sparkling Core -->
+    <circle cx="0" cy="0" r="14" fill="#FFFFFF" />
+    <circle cx="0" cy="0" r="8" fill="#FBBF24" />
+  </g>
+
+  <!-- 4. Playful Sparkles -->
+  <g fill="#FFFFFF" opacity="0.9" filter="url(#softGlow)">
+    <polygon points="100,90 103,98 111,101 103,104 100,112 97,104 89,101 97,98" />
+    <polygon points="412,100 415,108 423,111 415,114 412,122 409,114 401,111 409,108" />
+    <polygon points="420,400 422,406 428,408 422,410 420,416 418,410 412,408 418,406" />
+    <polygon points="90,410 92,416 98,418 92,420 90,426 88,420 82,418 88,416" />
+  </g>
+</svg>
