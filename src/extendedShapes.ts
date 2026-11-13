@@ -83,7 +83,7 @@ for (let level = 151; level <= 300; level++) {
   }));
   SHAPE_DEFINITIONS[level] = {
     id: `master_${level}_${masterThemes[collectionId - 16][shapeIndex].toLowerCase().replace(/[^a-z0-9]+/g, '_')}`,
-    name: masterThemes[collectionId - 16][shapeIndex],
+    name: `Master ${masterThemes[collectionId - 16][shapeIndex]}`,
     collectionId,
     polygons,
     description: `Master collection: ${masterThemes[collectionId - 16][0]} challenge`,
