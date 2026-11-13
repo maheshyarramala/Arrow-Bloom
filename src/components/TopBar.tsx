@@ -21,7 +21,6 @@ interface TopBarProps {
 }
 
 export const TopBar: React.FC<TopBarProps> = React.memo(({
-  levelNumber,
   shapeName,
   collectionName,
   score,
@@ -64,7 +63,7 @@ export const TopBar: React.FC<TopBarProps> = React.memo(({
       {/* Left: Back Button */}
       <button
         onClick={onBack}
-        aria-label="Back to levels"
+        aria-label="Back to game home"
         className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-95 border ${
           isDark
             ? 'bg-white/10 hover:bg-white/20 text-white border-white/15'
@@ -77,10 +76,7 @@ export const TopBar: React.FC<TopBarProps> = React.memo(({
       {/* Center: Title & Collection */}
       <div className="flex-1 min-w-0 flex flex-col items-center justify-center text-center px-1">
         <div className="flex items-center gap-1.5 max-w-full">
-          <span className="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded-md bg-pink-500/20 text-pink-500 border border-pink-500/30">
-            L{levelNumber}
-          </span>
-          <h1
+<h1
             onPointerDown={() => {
               if (onToggleDebug) longPressTimer.current = window.setTimeout(onToggleDebug, 650);
             }}

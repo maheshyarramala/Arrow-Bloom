@@ -306,7 +306,7 @@ export default function App() {
         setShowGameOver(false);
         setShowCollectionComplete(false);
       } catch {
-        setScreen('levels');
+        setScreen('home');
       } finally {
         window.clearTimeout(spinnerTimer);
         if (requestId === levelRequestIdRef.current) setIsPreparingLevel(false);
@@ -665,7 +665,7 @@ export default function App() {
     setShowGameOver(false);
     setShowCollectionComplete(false);
     setIsPreparingLevel(false);
-    setScreen('levels');
+    setScreen('home');
   }, [currentLevelNumber, score, mistakes, hintsLeft, hearts]);
 
   // Hardware Back Button Handler (Capacitor & Web popstate)
@@ -814,7 +814,7 @@ export default function App() {
           progress={progress}
           isDarkTheme={isDark}
           onPlayLevel={(lvl) => startLevel(lvl)}
-          onOpenLevelList={() => setScreen('levels')}
+          onOpenLevelList={() => setScreen('home')}
           onOpenHowToPlay={() => setScreen('how-to-play')}
           onOpenSettings={() => setScreen('settings')}
           onOpenShop={() => setShowShop(true)}
@@ -985,7 +985,7 @@ export default function App() {
           isGameFinale={isGrandFinale}
           onContinue={() => {
             if (isGrandFinale) {
-              setScreen('levels');
+              setScreen('home');
             } else {
               startLevel(currentLevelNumber + 1);
             }

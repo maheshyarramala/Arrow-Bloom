@@ -257,10 +257,10 @@ function buildSingleLevelCandidate(
   const shapeDef = SHAPE_DEFINITIONS[levelNumber] || SHAPE_DEFINITIONS[shapeKey] || SHAPE_DEFINITIONS[1];
   const { collection } = getLevelParams(levelNumber);
 
-  // Scale gridSize dynamically so that silhouette holds enough cells for >= 150 arrows
+  // Keep board scale comfortable while generating fewer, longer arrows
   let gridSize = 46;
   let { cells: playableCells } = rasterizeShape(shapeDef, gridSize);
-  while (playableCells.length < 750 && gridSize < 64) {
+  while (playableCells.length < 620 && gridSize < 64) {
     gridSize += 2;
     ({ cells: playableCells } = rasterizeShape(shapeDef, gridSize));
   }
@@ -284,7 +284,7 @@ function buildSingleLevelCandidate(
     return true;
   }
 
-  // Pass 1: Build winding snakes with varied lengths (lengths 2 to 8)
+  // Pass 1: Build longer winding snakes so each puzzle has fewer, more involved arrows
   let attempts = 0;
   while (remaining.size > 0 && attempts < 4000) {
     attempts++;
@@ -306,10 +306,10 @@ function buildSingleLevelCandidate(
 
     const roll = rng();
     let targetLen = 3;
-    if (roll < 0.32) targetLen = 2;
-    else if (roll < 0.65) targetLen = 3;
-    else if (roll < 0.86) targetLen = 4 + Math.floor(rng() * 2);
-    else targetLen = 6 + Math.floor(rng() * 3); // 6, 7, 8
+    if (roll < 0.10) targetLen = 7 + Math.floor(rng() * 3);
+    else if (roll < 0.42) targetLen = 10 + Math.floor(rng() * 4);
+    else if (roll < 0.82) targetLen = 14 + Math.floor(rng() * 4);
+    else targetLen = 18 + Math.floor(rng() * 5); // 18–22 cells
 
     const snake = [neck, { r: hr, c: hc }];
     const snakeSet = new Set<number>([neck.r * gridSize + neck.c, hr * gridSize + hc]);
@@ -344,7 +344,7 @@ function buildSingleLevelCandidate(
       if (options.length === 0) break;
       const turns = options.filter(o => !o.isStraight);
       const straights = options.filter(o => o.isStraight);
-      const chosen = (turns.length > 0 && (straights.length === 0 || rng() < 0.48)) ? turns[Math.floor(rng() * turns.length)] : (straights[0] || turns[0]);
+      const chosen = (turns.length > 0 && (straights.length === 0 || rng() < 0.34)) ? turns[Math.floor(rng() * turns.length)] : (straights[0] || turns[0]);
       snake.unshift({ r: chosen.r, c: chosen.c });
       snakeSet.add(chosen.r * gridSize + chosen.c);
       tail = { r: chosen.r, c: chosen.c };

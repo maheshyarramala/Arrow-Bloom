@@ -111,26 +111,78 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       ctx.globalAlpha = alpha;
       ctx.lineWidth = Math.max(1.6, cell * 0.21);
     }
-    ctx.beginPath();
-    for (let i = 0; i < cells.length; i++) {
-      const x = (cells[i].c + 0.5) * cell + offsetX;
-      const y = (cells[i].r + 0.5) * cell + offsetY;
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    const tracePath = (yOffset: number) => {
+      ctx.beginPath();
+      for (let i = 0; i < cells.length; i++) {
+        const x = (cells[i].c + 0.5) * cell + offsetX;
+        const y = (cells[i].r + 0.5) * cell + offsetY + yOffset;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+    };
+    // Three-layer raised arrow: soft cast shadow, dark bevel, vivid top face and a fine highlight.
+    if (!performanceMode) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0,0,0,0.48)';
+      ctx.shadowColor = 'rgba(0,0,0,0.65)';
+      ctx.shadowBlur = Math.max(2, cell * 0.20);
+      ctx.lineWidth = Math.max(2.4, cell * 0.34);
+      tracePath(cell * 0.14);
+      ctx.stroke();
+      ctx.restore();
     }
+    ctx.save();
+    ctx.strokeStyle = performanceMode ? color : 'rgba(7,12,30,0.82)';
+    ctx.lineWidth = Math.max(2, cell * 0.29);
+    tracePath(performanceMode ? 0 : cell * 0.07);
     ctx.stroke();
+    ctx.restore();
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(1.6, cell * 0.21);
+    if (!performanceMode) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = glow ? Math.max(8, cell * 0.5) : Math.max(2, cell * 0.16);
+    }
+    tracePath(0);
+    ctx.stroke();
+    if (!performanceMode) {
+      ctx.globalAlpha *= 0.55;
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = Math.max(0.8, cell * 0.045);
+      tracePath(-Math.max(0.7, cell * 0.055));
+      ctx.stroke();
+    }
+    ctx.restore();
+
     const head = cells[cells.length - 1];
     const [dr, dc] = DIR_DELTA[arrow.direction];
     const hx = (head.c + 0.5) * cell + offsetX;
     const hy = (head.r + 0.5) * cell + offsetY;
     const px = -dr;
     const py = dc;
-    ctx.fillStyle = color;
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.beginPath();
-    ctx.moveTo(hx + dc * cell * 0.34, hy + dr * cell * 0.44);
-    ctx.lineTo(hx - dc * cell * 0.08 + px * cell * 0.25, hy - dr * cell * 0.08 + py * cell * 0.32);
-    ctx.lineTo(hx - dc * cell * 0.08 - px * cell * 0.25, hy - dr * cell * 0.08 - py * cell * 0.32);
+    ctx.moveTo(hx + dc * cell * 0.38, hy + dr * cell * 0.49 + cell * 0.12);
+    ctx.lineTo(hx - dc * cell * 0.10 + px * cell * 0.28, hy - dr * cell * 0.10 + py * cell * 0.34 + cell * 0.12);
+    ctx.lineTo(hx - dc * cell * 0.10 - px * cell * 0.28, hy - dr * cell * 0.10 - py * cell * 0.34 + cell * 0.12);
     ctx.closePath();
     ctx.fill();
+    ctx.restore();
+    const headGradient = ctx.createLinearGradient(hx - dc * cell * 0.25, hy - dr * cell * 0.25, hx + dc * cell * 0.30, hy + dr * cell * 0.30);
+    headGradient.addColorStop(0, '#FFFFFF');
+    headGradient.addColorStop(0.32, color);
+    headGradient.addColorStop(1, color);
+    ctx.save();
+    ctx.fillStyle = headGradient;
+    if (!performanceMode) { ctx.shadowColor = color; ctx.shadowBlur = glow ? 10 : 3; }
+    ctx.beginPath();
+    ctx.moveTo(hx + dc * cell * 0.38, hy + dr * cell * 0.49);
+    ctx.lineTo(hx - dc * cell * 0.10 + px * cell * 0.28, hy - dr * cell * 0.10 + py * cell * 0.34);
+    ctx.lineTo(hx - dc * cell * 0.10 - px * cell * 0.28, hy - dr * cell * 0.10 - py * cell * 0.34);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
     if (colorBlindMode) {
       ctx.fillStyle = '#FFFFFF';
       ctx.font = `900 ${Math.max(8, cell * 0.28)}px sans-serif`;
