@@ -3,7 +3,7 @@
  * Includes audio/theme controls, How to Play & Rules, Legal & Ads Compliance,
  * and Developer Contact Details (devops.maheshbabu@gmail.com).
  */
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { GameSettings } from '../types.ts';
 import {
   ChevronLeft,
@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { soundManager } from '../audio.ts';
 import { LegalTab } from './LegalPagesModal.tsx';
+import { createProgressBackup, restoreProgressBackup } from '../storage.ts';
 
 interface SettingsProps {
   settings: GameSettings;
@@ -47,6 +48,8 @@ export const Settings: React.FC<SettingsProps> = ({
 }) => {
   const [showConfirmReset, setShowConfirmReset] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
+  const [backupNotice, setBackupNotice] = useState<string | null>(null);
+  const backupInputRef = useRef<HTMLInputElement>(null);
   const isDark = settings.theme === 'dark';
   const developerEmail = 'devops.maheshbabu@gmail.com';
 
@@ -64,6 +67,36 @@ export const Settings: React.FC<SettingsProps> = ({
       ...settings,
       theme: settings.theme === 'dark' ? 'light' : 'dark',
     });
+  };
+
+  const exportBackup = () => {
+    try {
+      const blob = new Blob([createProgressBackup()], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `arrow-bloom-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      setBackupNotice('Backup exported. Keep the JSON file somewhere safe.');
+    } catch {
+      setBackupNotice('Could not export the backup on this device.');
+    }
+  };
+
+  const importBackup = async (file?: File) => {
+    if (!file) return;
+    try {
+      const restored = restoreProgressBackup(await file.text());
+      if (!restored) {
+        setBackupNotice('This backup is invalid or from an unsupported version.');
+        return;
+      }
+      setBackupNotice('Backup restored. Reloading your game…');
+      window.setTimeout(() => window.location.reload(), 450);
+    } catch {
+      setBackupNotice('Could not read this backup file.');
+    }
   };
 
   const copyEmail = () => {
@@ -478,7 +511,41 @@ export const Settings: React.FC<SettingsProps> = ({
           </div>
         </div>
 
-        {/* Section 5: Reset Progress */}
+        {/* Section 5: Progress Backup & Recovery */}
+        <div className="space-y-2">
+          <span className="text-[11px] font-black uppercase tracking-wider text-cyan-400 px-1">
+            Progress Backup &amp; Recovery
+          </span>
+          <div className={`rounded-2xl p-3.5 border flex flex-col gap-3 ${isDark ? 'bg-slate-900/60 border-white/15' : 'bg-white border-slate-200'}`}>
+            <div>
+              <h3 className="font-black text-sm">Protect your game progress</h3>
+              <p className="text-xs opacity-60 mt-1">Export your levels, stars, daily rewards, settings and in-progress puzzle. Restore the file if you change or reset your device.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={exportBackup} className="py-2.5 rounded-xl bg-cyan-500/20 border border-cyan-400/30 text-cyan-300 text-xs font-black active:scale-95">
+                Export Backup
+              </button>
+              <button type="button" onClick={() => backupInputRef.current?.click()} className="py-2.5 rounded-xl bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-black active:scale-95">
+                Restore Backup
+              </button>
+            </div>
+            <input
+              ref={backupInputRef}
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                void importBackup(file);
+                event.target.value = '';
+              }}
+            />
+            {backupNotice && <p role="status" className="text-[11px] text-emerald-300">{backupNotice}</p>}
+            <p className="text-[10px] opacity-50">A local safety copy is also maintained automatically. Manual export is recommended before reinstalling the app.</p>
+          </div>
+        </div>
+
+        {/* Section 6: Reset Progress */}
         <div className="pt-2 pb-6 border-t border-white/10 flex flex-col gap-2">
           {!showConfirmReset ? (
             <button

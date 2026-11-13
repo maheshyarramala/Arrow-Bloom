@@ -55,8 +55,10 @@ export const GameCenterModal: React.FC<GameCenterModalProps> = ({
     else if (ach.id === 'shapes_collector') current = clearedCount >= 10 ? 10 : clearedCount;
     else if (ach.id === 'century_solver') current = clearedCount >= 100 ? 100 : clearedCount;
     else if (ach.id === 'grand_master') current = clearedCount;
-    else if (ach.id === 'perfectionist') current = totalStars >= 3 ? 1 : 0;
-    else if (ach.id === 'combo_maestro') current = clearedCount >= 2 ? 5 : 2;
+    else if (ach.id === 'perfectionist') current = Math.min(1, progress.stats?.perfectLevels || 0);
+    else if (ach.id === 'combo_maestro') current = Math.min(5, progress.stats?.bestCombo || 0);
+    else if (ach.id === 'arrow_collector') current = Math.min(1000, progress.stats?.arrowsCleared || 0);
+    else if (ach.id === 'daily_bloom') current = Math.min(7, progress.stats?.dailyChallengesCompleted || 0);
     else if (ach.id === 'ad_free_vip') current = isVip ? 1 : 0;
 
     const progressPct = Math.min(100, Math.round((current / ach.target) * 100));
@@ -156,6 +158,23 @@ export const GameCenterModal: React.FC<GameCenterModalProps> = ({
             <span>{syncAlert}</span>
           </div>
         )}
+
+        {/* Real player statistics */}
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { label: 'Levels cleared', value: clearedCount.toLocaleString(), color: 'text-emerald-300' },
+            { label: 'Total stars', value: totalStars.toLocaleString(), color: 'text-amber-300' },
+            { label: 'Arrows cleared', value: (progress.stats?.arrowsCleared || 0).toLocaleString(), color: 'text-cyan-300' },
+            { label: 'Best combo', value: `${progress.stats?.bestCombo || 0}×`, color: 'text-pink-300' },
+            { label: 'Perfect levels', value: (progress.stats?.perfectLevels || 0).toLocaleString(), color: 'text-purple-300' },
+            { label: 'Daily puzzles', value: (progress.stats?.dailyChallengesCompleted || 0).toLocaleString(), color: 'text-orange-300' },
+          ].map((stat) => (
+            <div key={stat.label} className="rounded-xl bg-white/5 border border-white/10 p-2.5">
+              <span className={`block text-lg font-black ${stat.color}`}>{stat.value}</span>
+              <span className="text-[10px] text-white/55">{stat.label}</span>
+            </div>
+          ))}
+        </div>
 
         {/* Tab Switcher */}
         <div className="flex rounded-2xl bg-slate-950/80 p-1 border border-white/10">

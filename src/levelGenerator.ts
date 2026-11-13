@@ -109,15 +109,21 @@ export function getDirFromDelta(dr: number, dc: number): Direction {
   return 'right';
 }
 
+export function getDifficultyProfile(level: number) {
+  const safeLevel = Math.max(1, Math.min(300, Math.floor(level)));
+  if (safeLevel <= 10) return { tier: 'Beginner', gridSize: 46, turnChance: 0.34, targetMin: 7, targetMax: 17 };
+  if (safeLevel <= 50) return { tier: 'Easy', gridSize: 47, turnChance: 0.38, targetMin: 7, targetMax: 18 };
+  if (safeLevel <= 100) return { tier: 'Medium', gridSize: 49, turnChance: 0.44, targetMin: 8, targetMax: 19 };
+  if (safeLevel <= 180) return { tier: 'Hard', gridSize: 51, turnChance: 0.50, targetMin: 8, targetMax: 20 };
+  if (safeLevel <= 250) return { tier: 'Expert', gridSize: 53, turnChance: 0.56, targetMin: 9, targetMax: 21 };
+  return { tier: 'Master', gridSize: 55, turnChance: 0.62, targetMin: 9, targetMax: 22 };
+}
+
 export function getLevelParams(level: number) {
   const collectionIdx = Math.min(29, Math.floor((level - 1) / 10));
   const collection = COLLECTIONS[collectionIdx];
-  const progress = (level - 1) / 299;
-  let gridSize = Math.round(44 + progress * 10); // 44 to 54 for 150+ arrows
-  const minLen = 2;
-  const maxLen = 8;
-  gridSize = Math.max(44, Math.min(64, gridSize));
-  return { collection, gridSize, minLen, maxLen };
+  const difficulty = getDifficultyProfile(level);
+  return { collection, ...difficulty, minLen: 2, maxLen: 8 };
 }
 
 export function assignColors(
@@ -257,10 +263,11 @@ function buildSingleLevelCandidate(
   const shapeDef = SHAPE_DEFINITIONS[levelNumber] || SHAPE_DEFINITIONS[shapeKey] || SHAPE_DEFINITIONS[1];
   const { collection } = getLevelParams(levelNumber);
 
-  // Keep board scale comfortable while generating fewer, longer arrows
-  let gridSize = 46;
+  // Board density and path complexity increase gradually across the six difficulty tiers.
+  const difficulty = getDifficultyProfile(levelNumber);
+  let gridSize = difficulty.gridSize;
   let { cells: playableCells } = rasterizeShape(shapeDef, gridSize);
-  while (playableCells.length < 620 && gridSize < 64) {
+  while (playableCells.length < 620 && gridSize + 2 <= 64) {
     gridSize += 2;
     ({ cells: playableCells } = rasterizeShape(shapeDef, gridSize));
   }
@@ -309,7 +316,7 @@ function buildSingleLevelCandidate(
     if (roll < 0.10) targetLen = 7 + Math.floor(rng() * 3);
     else if (roll < 0.42) targetLen = 10 + Math.floor(rng() * 4);
     else if (roll < 0.82) targetLen = 14 + Math.floor(rng() * 4);
-    else targetLen = 18 + Math.floor(rng() * 5); // 18–22 cells
+    else targetLen = 18 + Math.floor(rng() * 5);
 
     const snake = [neck, { r: hr, c: hc }];
     const snakeSet = new Set<number>([neck.r * gridSize + neck.c, hr * gridSize + hc]);
@@ -344,7 +351,9 @@ function buildSingleLevelCandidate(
       if (options.length === 0) break;
       const turns = options.filter(o => !o.isStraight);
       const straights = options.filter(o => o.isStraight);
-      const chosen = (turns.length > 0 && (straights.length === 0 || rng() < 0.34)) ? turns[Math.floor(rng() * turns.length)] : (straights[0] || turns[0]);
+      const chosen = (turns.length > 0 && (straights.length === 0 || rng() < difficulty.turnChance))
+        ? turns[Math.floor(rng() * turns.length)]
+        : (straights[0] || turns[0]);
       snake.unshift({ r: chosen.r, c: chosen.c });
       snakeSet.add(chosen.r * gridSize + chosen.c);
       tail = { r: chosen.r, c: chosen.c };
@@ -479,7 +488,8 @@ function buildSingleLevelCandidate(
 }
 
 export function validateLevel(level: LevelConfig): boolean {
-  if (!level || !level.arrows || level.arrows.length < 150) return false;
+  // Beginner levels can intentionally contain fewer than 150 arrows; only an empty board is invalid.
+  if (!level || !level.arrows || level.arrows.length < 1 || !level.shapeName || level.levelNumber < 1 || level.levelNumber > 300) return false;
   const gridSize = level.gridSize;
   const owner = new Int16Array(gridSize * gridSize);
   owner.fill(-1);
@@ -510,7 +520,18 @@ export function validateLevel(level: LevelConfig): boolean {
 
   const analysis = analyzeLevelSolvability(level.arrows, gridSize);
   if (!analysis.solvable) return false;
-
+  if (level.solutionOrder.length !== level.arrows.length) return false;
+  if (new Set(level.solutionOrder).size !== level.arrows.length) return false;
+  // Verify that the generated mask represents every occupied cell and no stray cells.
+  let occupiedCount = 0;
+  for (let r = 0; r < gridSize; r++) {
+    for (let c = 0; c < gridSize; c++) {
+      const occupied = owner[r * gridSize + c] >= 0;
+      if (occupied) occupiedCount++;
+      if (Boolean(level.playableMask[r]?.[c]) !== occupied) return false;
+    }
+  }
+  if (occupiedCount !== level.playableCells.length) return false;
   return true;
 }
 
@@ -524,26 +545,25 @@ export function getLevel(
   if (levelCache.has(safeLevel)) return levelCache.get(safeLevel)!;
 
   let bestCandidate: LevelConfig | null = null;
-  const maxAttempts = options.maxAttempts ?? 15;
-
+  const maxAttempts = options.maxAttempts ?? 20;
+  // Always allow the configured retry count; a single slow candidate must not prevent
+  // the worker from trying alternate deterministic seeds for a valid puzzle.
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const candidate = buildSingleLevelCandidate(safeLevel, safeLevel * 7919 + attempt * 101);
     if (candidate && validateLevel(candidate)) {
       levelCache.set(safeLevel, candidate);
       return candidate;
     }
-    if (candidate && (!bestCandidate || candidate.arrows.length > bestCandidate.arrows.length)) {
+    if (candidate && validateLevel(candidate) && (!bestCandidate || candidate.stats.depth > bestCandidate.stats.depth)) {
       bestCandidate = candidate;
     }
   }
 
-  if (bestCandidate && bestCandidate.arrows.length > 0) {
+  if (bestCandidate && validateLevel(bestCandidate)) {
     levelCache.set(safeLevel, bestCandidate);
     return bestCandidate;
   }
 
-  // Guaranteed fallback candidate
-  const fallback = buildSingleLevelCandidate(safeLevel, 42) || buildSingleLevelCandidate(1, 42)!;
-  levelCache.set(safeLevel, fallback);
-  return fallback;
+  // Never ship an invalid fallback puzzle: fail visibly so QA can catch and fix the seed.
+  throw new Error(`Unable to generate a valid puzzle for level ${safeLevel} within ${maxAttempts} attempts`);
 }

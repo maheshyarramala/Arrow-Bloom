@@ -13,6 +13,16 @@ export function getTodayDateString(): string {
   return `${year}-${month}-${day}`;
 }
 
+/** Stable daily puzzle selection; the same date always opens the same level offline. */
+export function getDailyChallengeLevel(date = getTodayDateString()): number {
+  let hash = 2166136261;
+  for (let i = 0; i < date.length; i++) {
+    hash ^= date.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return 1 + ((hash >>> 0) % 300);
+}
+
 export function getDefaultMissions(): DailyMission[] {
   return [
     {

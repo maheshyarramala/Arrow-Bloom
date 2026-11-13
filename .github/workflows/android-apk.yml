@@ -39,6 +39,12 @@ jobs:
       - name: Verify gameplay rules and key levels
         run: npm run test:levels
 
+      - name: Verify progress backup and recovery
+        run: npm run test:storage
+
+      - name: Verify offline gameplay and Android lifecycle
+        run: npm run test:offline
+
       - name: Build web game
         run: npm run build
 

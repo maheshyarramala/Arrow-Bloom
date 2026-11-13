@@ -29,6 +29,10 @@ interface LevelCompleteModalProps {
   isNewHigh: boolean;
   hasNextLevel: boolean;
   isAdFree?: boolean;
+  isDailyChallenge?: boolean;
+  arrowsCleared?: number;
+  solutionDepth?: number;
+  gridSize?: number;
   onNextLevel: () => void;
   onReplay: () => void;
   onHome: () => void;
@@ -44,6 +48,10 @@ export const LevelCompleteModal: React.FC<LevelCompleteModalProps> = ({
   isNewHigh,
   hasNextLevel,
   isAdFree = false,
+  isDailyChallenge = false,
+  arrowsCleared = 0,
+  solutionDepth = 0,
+  gridSize = 0,
   onNextLevel,
   onReplay,
   onHome,
@@ -61,7 +69,7 @@ export const LevelCompleteModal: React.FC<LevelCompleteModalProps> = ({
         {/* Header Tag */}
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 text-xs font-black uppercase tracking-wider shadow-md">
           <Sparkles className="w-3.5 h-3.5 fill-current" />
-          <span>Puzzle Cleared!</span>
+          <span>{isDailyChallenge ? 'Daily Puzzle Cleared!' : 'Puzzle Cleared!'}</span>
         </div>
 
         {/* Revealed Colorful Silhouette Celebration Picture */}
@@ -130,9 +138,28 @@ export const LevelCompleteModal: React.FC<LevelCompleteModalProps> = ({
               {mistakes === 0 ? '✨ Perfect (0 mistakes)' : `${mistakes} ${mistakes === 1 ? 'mistake' : 'mistakes'}`}
             </span>
           </div>
-          {isNewHigh && (
+          {isNewHigh && !isDailyChallenge && (
             <div className="text-[10px] text-center font-extrabold text-yellow-300 uppercase tracking-wider bg-yellow-500/20 py-0.5 rounded border border-yellow-400/30">
               🎉 New High Score!
+            </div>
+          )}
+          <div className="grid grid-cols-3 gap-1.5 pt-1 text-center">
+            <div className="rounded-lg bg-white/5 p-1.5">
+              <span className="block text-sm font-black text-cyan-300">{arrowsCleared}</span>
+              <span className="text-[9px] uppercase tracking-wide text-white/50">Arrows</span>
+            </div>
+            <div className="rounded-lg bg-white/5 p-1.5">
+              <span className="block text-sm font-black text-purple-300">{solutionDepth}</span>
+              <span className="text-[9px] uppercase tracking-wide text-white/50">Depth</span>
+            </div>
+            <div className="rounded-lg bg-white/5 p-1.5">
+              <span className="block text-sm font-black text-emerald-300">{gridSize}×{gridSize}</span>
+              <span className="text-[9px] uppercase tracking-wide text-white/50">Board</span>
+            </div>
+          </div>
+          {isDailyChallenge && (
+            <div className="text-[11px] font-black text-cyan-200 text-center bg-cyan-500/15 border border-cyan-400/25 rounded-xl py-2">
+              🎁 Daily reward: +2 bonus hints added to your Hint Bank
             </div>
           )}
         </div>
@@ -160,7 +187,7 @@ export const LevelCompleteModal: React.FC<LevelCompleteModalProps> = ({
               className="w-full py-3 px-5 rounded-2xl bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-500 hover:from-emerald-300 hover:to-cyan-400 active:scale-95 text-slate-950 font-black text-base shadow-lg border border-emerald-200 flex items-center justify-center gap-2 transition-transform"
             >
               <Play className="w-5 h-5 fill-current" />
-              <span>Next Level</span>
+              <span>{isDailyChallenge ? 'Daily Reward Collected' : 'Next Level'}</span>
             </button>
           ) : (
             <button

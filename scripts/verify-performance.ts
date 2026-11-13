@@ -1,4 +1,5 @@
-import { getLevel, analyzeLevelSolvability, getLevelParams, COLLECTIONS } from '../src/levelGenerator.ts';
+import { getLevel, analyzeLevelSolvability, getLevelParams, getDifficultyProfile, COLLECTIONS } from '../src/levelGenerator.ts';
+import { SHAPE_DEFINITIONS } from '../src/shapes.ts';
 import { calculateStars, computeArrowScore, checkArrowRay, getHintArrow } from '../src/gameLogic.ts';
 import type { ArrowData } from '../src/types.ts';
 
@@ -15,6 +16,14 @@ function assert(condition: unknown, message: string): asserts condition {
 }
 
 assert(COLLECTIONS.length === 30, `Expected 30 collections, got ${COLLECTIONS.length}`);
+assert(Object.keys(SHAPE_DEFINITIONS).length >= 300, 'All 300 levels must have a registered silhouette');
+assert(new Set(Array.from({ length: 300 }, (_, i) => SHAPE_DEFINITIONS[i + 1]?.name)).size === 300,
+  'Each of the 300 levels must have a distinct silhouette name');
+const tierSamples = [1, 11, 51, 101, 181, 251].map(getDifficultyProfile);
+assert(tierSamples.map(t => t.turnChance).every((v, i, a) => i === 0 || v > a[i - 1]),
+  'Difficulty turn complexity must increase at each tier');
+assert(tierSamples.map(t => t.gridSize).every((v, i, a) => i === 0 || v > a[i - 1]),
+  'Difficulty board size must increase at each tier');
 assert(COLLECTIONS.every((collection, index) =>
   collection.id === index + 1 &&
   collection.levels.length === 10 &&

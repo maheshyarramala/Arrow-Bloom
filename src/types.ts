@@ -52,6 +52,8 @@ export interface LevelConfig {
     coveragePct: number;
     trapPct: number;
     avgLength: number;
+    difficultyTier?: string;
+    turnChance?: number;
   };
 }
 
@@ -102,6 +104,14 @@ export interface PlayerProgress {
   levelData: Record<number, LevelProgress>;
   totalScore: number;
   dailyMissions?: DailyMissionsProgress;
+  dailyChallenge?: { date: string; levelNumber: number; completed: boolean };
+  stats?: {
+    arrowsCleared: number;
+    bestCombo: number;
+    perfectLevels: number;
+    dailyChallengesCompleted?: number;
+    lastPlayedAt: number;
+  };
 }
 
 export type ScreenState =
@@ -129,6 +139,7 @@ export interface SavedLevelState {
   hintsLeft: number;
   hearts: number;
   savedAt: number;
+  dailyChallenge?: boolean;
 }
 
 export interface AdState {
