@@ -284,6 +284,7 @@ export default function App() {
         const savedMidState = fromScratch ? null : loadMidLevelState(lvlNum);
 
         if (savedMidState && savedMidState.activeArrows && savedMidState.activeArrows.length > 0) {
+          setIsDailyChallenge(dailyChallenge || Boolean(savedMidState.dailyChallenge));
           // RESUME EXACTLY WHERE PLAYER LEFT OFF
           setActiveArrows(savedMidState.activeArrows.map((a) => ({ ...a, cells: a.cells })));
           activeArrowsRef.current = savedMidState.activeArrows;
@@ -361,6 +362,7 @@ export default function App() {
                 hintsLeft,
                 hearts: 0,
                 savedAt: Date.now(),
+        dailyChallenge: isDailyChallenge,
               });
               setShowGameOver(true);
             }, 450);
@@ -436,6 +438,7 @@ export default function App() {
           hintsLeft,
           hearts,
           savedAt: Date.now(),
+        dailyChallenge: isDailyChallenge,
         });
       }
 
@@ -588,6 +591,7 @@ export default function App() {
       hintsLeft,
       hearts,
       savedAt: Date.now(),
+        dailyChallenge: isDailyChallenge,
     });
   }, [undoHistory, currentLevelNumber, score, mistakes, hintsLeft, hearts]);
 
@@ -631,6 +635,7 @@ export default function App() {
           hintsLeft: next,
           hearts,
           savedAt: Date.now(),
+        dailyChallenge: isDailyChallenge,
         });
         return next;
       });
@@ -663,6 +668,7 @@ export default function App() {
         hintsLeft,
         hearts: 3,
         savedAt: Date.now(),
+        dailyChallenge: isDailyChallenge,
       });
     };
 
@@ -715,6 +721,7 @@ export default function App() {
         hintsLeft,
         hearts,
         savedAt: Date.now(),
+        dailyChallenge: isDailyChallenge,
       });
     }
     setShowLevelComplete(false);
@@ -723,6 +730,41 @@ export default function App() {
     setIsPreparingLevel(false);
     setScreen('home');
   }, [currentLevelNumber, score, mistakes, hintsLeft, hearts]);
+
+  // Persist progress and the current board when Android pauses, the app is backgrounded,
+  // or the WebView is about to be discarded. Arrow-by-arrow saves remain the primary checkpoint.
+  useEffect(() => {
+    const persistCurrentSession = () => {
+      saveProgress(progress);
+      const board = activeArrowsRef.current;
+      if (screen === 'game' && board.length > 0 && hearts > 0 && !completionCommittedRef.current) {
+        saveMidLevelState({
+          levelNumber: currentLevelNumber,
+          activeArrows: board,
+          score,
+          mistakes,
+          hintsLeft,
+          hearts,
+          savedAt: Date.now(),
+          dailyChallenge: isDailyChallenge,
+        });
+      }
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') persistCurrentSession();
+    };
+    window.addEventListener('pagehide', persistCurrentSession);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    let appStateListener: { remove: () => void } | null = null;
+    CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      if (!isActive) persistCurrentSession();
+    }).then((listener) => { appStateListener = listener; }).catch(() => undefined);
+    return () => {
+      window.removeEventListener('pagehide', persistCurrentSession);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      appStateListener?.remove();
+    };
+  }, [progress, screen, currentLevelNumber, score, mistakes, hintsLeft, hearts, isDailyChallenge]);
 
   // Hardware Back Button Handler (Capacitor & Web popstate)
   // Ensures pressing back navigates UI cleanly rather than killing the app!
