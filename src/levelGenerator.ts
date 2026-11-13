@@ -311,8 +311,12 @@ function buildSingleLevelCandidate(
     const [dr, dc] = DIR_DELTA[chosenDir];
     const neck = { r: hr - dr, c: hc - dc };
 
-    const targetLen = difficulty.targetMin +
-      Math.floor(rng() * (difficulty.targetMax - difficulty.targetMin + 1));
+    const roll = rng();
+    let targetLen = 3;
+    if (roll < 0.10) targetLen = 7 + Math.floor(rng() * 3);
+    else if (roll < 0.42) targetLen = 10 + Math.floor(rng() * 4);
+    else if (roll < 0.82) targetLen = 14 + Math.floor(rng() * 4);
+    else targetLen = 18 + Math.floor(rng() * 5);
 
     const snake = [neck, { r: hr, c: hc }];
     const snakeSet = new Set<number>([neck.r * gridSize + neck.c, hr * gridSize + hc]);
