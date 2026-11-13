@@ -56,7 +56,7 @@ const masterThemes = [
   ["Eclipse","Solar Eclipse","Lunar Shadow","Black Sun","Corona Ring","Shadow Mask","Eclipse Wing","Dark Star","Twilight Gate","Eclipse Crown"],
   ["Starlight","Constellation","Shooting Star","Star Map","Moon Rover","Astral Compass","Planet Ring","Star Lantern","Cosmic Flower","Starlight Crown"],
   ["Obsidian","Obsidian Blade","Dark Crystal","Basalt Tower","Night Raven","Black Lotus","Shadow Gem","Obsidian Gate","Void Mask","Obsidian Crown"],
-  ["Final Bloom","Bloom Spiral","Grand Petal","Radiant Heart","Final Key","Celestial Rose","Prism Phoenix","Eternal Garden","Master Emblem","Final Bloom"]
+  ["Grand Finale","Bloom Spiral","Grand Petal","Radiant Heart","Final Key","Celestial Rose","Prism Phoenix","Eternal Garden","Master Emblem","Final Bloom"]
 ];
 
 for (let level = 151; level <= 300; level++) {
