@@ -56,7 +56,7 @@ import { ShopModal } from './components/ShopModal.tsx';
 import { GameCenterModal } from './components/GameCenterModal.tsx';
 import { LegalPagesModal, LegalTab } from './components/LegalPagesModal.tsx';
 import { DailyMissionsModal } from './components/DailyMissionsModal.tsx';
-import { recordMissionEvent, consumeScoreMultiplier } from './dailyMissions.ts';
+import { recordMissionEvent, consumeScoreMultiplier, getTodayDateString, getDailyChallengeLevel } from './dailyMissions.ts';
 import { saveProgress } from './storage.ts';
 
 // Score Reducer
@@ -85,6 +85,7 @@ export default function App() {
   const [settings, setSettings] = useState<GameSettings>(loadSettings);
   const [progress, setProgress] = useState<PlayerProgress>(loadProgress);
   const [isAdFree, setIsAdFree] = useState<boolean>(isAdFreePurchased);
+  const [isDailyChallenge, setIsDailyChallenge] = useState(false);
 
   // Active Level Data
   const EMPTY_LEVEL: LevelConfig = {
@@ -262,8 +263,9 @@ export default function App() {
 
   // Start Level: Supports Mid-Level Resume Persistence!
   const startLevel = useCallback(
-    async (lvlNum: number, fromScratch = false, extraHint = false) => {
+    async (lvlNum: number, fromScratch = false, extraHint = false, dailyChallenge = false) => {
       const requestId = ++levelRequestIdRef.current;
+      setIsDailyChallenge(dailyChallenge);
       setIsPreparingLevel(true);
       // Start each puzzle in a predictable fit-to-screen view.
       setZoomLevel(1);
@@ -407,7 +409,15 @@ export default function App() {
       // Track mission progress for arrows cleared and combos reached
       let progNow = progress;
       const { updatedProgress: pArrows } = recordMissionEvent(progNow, { type: 'ARROWS_CLEARED', count: 1 });
-      progNow = pArrows;
+      progNow = {
+        ...pArrows,
+        stats: {
+          arrowsCleared: (pArrows.stats?.arrowsCleared || 0) + 1,
+          bestCombo: Math.max(pArrows.stats?.bestCombo || 0, nextCombo),
+          perfectLevels: pArrows.stats?.perfectLevels || 0,
+          lastPlayedAt: Date.now(),
+        },
+      };
       if (nextCombo >= 4) {
         const { updatedProgress: pCombo } = recordMissionEvent(progNow, { type: 'COMBO_REACHED', comboCount: nextCombo });
         progNow = pCombo;
@@ -476,8 +486,31 @@ export default function App() {
           mistakes: finalMistakes,
           stars,
         });
-        const pConsumed = consumeScoreMultiplier(pWin);
-        const nextSavedProgress = updateLevelCompletion(pConsumed, currentLevelNumber, stars, finalScore);
+        const pConsumedBase = consumeScoreMultiplier(pWin);
+        const pConsumed: PlayerProgress = {
+          ...pConsumedBase,
+          stats: {
+            arrowsCleared: pConsumedBase.stats?.arrowsCleared || 0,
+            bestCombo: Math.max(pConsumedBase.stats?.bestCombo || 0, comboCount),
+            perfectLevels: (pConsumedBase.stats?.perfectLevels || 0) + (finalMistakes === 0 ? 1 : 0),
+            lastPlayedAt: Date.now(),
+          },
+        };
+        let nextSavedProgress: PlayerProgress;
+        if (isDailyChallenge) {
+          const today = getTodayDateString();
+          const alreadyClaimed = pConsumed.dailyChallenge?.date === today && pConsumed.dailyChallenge.completed;
+          nextSavedProgress = {
+            ...pConsumed,
+            dailyChallenge: { date: today, levelNumber: currentLevelNumber, completed: true },
+            dailyMissions: pConsumed.dailyMissions
+              ? { ...pConsumed.dailyMissions, bonusHintsBank: pConsumed.dailyMissions.bonusHintsBank + (alreadyClaimed ? 0 : 2) }
+              : pConsumed.dailyMissions,
+          };
+          saveProgress(nextSavedProgress);
+        } else {
+          nextSavedProgress = updateLevelCompletion(pConsumed, currentLevelNumber, stars, finalScore);
+        }
         setProgress(nextSavedProgress);
         soundManager.playWin();
 
@@ -494,7 +527,7 @@ export default function App() {
       const timer = window.setTimeout(finishAnimation, animationDuration);
       escapeTimersRef.current.set(arrowId, timer);
     },
-    [hearts, levelConfig.gridSize, comboCount, mistakes, score, hintsLeft, progress, currentLevelNumber, settings.animationSpeed]
+    [hearts, levelConfig.gridSize, comboCount, mistakes, score, hintsLeft, progress, currentLevelNumber, settings.animationSpeed, isDailyChallenge]
   );
 
   const handleArrowSelectRef = useRef<(arrowId: string) => void>(() => {});
@@ -831,6 +864,9 @@ export default function App() {
           progress={progress}
           isDarkTheme={isDark}
           onPlayLevel={(lvl) => startLevel(lvl)}
+          dailyChallengeLevel={getDailyChallengeLevel()}
+          dailyChallengeCompleted={progress.dailyChallenge?.date === getTodayDateString() && progress.dailyChallenge.completed}
+          onPlayDailyChallenge={() => startLevel(getDailyChallengeLevel(), true, false, true)}
           onOpenSettings={() => setScreen('settings')}
           onOpenShop={() => setShowShop(true)}
           onOpenGameCenter={() => setShowGameCenter(true)}
@@ -973,7 +1009,11 @@ export default function App() {
           isNewHigh={isNewHighScore}
           hasNextLevel={currentLevelNumber < 300}
           isAdFree={isAdFree}
-          onNextLevel={() => startLevel(currentLevelNumber + 1)}
+          isDailyChallenge={isDailyChallenge}
+          arrowsCleared={levelConfig.arrows.length}
+          solutionDepth={levelConfig.stats.depth}
+          gridSize={levelConfig.gridSize}
+          onNextLevel={() => isDailyChallenge ? goHome() : startLevel(currentLevelNumber + 1)}
           onReplay={() => startLevel(currentLevelNumber, true)}
           onHome={goHome}
           onDoubleScoreAd={handleDoubleScoreAd}
