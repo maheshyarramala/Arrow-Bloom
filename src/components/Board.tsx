@@ -494,6 +494,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
   const tapAmbiguousRef = useRef(false);
   const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
+    event.preventDefault();
     const points = activePointersRef.current;
     points.set(event.pointerId, { x: event.clientX, y: event.clientY });
     try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* ignore */ }
@@ -555,8 +556,10 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       else if(distance<secondDistance) secondDistance=distance;
     }
     const hitRadius = Math.min(24,Math.max(16,cell*.6));
-    tapAmbiguousRef.current = bestDistance<=hitRadius && secondDistance-bestDistance<=4;
-    tapCandidateRef.current = bestDistance<=hitRadius && !tapAmbiguousRef.current ? bestId : null;
+    // Choose the closest arrow deterministically. Near-ties are common on dense boards;
+    // rejecting them made valid taps appear to be ignored.
+    tapAmbiguousRef.current = false;
+    tapCandidateRef.current = bestDistance <= hitRadius ? bestId : null;
     if (tapCandidateRef.current) {
       focusedArrowIndexRef.current = arrows.findIndex(a=>a.id===tapCandidateRef.current);
       focusActiveRef.current = true;
@@ -586,7 +589,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     const p = pointerRef.current;
     if (!p.down) return;
     const dx = event.clientX - p.x, dy = event.clientY - p.y;
-    if (Math.hypot(dx,dy) > (event.pointerType === 'mouse' ? 5 : 10) && !p.dragging) {
+    if (Math.hypot(dx,dy) > (event.pointerType === 'mouse' ? 5 : 8) && !p.dragging) {
       p.dragging = true; tapCandidateRef.current = null; focusActiveRef.current = false; onDraggingChange?.(true);
     }
     if (!p.dragging || transformRef.current.zoom <= 1) return;
@@ -612,7 +615,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     const p = pointerRef.current;
     if (!p.down) return;
     if (p.dragging) onPanChange({x:transformRef.current.x,y:transformRef.current.y});
-    else if (!tapAmbiguousRef.current && tapCandidateRef.current) onArrowSelect(tapCandidateRef.current);
+    else if (tapCandidateRef.current) onArrowSelect(tapCandidateRef.current);
     if (p.dragging) onDraggingChange?.(false);
     pointerRef.current.down=false; pointerRef.current.dragging=false;
     tapCandidateRef.current=null; tapAmbiguousRef.current=false; focusActiveRef.current=false;

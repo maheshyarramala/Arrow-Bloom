@@ -50,7 +50,7 @@ export const Settings: React.FC<SettingsProps> = ({
   const isDark = settings.theme === 'dark';
   const developerEmail = 'devops.maheshbabu@gmail.com';
 
-  const toggle = (key: keyof Omit<GameSettings, 'theme'>) => {
+  const toggle = (key: keyof Pick<GameSettings, 'soundEnabled' | 'musicEnabled' | 'vibrationEnabled' | 'colorBlindMode' | 'performanceMode'>) => {
     soundManager.playClick();
     onUpdateSettings({
       ...settings,
@@ -243,6 +243,43 @@ export const Settings: React.FC<SettingsProps> = ({
                 }`}
               />
             </button>
+          </div>
+
+          {/* Arrow Animation Speed */}
+          <div
+            className={`rounded-2xl p-3.5 border flex flex-col gap-3 shadow-sm ${
+              isDark ? 'bg-slate-900/60 border-white/15' : 'bg-white border-slate-200'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400">
+                <Gauge className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="font-black text-sm">Arrow Animation Speed</h2>
+                <p className="text-xs opacity-60">Choose how quickly arrows escape</p>
+              </div>
+            </div>
+            <div className={`grid grid-cols-3 gap-2 rounded-xl p-1 ${isDark ? 'bg-black/25' : 'bg-slate-100'}`}>
+              {(['slow', 'normal', 'fast'] as const).map((speed) => (
+                <button
+                  key={speed}
+                  type="button"
+                  aria-pressed={(settings.animationSpeed || 'slow') === speed}
+                  onClick={() => {
+                    soundManager.playClick();
+                    onUpdateSettings({ ...settings, animationSpeed: speed });
+                  }}
+                  className={`py-2 rounded-lg text-xs font-black capitalize transition-all active:scale-95 ${
+                    (settings.animationSpeed || 'slow') === speed
+                      ? 'bg-cyan-500 text-slate-950 shadow'
+                      : isDark ? 'text-white/65 hover:bg-white/10' : 'text-slate-600 hover:bg-white'
+                  }`}
+                >
+                  {speed}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Performance Mode */}

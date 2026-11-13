@@ -12,6 +12,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   vibrationEnabled: true,
   colorBlindMode: false,
   performanceMode: typeof navigator !== 'undefined' && ((navigator.hardwareConcurrency || 8) <= 4 || (((navigator as Navigator & { deviceMemory?: number }).deviceMemory || 8) <= 4)),
+  animationSpeed: 'slow',
   theme: 'dark',
 };
 
