@@ -184,6 +184,7 @@ export function updateLevelCompletion(
 export function resetProgress(): PlayerProgress {
   try {
     localStorage.removeItem(PROGRESS_KEY);
+    localStorage.removeItem(PROGRESS_BACKUP_KEY);
     localStorage.removeItem(MID_LEVEL_KEY);
   } catch {
     // Ignore
