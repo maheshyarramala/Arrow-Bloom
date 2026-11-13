@@ -681,7 +681,7 @@ export default function App() {
         onReward: performContinue,
       });
     }
-  }, [isAdFree, currentLevelNumber, score, mistakes, hintsLeft]);
+  }, [isAdFree, currentLevelNumber, score, mistakes, hintsLeft, isDailyChallenge]);
 
   // 2x Score Ad Bonus on Level Complete
   const handleDoubleScoreAd = useCallback(() => {
@@ -729,7 +729,7 @@ export default function App() {
     setShowCollectionComplete(false);
     setIsPreparingLevel(false);
     setScreen('home');
-  }, [currentLevelNumber, score, mistakes, hintsLeft, hearts]);
+  }, [currentLevelNumber, score, mistakes, hintsLeft, hearts, isDailyChallenge]);
 
   // Persist progress and the current board when Android pauses, the app is backgrounded,
   // or the WebView is about to be discarded. Arrow-by-arrow saves remain the primary checkpoint.
