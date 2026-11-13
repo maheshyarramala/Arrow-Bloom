@@ -265,6 +265,9 @@ export default function App() {
     async (lvlNum: number, fromScratch = false, extraHint = false) => {
       const requestId = ++levelRequestIdRef.current;
       setIsPreparingLevel(true);
+      // Start each puzzle in a predictable fit-to-screen view.
+      setZoomLevel(1);
+      setPanOffset({ x: 0, y: 0 });
       setActiveArrows([]);
       setLevelConfig(EMPTY_LEVEL);
       setCurrentLevelNumber(lvlNum);
@@ -376,7 +379,7 @@ export default function App() {
       setActiveArrows(nextBoard);
 
       const now = performance.now();
-      const animationDuration = Math.min(2800, Math.max(1000, 650 + arrow.cells.length * 38));
+      const animationDuration = Math.min(2200, Math.max(850, 650 + arrow.cells.length * 30));
       setEscapingArrows((current) => [
         ...current.filter((item) => item.arrow.id !== arrowId),
         { arrow, startedAt: now, duration: animationDuration },
