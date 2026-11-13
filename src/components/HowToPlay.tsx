@@ -1,7 +1,7 @@
 /**
  * Arrow Bloom - Illustrated How To Play Modal
  */
-import React from 'react';
+import React, { useState } from 'react';
 import { X, CheckCircle, AlertTriangle, Sparkles, Heart } from 'lucide-react';
 
 interface HowToPlayProps {
@@ -9,6 +9,8 @@ interface HowToPlayProps {
 }
 
 export const HowToPlay: React.FC<HowToPlayProps> = ({ onClose }) => {
+  const [practiceStep, setPracticeStep] = useState(0);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fade-in">
       <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl bg-slate-900/95 border-4 border-white/20 p-6 shadow-2xl text-white flex flex-col gap-5">
@@ -90,6 +92,55 @@ export const HowToPlay: React.FC<HowToPlayProps> = ({ onClose }) => {
             </div>
           </div>
         </div>
+
+        {/* Guided practice: the player must tap through a tiny example. */}
+        <section className="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-black text-sm text-cyan-200">Try a mini puzzle</h3>
+            <span className="text-[10px] font-black text-cyan-200">{practiceStep}/2 complete</span>
+          </div>
+          <p className="text-xs text-white/70">
+            {practiceStep === 0
+              ? 'First, tap the green arrow. Its path to the edge is clear.'
+              : practiceStep === 1
+              ? 'Great! The pink arrow was blocking the blue one. Tap the pink arrow to clear the way.'
+              : 'Perfect! Removing a blocker opens a path for the arrows behind it.'}
+          </p>
+          <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-950/70 p-3">
+            <div className="col-span-3 flex items-center justify-center gap-2">
+              <span className="text-[10px] text-white/35">BOARD EDGE ↑</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPracticeStep(1)}
+              disabled={practiceStep !== 0}
+              className={`rounded-xl p-3 text-xl font-black border transition-all ${
+                practiceStep === 0 ? 'bg-emerald-500/25 border-emerald-300 text-emerald-200 animate-pulse' : 'bg-white/5 border-white/10 text-white/25'
+              }`}
+              aria-label="Tap the free green arrow"
+            >↑</button>
+            <div className="rounded-xl p-3 flex items-center justify-center text-xs text-white/35">↗</div>
+            <button
+              type="button"
+              onClick={() => setPracticeStep(2)}
+              disabled={practiceStep !== 1}
+              className={`rounded-xl p-3 text-xl font-black border transition-all ${
+                practiceStep === 1 ? 'bg-pink-500/25 border-pink-300 text-pink-200 animate-pulse' : 'bg-white/5 border-white/10 text-white/25'
+              }`}
+              aria-label="Tap the pink blocking arrow"
+            >→</button>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 flex-1 rounded-full bg-white/10 overflow-hidden">
+              <div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-cyan-300 transition-all" style={{ width: `${practiceStep * 50}%` }} />
+            </div>
+            <button
+              type="button"
+              onClick={() => setPracticeStep(0)}
+              className="text-[10px] font-bold text-white/55 underline"
+            >Reset</button>
+          </div>
+        </section>
 
         {/* Action Button */}
         <button
