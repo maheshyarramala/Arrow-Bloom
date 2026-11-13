@@ -488,7 +488,8 @@ function buildSingleLevelCandidate(
 }
 
 export function validateLevel(level: LevelConfig): boolean {
-  if (!level || !level.arrows || level.arrows.length < 150 || !level.shapeName || level.levelNumber < 1 || level.levelNumber > 300) return false;
+  // Beginner levels can intentionally contain fewer than 150 arrows; only an empty board is invalid.
+  if (!level || !level.arrows || level.arrows.length < 1 || !level.shapeName || level.levelNumber < 1 || level.levelNumber > 300) return false;
   const gridSize = level.gridSize;
   const owner = new Int16Array(gridSize * gridSize);
   owner.fill(-1);
