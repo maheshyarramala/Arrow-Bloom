@@ -115,14 +115,14 @@ export function getDirFromDelta(dr: number, dc: number): Direction {
 
 export function getDifficultyProfile(level: number) {
   const safeLevel = Math.max(1, Math.min(500, Math.floor(level)));
-  if (safeLevel <= 10) return { tier: 'Beginner', gridSize: 48, turnChance: 0.36, targetMin: 7, targetMax: 17 };
-  if (safeLevel <= 50) return { tier: 'Easy', gridSize: 50, turnChance: 0.42, targetMin: 8, targetMax: 18 };
-  if (safeLevel <= 100) return { tier: 'Medium', gridSize: 52, turnChance: 0.48, targetMin: 8, targetMax: 19 };
-  if (safeLevel <= 180) return { tier: 'Hard', gridSize: 54, turnChance: 0.54, targetMin: 9, targetMax: 20 };
-  if (safeLevel <= 250) return { tier: 'Expert', gridSize: 56, turnChance: 0.60, targetMin: 9, targetMax: 21 };
-  if (safeLevel <= 350) return { tier: 'Master', gridSize: 58, turnChance: 0.65, targetMin: 10, targetMax: 22 };
-  if (safeLevel <= 430) return { tier: 'Grandmaster', gridSize: 60, turnChance: 0.70, targetMin: 10, targetMax: 23 };
-  return { tier: 'Eternal', gridSize: 62, turnChance: 0.74, targetMin: 11, targetMax: 24 };
+  if (safeLevel <= 10) return { tier: 'Beginner', gridSize: 58, turnChance: 0.50, targetMin: 7, targetMax: 15 };
+  if (safeLevel <= 50) return { tier: 'Easy', gridSize: 60, turnChance: 0.55, targetMin: 7, targetMax: 16 };
+  if (safeLevel <= 100) return { tier: 'Medium', gridSize: 62, turnChance: 0.60, targetMin: 8, targetMax: 17 };
+  if (safeLevel <= 180) return { tier: 'Hard', gridSize: 64, turnChance: 0.65, targetMin: 8, targetMax: 18 };
+  if (safeLevel <= 250) return { tier: 'Expert', gridSize: 66, turnChance: 0.70, targetMin: 9, targetMax: 19 };
+  if (safeLevel <= 350) return { tier: 'Master', gridSize: 68, turnChance: 0.74, targetMin: 9, targetMax: 20 };
+  if (safeLevel <= 430) return { tier: 'Grandmaster', gridSize: 70, turnChance: 0.78, targetMin: 10, targetMax: 21 };
+  return { tier: 'Eternal', gridSize: 72, turnChance: 0.82, targetMin: 10, targetMax: 22 };
 }
 
 export function getLevelParams(level: number) {
@@ -269,19 +269,82 @@ function buildSingleLevelCandidate(
   const shapeDef = SHAPE_DEFINITIONS[levelNumber] || SHAPE_DEFINITIONS[shapeKey] || SHAPE_DEFINITIONS[1];
   const { collection } = getLevelParams(levelNumber);
 
-  // Expand grid density enough to guarantee >60 winding interlocking arrows on every silhouette.
+  // Expand grid density enough to guarantee >=120 winding interlocking arrows on every silhouette.
   const difficulty = getDifficultyProfile(levelNumber);
   let gridSize = difficulty.gridSize;
   let { cells: playableCells } = rasterizeShape(shapeDef, gridSize);
-  while (playableCells.length < 880 && gridSize + 2 <= 76) {
+  while (playableCells.length < 1520 && gridSize + 2 <= 104) {
     gridSize += 2;
     ({ cells: playableCells } = rasterizeShape(shapeDef, gridSize));
   }
 
   const occupied = new Int16Array(gridSize * gridSize);
   occupied.fill(-1);
+  const playableSet = new Uint8Array(gridSize * gridSize);
   const remaining = new Set<number>();
-  for (const c of playableCells) remaining.add(c.r * gridSize + c.c);
+  let sumR = 0;
+  let sumC = 0;
+  for (const c of playableCells) {
+    const idx = c.r * gridSize + c.c;
+    remaining.add(idx);
+    playableSet[idx] = 1;
+    sumR += c.r;
+    sumC += c.c;
+  }
+  const centerR = playableCells.length ? sumR / playableCells.length : gridSize / 2;
+  const centerC = playableCells.length ? sumC / playableCells.length : gridSize / 2;
+
+  // Multi-source BFS from silhouette boundary so we peel outer shells inward ring-by-ring.
+  // Sealing the outer perimeter first traps interior arrows behind concentric blocker layers.
+  const boundaryDist = new Int16Array(gridSize * gridSize);
+  boundaryDist.fill(-1);
+  const bfsQueue = new Int32Array(playableCells.length);
+  let qHead = 0;
+  let qTail = 0;
+  const dirs4: Array<[number, number]> = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  for (const c of playableCells) {
+    let isBoundary = false;
+    for (let k = 0; k < 4; k++) {
+      const nr = c.r + dirs4[k][0];
+      const nc = c.c + dirs4[k][1];
+      if (nr < 0 || nr >= gridSize || nc < 0 || nc >= gridSize || playableSet[nr * gridSize + nc] === 0) {
+        isBoundary = true;
+        break;
+      }
+    }
+    if (isBoundary) {
+      const idx = c.r * gridSize + c.c;
+      boundaryDist[idx] = 1;
+      bfsQueue[qTail++] = idx;
+    }
+  }
+  while (qHead < qTail) {
+    const curr = bfsQueue[qHead++];
+    const cr = Math.floor(curr / gridSize);
+    const cc = curr % gridSize;
+    const nextD = boundaryDist[curr] + 1;
+    for (let k = 0; k < 4; k++) {
+      const nr = cr + dirs4[k][0];
+      const nc = cc + dirs4[k][1];
+      if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
+        const nIdx = nr * gridSize + nc;
+        if (playableSet[nIdx] === 1 && boundaryDist[nIdx] === -1) {
+          boundaryDist[nIdx] = nextD;
+          bfsQueue[qTail++] = nIdx;
+        }
+      }
+    }
+  }
+
+  const outerToInner = playableCells
+    .map((c) => {
+      const idx = c.r * gridSize + c.c;
+      const angle = Math.atan2(c.r - centerR, c.c - centerC);
+      return { idx, shell: boundaryDist[idx] > 0 ? boundaryDist[idx] : 999, angle };
+    })
+    .sort((a, b) => (a.shell !== b.shell ? a.shell - b.shell : a.angle - b.angle))
+    .map((item) => item.idx);
+  let peelCursor = 0;
 
   const arrows: ArrowData[] = [];
   const directions: Direction[] = ['up', 'down', 'left', 'right'];
@@ -311,7 +374,7 @@ function buildSingleLevelCandidate(
     }
     if (scored.length === 0) return null;
     scored.sort((a, b) => b.blockers - a.blockers);
-    if (scored[0].blockers > 0 && rng() < 0.92) return scored[0];
+    if (scored[0].blockers > 0 && rng() < 0.96) return scored[0];
     return scored[Math.floor(rng() * scored.length)];
   }
 
@@ -333,7 +396,7 @@ function buildSingleLevelCandidate(
     let backDc = neck.c - hc;
 
     while (snake.length < targetLen) {
-      const options: Array<{ r: number; c: number; dr: number; dc: number; isStraight: boolean; deg: number }> = [];
+      const options: Array<{ r: number; c: number; dr: number; dc: number; isStraight: boolean; deg: number; shell: number }> = [];
       for (const d of directions) {
         const [stepDr, stepDc] = DIR_DELTA[d];
         if (stepDr === -backDr && stepDc === -backDc) continue;
@@ -356,7 +419,8 @@ function buildSingleLevelCandidate(
               }
             }
             if (!touchesSelf) {
-              options.push({ r: nr, c: nc, dr: stepDr, dc: stepDc, isStraight: stepDr === backDr && stepDc === backDc, deg });
+              const shell = boundaryDist[idx] > 0 ? boundaryDist[idx] : 999;
+              options.push({ r: nr, c: nc, dr: stepDr, dc: stepDc, isStraight: stepDr === backDr && stepDc === backDc, deg, shell });
             }
           }
         }
@@ -364,11 +428,16 @@ function buildSingleLevelCandidate(
       if (options.length === 0) break;
       const alive = options.filter(o => o.deg > 0);
       const pool = alive.length > 0 ? alive : options;
-      pool.sort((a, b) => a.deg - b.deg);
-      let chosen = pool[0];
-      if (rng() >= 0.45) {
-        const turns = pool.filter(o => !o.isStraight);
-        const straights = pool.filter(o => o.isStraight);
+      // Prefer hugging the current outermost shell so the perimeter seals cleanly before going inward
+      let minShell = 9999;
+      for (let i = 0; i < pool.length; i++) if (pool[i].shell < minShell) minShell = pool[i].shell;
+      const shellPool = rng() < 0.85 ? pool.filter(o => o.shell <= minShell + 1) : pool;
+      const activePool = shellPool.length > 0 ? shellPool : pool;
+      activePool.sort((a, b) => a.deg - b.deg);
+      let chosen = activePool[0];
+      if (rng() >= 0.22) {
+        const turns = activePool.filter(o => !o.isStraight);
+        const straights = activePool.filter(o => o.isStraight);
         chosen = (turns.length > 0 && (straights.length === 0 || rng() < difficulty.turnChance))
           ? turns[Math.floor(rng() * turns.length)]
           : (straights[0] || turns[0]);
@@ -382,27 +451,52 @@ function buildSingleLevelCandidate(
     return snake;
   }
 
+  function collectPeelBatch(limit: number): number[] {
+    while (peelCursor < outerToInner.length && !remaining.has(outerToInner[peelCursor])) {
+      peelCursor++;
+    }
+    const batch: number[] = [];
+    for (let i = peelCursor; i < outerToInner.length && batch.length < limit; i++) {
+      const idx = outerToInner[i];
+      if (remaining.has(idx)) batch.push(idx);
+    }
+    return batch;
+  }
+
   function runSnakePass(minLen: number, minTarget: number, maxTarget: number, maxAttempts: number) {
     let attempts = 0;
-    while (remaining.size > 0 && attempts < maxAttempts) {
+    let consecutiveFails = 0;
+    while (remaining.size > 0 && attempts < maxAttempts && consecutiveFails < 60) {
       attempts++;
-      const arr = Array.from(remaining);
-      const sampleCount = arrows.length < 4 ? 1 : 8;
+      const batch = collectPeelBatch(16);
+      if (batch.length === 0) break;
+      // Check the very first frontier cells (adjacent to already-placed shell arrows) first
+      // so consecutive perimeter arrows point into each other instead of pointing straight outward.
       let bestPick: { hr: number; hc: number; d: Direction; blockers: number } | null = null;
-      for (let s = 0; s < sampleCount; s++) {
-        const startIdx = arr[Math.floor(rng() * arr.length)];
+      const checkCount = Math.min(batch.length, arrows.length < 2 ? 2 : 16);
+      for (let s = 0; s < checkCount; s++) {
+        const startIdx = batch[s];
         const hr = Math.floor(startIdx / gridSize);
         const hc = startIdx % gridSize;
         const pick = pickDirectionScored(hr, hc);
         if (pick && (!bestPick || pick.blockers > bestPick.blockers)) {
           bestPick = { hr, hc, d: pick.d, blockers: pick.blockers };
-          if (bestPick.blockers >= 2) break;
+          if (bestPick.blockers >= 3) break;
         }
       }
-      if (!bestPick) continue;
+      if (!bestPick) {
+        peelCursor = Math.min(outerToInner.length, peelCursor + 1);
+        consecutiveFails++;
+        continue;
+      }
       const targetLen = minTarget + Math.floor(rng() * (maxTarget - minTarget + 1));
       const snake = growSnake(bestPick.hr, bestPick.hc, bestPick.d, targetLen);
-      if (snake.length < minLen) continue;
+      if (snake.length < minLen) {
+        peelCursor = Math.min(outerToInner.length, peelCursor + 1);
+        consecutiveFails++;
+        continue;
+      }
+      consecutiveFails = 0;
 
       const arrowIdx = arrows.length;
       for (const c of snake) {
@@ -424,38 +518,45 @@ function buildSingleLevelCandidate(
     let madeProgress = true;
     while (madeProgress && remaining.size > 0) {
       madeProgress = false;
-      const candidates = Array.from(remaining);
-      for (let i = candidates.length - 1; i > 0; i--) {
-        const j = Math.floor(rng() * (i + 1));
-        const tmp = candidates[i];
-        candidates[i] = candidates[j];
-        candidates[j] = tmp;
+      const candidates: number[] = [];
+      for (let i = 0; i < outerToInner.length; i++) {
+        if (remaining.has(outerToInner[i])) candidates.push(outerToInner[i]);
       }
-      for (const startIdx of candidates) {
-        if (!remaining.has(startIdx)) continue;
-        const hr = Math.floor(startIdx / gridSize);
-        const hc = startIdx % gridSize;
-        const pick = pickDirectionScored(hr, hc);
-        if (!pick) continue;
-        const chosenDir = pick.d;
-        const targetLen = minTarget + Math.floor(rng() * (maxTarget - minTarget + 1));
-        const snake = growSnake(hr, hc, chosenDir, targetLen);
-        if (snake.length < minLen) continue;
+      // First pass places all arrows blocked by existing ones; fallback places ONE 0-blocker anchor then re-loops.
+      for (const requireBlocker of [true, false]) {
+        let placedZeroBlocker = false;
+        for (const startIdx of candidates) {
+          if (!remaining.has(startIdx)) continue;
+          const hr = Math.floor(startIdx / gridSize);
+          const hc = startIdx % gridSize;
+          const pick = pickDirectionScored(hr, hc);
+          if (!pick) continue;
+          if (requireBlocker && pick.blockers === 0) continue;
+          const chosenDir = pick.d;
+          const targetLen = minTarget + Math.floor(rng() * (maxTarget - minTarget + 1));
+          const snake = growSnake(hr, hc, chosenDir, targetLen);
+          if (snake.length < minLen) continue;
 
-        const arrowIdx = arrows.length;
-        for (const c of snake) {
-          const idx = c.r * gridSize + c.c;
-          occupied[idx] = arrowIdx;
-          remaining.delete(idx);
+          const arrowIdx = arrows.length;
+          for (const c of snake) {
+            const idx = c.r * gridSize + c.c;
+            occupied[idx] = arrowIdx;
+            remaining.delete(idx);
+          }
+          arrows.push({
+            id: `a_${levelNumber}_${arrowIdx + 1}`,
+            cells: snake,
+            direction: chosenDir,
+            order: arrowIdx,
+            colorIndex: -1,
+          });
+          madeProgress = true;
+          if (!requireBlocker) {
+            placedZeroBlocker = true;
+            break;
+          }
         }
-        arrows.push({
-          id: `a_${levelNumber}_${arrowIdx + 1}`,
-          cells: snake,
-          direction: chosenDir,
-          order: arrowIdx,
-          colorIndex: -1,
-        });
-        madeProgress = true;
+        if (placedZeroBlocker) break;
       }
     }
   }
@@ -500,29 +601,27 @@ function buildSingleLevelCandidate(
   }
 
   const cellCount = playableCells.length;
-  if (cellCount < 820) {
-    // Compact silhouettes: medium-long winding snakes so arrow count stays comfortably > 60 with 0 stubs
-    runSnakePass(6, 8, 14, 2000);
-    extendTails();
-    scanRemainingPass(5, 7, 12);
-    extendTails();
+  if (cellCount < 1550) {
+    // Medium-dense boards: target 130–180 winding interlocking arrows (>=120 guaranteed)
+    runSnakePass(5, 7, 11, 1400);
+    peelCursor = 0;
     scanRemainingPass(4, 5, 9);
     extendTails();
-  } else if (cellCount < 1150) {
-    // Medium silhouettes: lengthy winding snakes + dense interlocking coverage
-    runSnakePass(8, 12, 20, 2000);
+  } else if (cellCount < 2100) {
+    // Dense boards: 140–210 winding interlocking arrows
+    runSnakePass(6, 8, 13, 1600);
+    peelCursor = 0;
+    scanRemainingPass(5, 6, 11);
     extendTails();
-    scanRemainingPass(6, 9, 16);
-    extendTails();
-    scanRemainingPass(4, 6, 12);
+    scanRemainingPass(4, 4, 8);
     extendTails();
   } else {
-    // Large silhouettes: long sweeping serpentine arrows
-    runSnakePass(10, 15, 28, 2000);
+    // Grand dense boards: 160–260+ sweeping serpentine arrows
+    runSnakePass(7, 10, 18, 1800);
+    peelCursor = 0;
+    scanRemainingPass(6, 8, 14);
     extendTails();
-    scanRemainingPass(6, 12, 22);
-    extendTails();
-    scanRemainingPass(4, 8, 16);
+    scanRemainingPass(4, 5, 10);
     extendTails();
   }
 
@@ -572,8 +671,8 @@ function buildSingleLevelCandidate(
 }
 
 export function validateLevel(level: LevelConfig): boolean {
-  // Enforce >60 arrows per level and valid level bounds (1–500).
-  if (!level || !level.arrows || level.arrows.length <= 60 || !level.shapeName || level.levelNumber < 1 || level.levelNumber > 500) return false;
+  // Enforce >=120 arrows per level and valid level bounds (1–500).
+  if (!level || !level.arrows || level.arrows.length < 120 || !level.shapeName || level.levelNumber < 1 || level.levelNumber > 500) return false;
   const gridSize = level.gridSize;
   const owner = new Int16Array(gridSize * gridSize);
   owner.fill(-1);
