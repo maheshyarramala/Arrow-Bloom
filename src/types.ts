@@ -104,6 +104,13 @@ export interface PlayerProgress {
   levelData: Record<number, LevelProgress>;
   totalScore: number;
   dailyMissions?: DailyMissionsProgress;
+  dailyChallenge?: { date: string; levelNumber: number; completed: boolean };
+  stats?: {
+    arrowsCleared: number;
+    bestCombo: number;
+    perfectLevels: number;
+    lastPlayedAt: number;
+  };
 }
 
 export type ScreenState =
