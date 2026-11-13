@@ -61,7 +61,7 @@ export const LevelCompleteModal: React.FC<LevelCompleteModalProps> = ({
         {/* Header Tag */}
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 text-xs font-black uppercase tracking-wider shadow-md">
           <Sparkles className="w-3.5 h-3.5 fill-current" />
-          <span>Level {levelNumber} Cleared!</span>
+          <span>Puzzle Cleared!</span>
         </div>
 
         {/* Revealed Colorful Silhouette Celebration Picture */}
@@ -119,7 +119,7 @@ export const LevelCompleteModal: React.FC<LevelCompleteModalProps> = ({
         {/* Score & Mistake Stats */}
         <div className="w-full bg-white/10 rounded-2xl p-2.5 border border-white/15 flex flex-col gap-1 text-left">
           <div className="flex justify-between items-center text-xs">
-            <span className="text-white/80 font-semibold">Level Score:</span>
+            <span className="text-white/80 font-semibold">Puzzle Score:</span>
             <span className="font-black text-amber-300 text-base tabular-nums">
               {score.toLocaleString()} pts
             </span>
@@ -312,7 +312,7 @@ export const CollectionCompleteModal: React.FC<CollectionCompleteModalProps> = (
             className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-amber-400 via-yellow-400 to-orange-400 hover:from-amber-300 hover:to-orange-300 active:scale-95 text-slate-950 font-black text-base shadow-xl border border-yellow-100 flex items-center justify-center gap-2 transition-transform"
           >
             <Play className="w-5 h-5 fill-current" />
-            <span>{isGameFinale ? 'Browse All Levels' : `Enter ${nextCollection?.name || 'Next'}`}</span>
+            <span>{isGameFinale ? 'Play Again' : `Enter ${nextCollection?.name || 'Next'}`}</span>
           </button>
           <button
             onClick={onHome}
