@@ -30,7 +30,7 @@ for (let level = 51; level <= 150; level++) {
   const isFinal = level === 150;
   SHAPE_DEFINITIONS[level] = {
     id: isFinal ? 'grand_master' : `level_${level}_${shapeNames[offset].toLowerCase().replace(/[^a-z0-9]+/g, '_')}`,
-    name: isFinal ? 'Grand Master Bloom' : shapeNames[offset],
+    name: `${collectionThemes[collectionId - 6]} ${isFinal ? 'Grand Master Bloom' : shapeNames[offset]}`,
     collectionId: collectionId,
     polygons: isFinal ? [[[0.05, 0.05], [0.95, 0.05], [0.95, 0.95], [0.05, 0.95]]] : polygons,
     description: `${collectionThemes[collectionId - 6]} silhouette challenge`,
@@ -83,7 +83,7 @@ for (let level = 151; level <= 300; level++) {
   }));
   SHAPE_DEFINITIONS[level] = {
     id: `master_${level}_${masterThemes[collectionId - 16][shapeIndex].toLowerCase().replace(/[^a-z0-9]+/g, '_')}`,
-    name: `Master ${masterThemes[collectionId - 16][shapeIndex]}`,
+    name: `Master ${masterThemes[collectionId - 16][0]} ${masterThemes[collectionId - 16][shapeIndex]}`,
     collectionId,
     polygons,
     description: `Master collection: ${masterThemes[collectionId - 16][0]} challenge`,
