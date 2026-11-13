@@ -73,13 +73,17 @@ COLLECTIONS.push(
   { id: 15, name: 'Mastery', theme: 'mastery', levels: [141, 142, 143, 144, 145, 146, 147, 148, 149, 150], subtitle: 'The final ten challenges for master players', accentColor: '#F0ABFC', gradientDark: 'from-slate-950 via-indigo-950 to-black', gradientLight: 'from-slate-100 via-indigo-100 to-violet-100' }
 );
 
-for (let id = 16; id <= 30; id++) {
+for (let id = 16; id <= 50; id++) {
   const start = (id - 1) * 10 + 1;
   const hue = (id * 47) % 360;
+  const names = [
+    'Aurora','Neon City','Ancient','Crystal','Volcano','Dreamscape','Oceanic','Clockwork','Wildlands','Legendary','Infinity','Eclipse','Starlight','Obsidian','Final Bloom',
+    'Mirage','Frostbite','Nebula Rush','Jade Temple','Cyber Pulse','Solar Flare','Velvet Night','Amber Dunes','Arcane','Prism Forge','Skyborne','Coral Abyss','Starforge','Emerald Mist','Chronos','Radiant Peak','Phantom Maze','Celestial','Nova Core','Eternal Bloom'
+  ];
   COLLECTIONS.push({
-    id, name: ['Aurora','Neon City','Ancient','Crystal','Volcano','Dreamscape','Oceanic','Clockwork','Wildlands','Legendary','Infinity','Eclipse','Starlight','Obsidian','Final Bloom'][id - 16],
+    id, name: names[id - 16],
     theme: 'world-' + id, levels: Array.from({ length: 10 }, (_, i) => start + i),
-    subtitle: 'A new set of winding arrow challenges',
+    subtitle: id > 30 ? 'Apex master winding arrow challenges' : 'A new set of winding arrow challenges',
     gradientDark: 'from-slate-950 via-indigo-950 to-black', gradientLight: 'from-indigo-50 via-sky-100 to-violet-100',
     accentColor: 'hsl(' + hue + ' 85% 62%)',
   });
@@ -110,20 +114,22 @@ export function getDirFromDelta(dr: number, dc: number): Direction {
 }
 
 export function getDifficultyProfile(level: number) {
-  const safeLevel = Math.max(1, Math.min(300, Math.floor(level)));
-  if (safeLevel <= 10) return { tier: 'Beginner', gridSize: 46, turnChance: 0.34, targetMin: 7, targetMax: 17 };
-  if (safeLevel <= 50) return { tier: 'Easy', gridSize: 47, turnChance: 0.38, targetMin: 7, targetMax: 18 };
-  if (safeLevel <= 100) return { tier: 'Medium', gridSize: 49, turnChance: 0.44, targetMin: 8, targetMax: 19 };
-  if (safeLevel <= 180) return { tier: 'Hard', gridSize: 51, turnChance: 0.50, targetMin: 8, targetMax: 20 };
-  if (safeLevel <= 250) return { tier: 'Expert', gridSize: 53, turnChance: 0.56, targetMin: 9, targetMax: 21 };
-  return { tier: 'Master', gridSize: 55, turnChance: 0.62, targetMin: 9, targetMax: 22 };
+  const safeLevel = Math.max(1, Math.min(500, Math.floor(level)));
+  if (safeLevel <= 10) return { tier: 'Beginner', gridSize: 48, turnChance: 0.36, targetMin: 7, targetMax: 17 };
+  if (safeLevel <= 50) return { tier: 'Easy', gridSize: 50, turnChance: 0.42, targetMin: 8, targetMax: 18 };
+  if (safeLevel <= 100) return { tier: 'Medium', gridSize: 52, turnChance: 0.48, targetMin: 8, targetMax: 19 };
+  if (safeLevel <= 180) return { tier: 'Hard', gridSize: 54, turnChance: 0.54, targetMin: 9, targetMax: 20 };
+  if (safeLevel <= 250) return { tier: 'Expert', gridSize: 56, turnChance: 0.60, targetMin: 9, targetMax: 21 };
+  if (safeLevel <= 350) return { tier: 'Master', gridSize: 58, turnChance: 0.65, targetMin: 10, targetMax: 22 };
+  if (safeLevel <= 430) return { tier: 'Grandmaster', gridSize: 60, turnChance: 0.70, targetMin: 10, targetMax: 23 };
+  return { tier: 'Eternal', gridSize: 62, turnChance: 0.74, targetMin: 11, targetMax: 24 };
 }
 
 export function getLevelParams(level: number) {
-  const collectionIdx = Math.min(29, Math.floor((level - 1) / 10));
+  const collectionIdx = Math.min(49, Math.max(0, Math.floor((level - 1) / 10)));
   const collection = COLLECTIONS[collectionIdx];
   const difficulty = getDifficultyProfile(level);
-  return { collection, ...difficulty, minLen: 2, maxLen: 8 };
+  return { collection, ...difficulty, minLen: 4, maxLen: 28 };
 }
 
 export function assignColors(
@@ -263,11 +269,11 @@ function buildSingleLevelCandidate(
   const shapeDef = SHAPE_DEFINITIONS[levelNumber] || SHAPE_DEFINITIONS[shapeKey] || SHAPE_DEFINITIONS[1];
   const { collection } = getLevelParams(levelNumber);
 
-  // Board density and path complexity increase gradually across the six difficulty tiers.
+  // Expand grid density enough to guarantee >60 winding interlocking arrows on every silhouette.
   const difficulty = getDifficultyProfile(levelNumber);
   let gridSize = difficulty.gridSize;
   let { cells: playableCells } = rasterizeShape(shapeDef, gridSize);
-  while (playableCells.length < 620 && gridSize + 2 <= 64) {
+  while (playableCells.length < 880 && gridSize + 2 <= 76) {
     gridSize += 2;
     ({ cells: playableCells } = rasterizeShape(shapeDef, gridSize));
   }
@@ -280,44 +286,46 @@ function buildSingleLevelCandidate(
   const arrows: ArrowData[] = [];
   const directions: Direction[] = ['up', 'down', 'left', 'right'];
 
-  function isRayValid(hr: number, hc: number, d: Direction): boolean {
+  function countRayBlockers(hr: number, hc: number, d: Direction): number {
     const [dr, dc] = DIR_DELTA[d];
     let r = hr + dr, c = hc + dc;
+    let blockers = 0;
     while (r >= 0 && r < gridSize && c >= 0 && c < gridSize) {
       const idx = r * gridSize + c;
-      if (remaining.has(idx)) return false; // passes through unassigned cell -> could be blocked later
+      if (remaining.has(idx)) return -1; // passes through unassigned cell -> could be blocked later
+      if (occupied[idx] >= 0) blockers++;
       r += dr; c += dc;
     }
-    return true;
+    return blockers;
   }
 
-  // Pass 1: Build longer winding snakes so each puzzle has fewer, more involved arrows
-  let attempts = 0;
-  while (remaining.size > 0 && attempts < 4000) {
-    attempts++;
-    const arr = Array.from(remaining);
-    const startIdx = arr[Math.floor(rng() * arr.length)];
-    const hr = Math.floor(startIdx / gridSize);
-    const hc = startIdx % gridSize;
-
-    const validDirs = directions.filter((d) => {
+  function pickDirectionScored(hr: number, hc: number): { d: Direction; blockers: number } | null {
+    const scored: Array<{ d: Direction; blockers: number }> = [];
+    for (const d of directions) {
       const [dr, dc] = DIR_DELTA[d];
       const nr = hr - dr, nc = hc - dc;
-      return nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && remaining.has(nr * gridSize + nc) && isRayValid(hr, hc, d);
-    });
+      if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && remaining.has(nr * gridSize + nc)) {
+        const blockers = countRayBlockers(hr, hc, d);
+        if (blockers >= 0) scored.push({ d, blockers });
+      }
+    }
+    if (scored.length === 0) return null;
+    scored.sort((a, b) => b.blockers - a.blockers);
+    if (scored[0].blockers > 0 && rng() < 0.92) return scored[0];
+    return scored[Math.floor(rng() * scored.length)];
+  }
 
-    if (validDirs.length === 0) continue;
-    const chosenDir = validDirs[Math.floor(rng() * validDirs.length)];
+  function touchesArrowBody(arrowCells: CellCoord[], nr: number, nc: number, excludeIndex = 0): boolean {
+    for (let i = 0; i < arrowCells.length; i++) {
+      if (i === excludeIndex) continue;
+      if (Math.abs(arrowCells[i].r - nr) + Math.abs(arrowCells[i].c - nc) === 1) return true;
+    }
+    return false;
+  }
+
+  function growSnake(hr: number, hc: number, chosenDir: Direction, targetLen: number): CellCoord[] {
     const [dr, dc] = DIR_DELTA[chosenDir];
     const neck = { r: hr - dr, c: hc - dc };
-
-    const roll = rng();
-    let targetLen = 3;
-    if (roll < 0.10) targetLen = 7 + Math.floor(rng() * 3);
-    else if (roll < 0.42) targetLen = 10 + Math.floor(rng() * 4);
-    else if (roll < 0.82) targetLen = 14 + Math.floor(rng() * 4);
-    else targetLen = 18 + Math.floor(rng() * 5);
-
     const snake = [neck, { r: hr, c: hc }];
     const snakeSet = new Set<number>([neck.r * gridSize + neck.c, hr * gridSize + hc]);
     let tail = neck;
@@ -325,7 +333,7 @@ function buildSingleLevelCandidate(
     let backDc = neck.c - hc;
 
     while (snake.length < targetLen) {
-      const options: Array<{ r: number; c: number; dr: number; dc: number; isStraight: boolean }> = [];
+      const options: Array<{ r: number; c: number; dr: number; dc: number; isStraight: boolean; deg: number }> = [];
       for (const d of directions) {
         const [stepDr, stepDc] = DIR_DELTA[d];
         if (stepDr === -backDr && stepDc === -backDc) continue;
@@ -335,78 +343,155 @@ function buildSingleLevelCandidate(
           const idx = nr * gridSize + nc;
           if (remaining.has(idx) && !snakeSet.has(idx)) {
             let touchesSelf = false;
+            let deg = 0;
             for (const d2 of directions) {
               const [fDr, fDc] = DIR_DELTA[d2];
               const adjR = nr + fDr, adjC = nc + fDc;
-              if (snakeSet.has(adjR * gridSize + adjC) && (adjR !== tail.r || adjC !== tail.c)) {
-                touchesSelf = true; break;
+              if (adjR >= 0 && adjR < gridSize && adjC >= 0 && adjC < gridSize) {
+                const adjIdx = adjR * gridSize + adjC;
+                if (snakeSet.has(adjIdx) && (adjR !== tail.r || adjC !== tail.c)) {
+                  touchesSelf = true; break;
+                }
+                if (remaining.has(adjIdx) && !snakeSet.has(adjIdx)) deg++;
               }
             }
             if (!touchesSelf) {
-              options.push({ r: nr, c: nc, dr: stepDr, dc: stepDc, isStraight: stepDr === backDr && stepDc === backDc });
+              options.push({ r: nr, c: nc, dr: stepDr, dc: stepDc, isStraight: stepDr === backDr && stepDc === backDc, deg });
             }
           }
         }
       }
       if (options.length === 0) break;
-      const turns = options.filter(o => !o.isStraight);
-      const straights = options.filter(o => o.isStraight);
-      const chosen = (turns.length > 0 && (straights.length === 0 || rng() < difficulty.turnChance))
-        ? turns[Math.floor(rng() * turns.length)]
-        : (straights[0] || turns[0]);
+      const alive = options.filter(o => o.deg > 0);
+      const pool = alive.length > 0 ? alive : options;
+      pool.sort((a, b) => a.deg - b.deg);
+      let chosen = pool[0];
+      if (rng() >= 0.45) {
+        const turns = pool.filter(o => !o.isStraight);
+        const straights = pool.filter(o => o.isStraight);
+        chosen = (turns.length > 0 && (straights.length === 0 || rng() < difficulty.turnChance))
+          ? turns[Math.floor(rng() * turns.length)]
+          : (straights[0] || turns[0]);
+      }
       snake.unshift({ r: chosen.r, c: chosen.c });
       snakeSet.add(chosen.r * gridSize + chosen.c);
       tail = { r: chosen.r, c: chosen.c };
       backDr = chosen.dr;
       backDc = chosen.dc;
     }
-
-    const arrowIdx = arrows.length;
-    for (const c of snake) {
-      const idx = c.r * gridSize + c.c;
-      occupied[idx] = arrowIdx;
-      remaining.delete(idx);
-    }
-    arrows.push({
-      id: `a_${levelNumber}_${arrowIdx + 1}`,
-      cells: snake,
-      direction: chosenDir,
-      order: arrowIdx,
-      colorIndex: -1,
-    });
+    return snake;
   }
 
-  // Pass 2: Safely extend tails of arrows into adjacent remaining cells
-  let changed = true;
-  while (changed && remaining.size > 0) {
-    changed = false;
-    for (let k = 0; k < arrows.length; k++) {
-      const arr = arrows[k];
-      const tail = arr.cells[0];
-      for (const d of directions) {
-        const [dr, dc] = DIR_DELTA[d];
-        const nr = tail.r + dr, nc = tail.c + dc;
-        if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
-          const idx = nr * gridSize + nc;
-          if (remaining.has(idx)) {
-            // Check if (nr, nc) is in forward ray of any earlier arrow
-            let inRay = false;
-            for (let j = 0; j <= k; j++) {
-              const head = arrows[j].cells[arrows[j].cells.length - 1];
-              const [hdr, hdc] = DIR_DELTA[arrows[j].direction];
-              let rr = head.r + hdr, cc = head.c + hdc;
-              while (rr >= 0 && rr < gridSize && cc >= 0 && cc < gridSize) {
-                if (rr === nr && cc === nc) { inRay = true; break; }
-                rr += hdr; cc += hdc;
+  function runSnakePass(minLen: number, minTarget: number, maxTarget: number, maxAttempts: number) {
+    let attempts = 0;
+    while (remaining.size > 0 && attempts < maxAttempts) {
+      attempts++;
+      const arr = Array.from(remaining);
+      const sampleCount = arrows.length < 4 ? 1 : 8;
+      let bestPick: { hr: number; hc: number; d: Direction; blockers: number } | null = null;
+      for (let s = 0; s < sampleCount; s++) {
+        const startIdx = arr[Math.floor(rng() * arr.length)];
+        const hr = Math.floor(startIdx / gridSize);
+        const hc = startIdx % gridSize;
+        const pick = pickDirectionScored(hr, hc);
+        if (pick && (!bestPick || pick.blockers > bestPick.blockers)) {
+          bestPick = { hr, hc, d: pick.d, blockers: pick.blockers };
+          if (bestPick.blockers >= 2) break;
+        }
+      }
+      if (!bestPick) continue;
+      const targetLen = minTarget + Math.floor(rng() * (maxTarget - minTarget + 1));
+      const snake = growSnake(bestPick.hr, bestPick.hc, bestPick.d, targetLen);
+      if (snake.length < minLen) continue;
+
+      const arrowIdx = arrows.length;
+      for (const c of snake) {
+        const idx = c.r * gridSize + c.c;
+        occupied[idx] = arrowIdx;
+        remaining.delete(idx);
+      }
+      arrows.push({
+        id: `a_${levelNumber}_${arrowIdx + 1}`,
+        cells: snake,
+        direction: bestPick.d,
+        order: arrowIdx,
+        colorIndex: -1,
+      });
+    }
+  }
+
+  function scanRemainingPass(minLen: number, minTarget: number, maxTarget: number) {
+    let madeProgress = true;
+    while (madeProgress && remaining.size > 0) {
+      madeProgress = false;
+      const candidates = Array.from(remaining);
+      for (let i = candidates.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        const tmp = candidates[i];
+        candidates[i] = candidates[j];
+        candidates[j] = tmp;
+      }
+      for (const startIdx of candidates) {
+        if (!remaining.has(startIdx)) continue;
+        const hr = Math.floor(startIdx / gridSize);
+        const hc = startIdx % gridSize;
+        const pick = pickDirectionScored(hr, hc);
+        if (!pick) continue;
+        const chosenDir = pick.d;
+        const targetLen = minTarget + Math.floor(rng() * (maxTarget - minTarget + 1));
+        const snake = growSnake(hr, hc, chosenDir, targetLen);
+        if (snake.length < minLen) continue;
+
+        const arrowIdx = arrows.length;
+        for (const c of snake) {
+          const idx = c.r * gridSize + c.c;
+          occupied[idx] = arrowIdx;
+          remaining.delete(idx);
+        }
+        arrows.push({
+          id: `a_${levelNumber}_${arrowIdx + 1}`,
+          cells: snake,
+          direction: chosenDir,
+          order: arrowIdx,
+          colorIndex: -1,
+        });
+        madeProgress = true;
+      }
+    }
+  }
+
+  function extendTails() {
+    let changed = true;
+    while (changed && remaining.size > 0) {
+      changed = false;
+      for (let k = 0; k < arrows.length; k++) {
+        const arr = arrows[k];
+        const tail = arr.cells[0];
+        for (const d of directions) {
+          const [dr, dc] = DIR_DELTA[d];
+          const nr = tail.r + dr, nc = tail.c + dc;
+          if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize) {
+            const idx = nr * gridSize + nc;
+            if (remaining.has(idx) && !touchesArrowBody(arr.cells, nr, nc, 0)) {
+              // Check if (nr, nc) is in forward ray of any earlier arrow
+              let inRay = false;
+              for (let j = 0; j <= k; j++) {
+                const head = arrows[j].cells[arrows[j].cells.length - 1];
+                const [hdr, hdc] = DIR_DELTA[arrows[j].direction];
+                let rr = head.r + hdr, cc = head.c + hdc;
+                while (rr >= 0 && rr < gridSize && cc >= 0 && cc < gridSize) {
+                  if (rr === nr && cc === nc) { inRay = true; break; }
+                  rr += hdr; cc += hdc;
+                }
+                if (inRay) break;
               }
-              if (inRay) break;
-            }
-            if (!inRay) {
-              arr.cells.unshift({ r: nr, c: nc });
-              occupied[idx] = k;
-              remaining.delete(idx);
-              changed = true;
-              break;
+              if (!inRay) {
+                arr.cells.unshift({ r: nr, c: nc });
+                occupied[idx] = k;
+                remaining.delete(idx);
+                changed = true;
+                break;
+              }
             }
           }
         }
@@ -414,32 +499,31 @@ function buildSingleLevelCandidate(
     }
   }
 
-  // Pass 3: Pair any adjacent remaining cells into 2-cell arrows
-  if (remaining.size > 0) {
-    for (const idx of Array.from(remaining)) {
-      if (!remaining.has(idx)) continue;
-      const r = Math.floor(idx / gridSize);
-      const c = idx % gridSize;
-      for (const d of directions) {
-        const [dr, dc] = DIR_DELTA[d];
-        const nr = r - dr, nc = c - dc;
-        if (nr >= 0 && nr < gridSize && nc >= 0 && nc < gridSize && remaining.has(nr * gridSize + nc) && isRayValid(r, c, d)) {
-          const arrowIdx = arrows.length;
-          occupied[idx] = arrowIdx;
-          occupied[nr * gridSize + nc] = arrowIdx;
-          remaining.delete(idx);
-          remaining.delete(nr * gridSize + nc);
-          arrows.push({
-            id: `a_${levelNumber}_${arrowIdx + 1}`,
-            cells: [{ r: nr, c: nc }, { r, c }],
-            direction: d,
-            order: arrowIdx,
-            colorIndex: -1,
-          });
-          break;
-        }
-      }
-    }
+  const cellCount = playableCells.length;
+  if (cellCount < 820) {
+    // Compact silhouettes: medium-long winding snakes so arrow count stays comfortably > 60 with 0 stubs
+    runSnakePass(6, 8, 14, 2000);
+    extendTails();
+    scanRemainingPass(5, 7, 12);
+    extendTails();
+    scanRemainingPass(4, 5, 9);
+    extendTails();
+  } else if (cellCount < 1150) {
+    // Medium silhouettes: lengthy winding snakes + dense interlocking coverage
+    runSnakePass(8, 12, 20, 2000);
+    extendTails();
+    scanRemainingPass(6, 9, 16);
+    extendTails();
+    scanRemainingPass(4, 6, 12);
+    extendTails();
+  } else {
+    // Large silhouettes: long sweeping serpentine arrows
+    runSnakePass(10, 15, 28, 2000);
+    extendTails();
+    scanRemainingPass(6, 12, 22);
+    extendTails();
+    scanRemainingPass(4, 8, 16);
+    extendTails();
   }
 
   // Build actualMask and actualCells strictly from arrow cells so EVERY dot is covered by an arrow!
@@ -488,15 +572,15 @@ function buildSingleLevelCandidate(
 }
 
 export function validateLevel(level: LevelConfig): boolean {
-  // Beginner levels can intentionally contain fewer than 150 arrows; only an empty board is invalid.
-  if (!level || !level.arrows || level.arrows.length < 1 || !level.shapeName || level.levelNumber < 1 || level.levelNumber > 300) return false;
+  // Enforce >60 arrows per level and valid level bounds (1–500).
+  if (!level || !level.arrows || level.arrows.length <= 60 || !level.shapeName || level.levelNumber < 1 || level.levelNumber > 500) return false;
   const gridSize = level.gridSize;
   const owner = new Int16Array(gridSize * gridSize);
   owner.fill(-1);
 
   for (let i = 0; i < level.arrows.length; i++) {
     const arrow = level.arrows[i];
-    if (!arrow.cells || arrow.cells.length < 2) return false;
+    if (!arrow.cells || arrow.cells.length < 4) return false;
     for (let j = 1; j < arrow.cells.length; j++) {
       const a = arrow.cells[j - 1];
       const b = arrow.cells[j];
@@ -541,25 +625,28 @@ export function getLevel(
   levelNumber: number,
   options: { maxAttempts?: number; timeBudgetMs?: number } = {}
 ): LevelConfig {
-  const safeLevel = Math.max(1, Math.min(300, Math.floor(levelNumber)));
+  const safeLevel = Math.max(1, Math.min(500, Math.floor(levelNumber)));
   if (levelCache.has(safeLevel)) return levelCache.get(safeLevel)!;
 
   let bestCandidate: LevelConfig | null = null;
   const maxAttempts = options.maxAttempts ?? 20;
-  // Always allow the configured retry count; a single slow candidate must not prevent
-  // the worker from trying alternate deterministic seeds for a valid puzzle.
+  let validFound = 0;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const candidate = buildSingleLevelCandidate(safeLevel, safeLevel * 7919 + attempt * 101);
     if (candidate && validateLevel(candidate)) {
-      levelCache.set(safeLevel, candidate);
-      return candidate;
-    }
-    if (candidate && validateLevel(candidate) && (!bestCandidate || candidate.stats.depth > bestCandidate.stats.depth)) {
-      bestCandidate = candidate;
+      validFound++;
+      if (!bestCandidate || candidate.stats.depth > bestCandidate.stats.depth) {
+        bestCandidate = candidate;
+      }
+      // Evaluate 2 valid candidates when quick, keeping the deeper more interlocking puzzle.
+      if (validFound >= 2 || bestCandidate.stats.depth >= 14) {
+        levelCache.set(safeLevel, bestCandidate);
+        return bestCandidate;
+      }
     }
   }
 
-  if (bestCandidate && validateLevel(bestCandidate)) {
+  if (bestCandidate) {
     levelCache.set(safeLevel, bestCandidate);
     return bestCandidate;
   }

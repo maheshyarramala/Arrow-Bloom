@@ -15,11 +15,11 @@ function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
-assert(COLLECTIONS.length === 30, `Expected 30 collections, got ${COLLECTIONS.length}`);
-assert(Object.keys(SHAPE_DEFINITIONS).length >= 300, 'All 300 levels must have a registered silhouette');
-assert(new Set(Array.from({ length: 300 }, (_, i) => SHAPE_DEFINITIONS[i + 1]?.name)).size === 300,
-  'Each of the 300 levels must have a distinct silhouette name');
-const tierSamples = [1, 11, 51, 101, 181, 251].map(getDifficultyProfile);
+assert(COLLECTIONS.length === 50, `Expected 50 collections, got ${COLLECTIONS.length}`);
+assert(Object.keys(SHAPE_DEFINITIONS).length >= 500, 'All 500 levels must have a registered silhouette');
+assert(new Set(Array.from({ length: 500 }, (_, i) => SHAPE_DEFINITIONS[i + 1]?.name)).size === 500,
+  'Each of the 500 levels must have a distinct silhouette name');
+const tierSamples = [1, 11, 51, 101, 181, 251, 351, 431].map(getDifficultyProfile);
 assert(tierSamples.map(t => t.turnChance).every((v, i, a) => i === 0 || v > a[i - 1]),
   'Difficulty turn complexity must increase at each tier');
 assert(tierSamples.map(t => t.gridSize).every((v, i, a) => i === 0 || v > a[i - 1]),
@@ -28,16 +28,16 @@ assert(COLLECTIONS.every((collection, index) =>
   collection.id === index + 1 &&
   collection.levels.length === 10 &&
   collection.levels.every((level, i) => level === index * 10 + i + 1)
-), 'Collection mapping must cover levels 1–300 exactly once');
+), 'Collection mapping must cover levels 1–500 exactly once');
 
-for (let levelNumber = 1; levelNumber <= 300; levelNumber++) {
+for (let levelNumber = 1; levelNumber <= 500; levelNumber++) {
   const started = performance.now();
   const level = getLevel(levelNumber, { maxAttempts: 20, timeBudgetMs: 1200 });
   const elapsed = performance.now() - started;
   maxGenerationMs = Math.max(maxGenerationMs, elapsed);
   assert(level.levelNumber === levelNumber, `Level identity mismatch at ${levelNumber}`);
-  assert(level.arrows.length > 0, `Level ${levelNumber} generated no arrows`);
-  assert(level.gridSize >= 1 && level.gridSize <= 64, `Level ${levelNumber} grid out of bounds`);
+  assert(level.arrows.length > 60, `Level ${levelNumber} generated only ${level.arrows.length} arrows (must be > 60)`);
+  assert(level.gridSize >= 1 && level.gridSize <= 76, `Level ${levelNumber} grid out of bounds`);
   assert(level.playableMask.length === level.gridSize, `Level ${levelNumber} mask height mismatch`);
   assert(level.playableMask.every(row => row.length === level.gridSize), `Level ${levelNumber} mask width mismatch`);
   assert(level.stats.depth > 0, `Level ${levelNumber} has no solution depth`);
@@ -46,7 +46,7 @@ for (let levelNumber = 1; levelNumber <= 300; levelNumber++) {
 
   const occupied = new Map<string, string>();
   for (const arrow of level.arrows) {
-    assert(arrow.cells.length >= 2, `Level ${levelNumber} arrow ${arrow.id} is too short`);
+    assert(arrow.cells.length >= 4, `Level ${levelNumber} arrow ${arrow.id} is too short`);
     for (let i = 0; i < arrow.cells.length; i++) {
       const cell = arrow.cells[i];
       assert(Number.isInteger(cell.r) && Number.isInteger(cell.c), `Level ${levelNumber} has non-integer cell`);
@@ -95,7 +95,7 @@ for (let levelNumber = 1; levelNumber <= 300; levelNumber++) {
   }
 }
 
-assert(seenShapeWorlds.size === 30, 'Not all 30 worlds were exercised');
+assert(seenShapeWorlds.size === 50, 'Not all 50 worlds were exercised');
 assert(calculateStars(0) === 3 && calculateStars(1) === 2 && calculateStars(2) === 1, 'Star calculation regression');
 assert(computeArrowScore(5, 1) === 50 && computeArrowScore(5, 2) === 80, 'Score calculation regression');
 
@@ -107,4 +107,4 @@ assert(!checkArrowRay('a', testArrows, 8).isFree, 'Ray check failed to detect a 
 assert(checkArrowRay('b', testArrows, 8).isFree, 'Ray check incorrectly blocked a free arrow');
 assert(getHintArrow(testArrows, ['b', 'a'], 8), 'Hint selection failed');
 
-console.log(`PASS: all 300 levels; ${totalArrows} arrows; max grid ${maxGrid}; max generation ${Math.round(maxGenerationMs)}ms; total ${Math.round(performance.now() - startedAll)}ms`);
+console.log(`PASS: all 500 levels; ${totalArrows} arrows; max grid ${maxGrid}; max generation ${Math.round(maxGenerationMs)}ms; total ${Math.round(performance.now() - startedAll)}ms`);

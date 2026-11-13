@@ -105,14 +105,14 @@ export function restoreProgressBackup(raw: string): PlayerProgress | null {
     const backup = JSON.parse(raw);
     if (backup?.app !== 'Arrow Bloom' || backup?.formatVersion !== 1 || !backup.progress?.levelData) return null;
     const progress = backup.progress as PlayerProgress;
-    if (!Number.isFinite(progress.unlockedLevel) || progress.unlockedLevel < 1 || progress.unlockedLevel > 300) return null;
+    if (!Number.isFinite(progress.unlockedLevel) || progress.unlockedLevel < 1 || progress.unlockedLevel > 500) return null;
     if (typeof progress.totalScore !== 'number' || typeof progress.levelData !== 'object') return null;
     const safeProgress: PlayerProgress = ensureDailyMissions({
       ...progress,
       stats: progress.stats || { arrowsCleared: 0, bestCombo: 0, perfectLevels: 0, lastPlayedAt: 0 },
     });
     saveProgress(safeProgress);
-    if (backup.midLevel && Number.isFinite(backup.midLevel.levelNumber) && backup.midLevel.levelNumber >= 1 && backup.midLevel.levelNumber <= 300) {
+    if (backup.midLevel && Number.isFinite(backup.midLevel.levelNumber) && backup.midLevel.levelNumber >= 1 && backup.midLevel.levelNumber <= 500) {
       saveMidLevelState(backup.midLevel);
     } else {
       clearMidLevelState();
@@ -152,9 +152,9 @@ export function updateLevelCompletion(
     cleared: true,
   };
 
-  // Unlock next level (up to 150)
+  // Unlock next level (up to 500)
   const nextLevel = levelNumber + 1;
-  if (nextLevel <= 300) {
+  if (nextLevel <= 500) {
     if (nextProgress.unlockedLevel < nextLevel) {
       nextProgress.unlockedLevel = nextLevel;
     }
@@ -252,7 +252,7 @@ export const ACHIEVEMENTS_DEF: Array<{ id: string; title: string; description: s
   { id: 'shapes_collector', title: 'Shape Master', description: 'Clear Collection 1 (Levels 1–10)', icon: '🌸', xpReward: 3000, target: 10 },
   { id: 'century_solver', title: 'Century Solver', description: 'Conquer 100 intricate arrow puzzles', icon: '💯', xpReward: 7500, target: 100 },
   { id: 'ad_free_vip', title: 'Patron of Bloom', description: 'Unlock Lifetime Ad-Free VIP Pass', icon: '👑', xpReward: 5000, target: 1 },
-  { id: 'grand_master', title: 'Grand Master 300', description: 'Conquer all 300 arrow silhouettes', icon: '🌟', xpReward: 15000, target: 300 },
+  { id: 'grand_master', title: 'Grand Master', description: 'Conquer the deepest master arrow silhouettes', icon: '🌟', xpReward: 15000, target: 500 },
   { id: 'arrow_collector', title: 'Arrow Collector', description: 'Clear 1,000 arrows', icon: '🏹', xpReward: 2500, target: 1000 },
   { id: 'daily_bloom', title: 'Daily Bloom', description: 'Complete 7 daily puzzles', icon: '🌞', xpReward: 3500, target: 7 },
 ];

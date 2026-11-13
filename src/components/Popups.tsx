@@ -195,7 +195,7 @@ export const LevelCompleteModal: React.FC<LevelCompleteModalProps> = ({
               className="w-full py-3 px-5 rounded-2xl bg-gradient-to-r from-purple-500 to-indigo-500 text-white font-black text-base shadow-lg border border-purple-300 flex items-center justify-center gap-2 active:scale-95 transition-transform"
             >
               <Trophy className="w-5 h-5" />
-              <span>All 300 Levels Conquered!</span>
+              <span>All Puzzles Conquered!</span>
             </button>
           )}
 
@@ -326,7 +326,7 @@ export const CollectionCompleteModal: React.FC<CollectionCompleteModalProps> = (
           </h2>
           <p className="text-xs text-white/80 mt-2 px-2 leading-relaxed">
             {isGameFinale
-              ? 'You have solved all 300 silhouette puzzles! You have mastered the Grand Master Maze!'
+              ? 'You have solved every silhouette puzzle and conquered the Grand Master Maze!'
               : `You have cleared all 10 puzzles in ${completedCollection.name}! ${
                   nextCollection ? `Next up: ${nextCollection.name}!` : ''
                 }`}

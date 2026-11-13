@@ -43,7 +43,7 @@ export const Home: React.FC<HomeProps> = ({
   dailyChallengeCompleted,
   onPlayDailyChallenge,
 }) => {
-  const currentLvl = Math.min(300, Math.max(1, progress.unlockedLevel || 1));
+  const currentLvl = Math.min(500, Math.max(1, progress.unlockedLevel || 1));
   const totalStars = Object.values(progress.levelData).reduce(
     (sum, level) => sum + (level.stars || 0),
     0
@@ -205,7 +205,7 @@ export const Home: React.FC<HomeProps> = ({
                 {dailyChallengeCompleted ? 'Daily Puzzle Completed' : dailyMidState ? 'Resume Daily Puzzle' : 'Daily Puzzle'}
               </span>
               <span className="text-[10px] text-white/65 block truncate">
-                {dailyChallengeCompleted ? 'Your daily reward is secured' : dailyMidState ? `Resume your puzzle • #${dailyChallengeLevel}` : `A fresh challenge • Puzzle #${dailyChallengeLevel}`}
+                {dailyChallengeCompleted ? 'Your daily reward is secured' : dailyMidState ? 'Resume today\'s daily challenge' : 'A fresh daily silhouette challenge'}
               </span>
             </div>
           </div>

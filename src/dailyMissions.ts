@@ -20,7 +20,7 @@ export function getDailyChallengeLevel(date = getTodayDateString()): number {
     hash ^= date.charCodeAt(i);
     hash = Math.imul(hash, 16777619);
   }
-  return 1 + ((hash >>> 0) % 300);
+  return 1 + ((hash >>> 0) % 500);
 }
 
 export function getDefaultMissions(): DailyMission[] {

@@ -194,7 +194,7 @@ export default function App() {
       }
     };
     // Warm the next playable puzzle while the player is still on the home screen.
-    worker.postMessage({ levelNumber: Math.max(1, Math.min(300, progress.unlockedLevel || 1)) });
+    worker.postMessage({ levelNumber: Math.max(1, Math.min(500, progress.unlockedLevel || 1)) });
     worker.onerror = () => {
       pendingLevelsRef.current.forEach((resolvers) =>
         resolvers.forEach((item) => item.reject(new Error('Level worker failed')))
@@ -527,7 +527,7 @@ export default function App() {
           const index = Math.floor((currentLevelNumber - 1) / 10);
           setCompletedCollection(COLLECTIONS[index] || null);
           setNextCollection(COLLECTIONS[index + 1] || null);
-          setIsGrandFinale(currentLevelNumber === 300);
+          setIsGrandFinale(currentLevelNumber === 500);
           setShowCollectionComplete(true);
         } else {
           setShowLevelComplete(true);
@@ -1055,7 +1055,7 @@ export default function App() {
           score={score}
           mistakes={mistakes}
           isNewHigh={isNewHighScore}
-          hasNextLevel={isDailyChallenge || currentLevelNumber < 300}
+          hasNextLevel={isDailyChallenge || currentLevelNumber < 500}
           isAdFree={isAdFree}
           isDailyChallenge={isDailyChallenge}
           arrowsCleared={levelConfig.arrows.length}

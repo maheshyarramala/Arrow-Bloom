@@ -93,9 +93,9 @@ export const GameCenterModal: React.FC<GameCenterModalProps> = ({
 
   // Mock global leaderboard
   const mockLeaderboard = [
-    { rank: 1, name: 'DragonMaster_X', score: 382400, levels: 300, isVip: true },
-    { rank: 2, name: 'BloomQueen_9', score: 341200, levels: 284, isVip: true },
-    { rank: 3, name: 'ZenPuzzler_7', score: 298500, levels: 250, isVip: false },
+    { rank: 1, name: 'DragonMaster_X', score: 382400, levels: 364, isVip: true },
+    { rank: 2, name: 'BloomQueen_9', score: 341200, levels: 318, isVip: true },
+    { rank: 3, name: 'ZenPuzzler_7', score: 298500, levels: 274, isVip: false },
     { rank: 4, name: profile.gamerTag + ' (You)', score: totalScore, levels: clearedCount, isVip, isCurrent: true },
     { rank: 5, name: 'NeonRider_21', score: Math.max(12000, totalScore - 4200), levels: Math.max(1, clearedCount - 2), isVip: false },
     { rank: 6, name: 'ArrowSniper', score: Math.max(8500, totalScore - 9600), levels: Math.max(1, clearedCount - 5), isVip: false },

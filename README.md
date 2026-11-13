@@ -4,8 +4,8 @@ Arrow Bloom is a colourful silhouette puzzle game built with React, TypeScript a
 
 ## Game content
 
-- 300 levels arranged into 30 themed collections.
-- 30 themed collections, including distinct Master collections for levels 151–300.
+- 500 levels arranged into 50 themed collections.
+- 50 themed collections, including distinct Master and Apex collections for deeper play.
 - Level difficulty scales with grid size and arrow-path complexity.
 - Progress is saved locally with an automatic rolling recovery copy and manual JSON export/import.
 - Daily puzzle selection is deterministic and works offline; the core Android game is bundled locally.

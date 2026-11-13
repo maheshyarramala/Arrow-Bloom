@@ -30,8 +30,27 @@ async function generate() {
   // 1. Generate Web PWA icons & favicons in public/
   await sharp(SOURCE_IMAGE).resize(192, 192).toFile(path.join(ROOT_DIR, 'public', 'icon-192.png'));
   await sharp(SOURCE_IMAGE).resize(512, 512).toFile(path.join(ROOT_DIR, 'public', 'icon-512.png'));
+  await sharp(SOURCE_IMAGE).resize(192, 192).toFile(path.join(ROOT_DIR, 'public', 'pwa-192x192.png'));
+  await sharp(SOURCE_IMAGE).resize(512, 512).toFile(path.join(ROOT_DIR, 'public', 'pwa-512x512.png'));
+  await sharp(SOURCE_IMAGE).resize(180, 180).toFile(path.join(ROOT_DIR, 'public', 'apple-touch-icon.png'));
   await sharp(SOURCE_IMAGE).resize(64, 64).toFile(path.join(ROOT_DIR, 'public', 'favicon.png'));
-  console.log('✔ Generated web PWA icons: icon-192.png, icon-512.png, favicon.png');
+
+  const maskableInner = 400; // 78% of 512 inside 80% safe zone
+  const maskablePad = Math.round((512 - maskableInner) / 2);
+  const maskableLogo = await sharp(SOURCE_IMAGE).resize(maskableInner, maskableInner, { fit: 'contain' }).toBuffer();
+  await sharp({
+    create: {
+      width: 512,
+      height: 512,
+      channels: 4,
+      background: { r: 11, g: 14, b: 40, alpha: 1 },
+    },
+  })
+    .composite([{ input: maskableLogo, top: maskablePad, left: maskablePad }])
+    .png()
+    .toFile(path.join(ROOT_DIR, 'public', 'pwa-maskable-512x512.png'));
+
+  console.log('✔ Generated web PWA icons: pwa-192x192.png, pwa-512x512.png, pwa-maskable-512x512.png, apple-touch-icon.png, favicon.png');
 
   if (!fs.existsSync(RES_DIR)) {
     console.warn(`Android res directory not found at ${RES_DIR}. Skipping native icons.`);

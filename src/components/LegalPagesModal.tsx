@@ -172,7 +172,7 @@ export const LegalPagesModal: React.FC<LegalPagesModalProps> = ({
               </p>
               <h4 className="font-bold text-white">2. Google AdMob &amp; Advertising</h4>
               <p>
-                To provide free access to all 300 levels, we use Google AdMob to serve non-intrusive advertisements (banners and rewarded video ads). Google AdMob may process device identifiers (such as Android Advertising ID - GAID) and IP addresses to serve ads, prevent ad fraud, and provide analytics according to Google&apos;s Privacy Policy.
+                To provide free access to all puzzle levels, we use Google AdMob to serve non-intrusive advertisements (banners and rewarded video ads). Google AdMob may process device identifiers (such as Android Advertising ID - GAID) and IP addresses to serve ads, prevent ad fraud, and provide analytics according to Google&apos;s Privacy Policy.
               </p>
               <h4 className="font-bold text-white">3. Children&apos;s Privacy (COPPA &amp; GDPR-K)</h4>
               <p>
