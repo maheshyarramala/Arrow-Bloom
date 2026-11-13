@@ -50,6 +50,7 @@ export const Home: React.FC<HomeProps> = ({
   );
   const isVip = isAdFreePurchased();
   const midState = loadMidLevelState(currentLvl);
+  const dailyMidState = loadMidLevelState(dailyChallengeLevel);
 
   const ensured = ensureDailyMissions(progress);
   const dailyState = ensured.dailyMissions;
@@ -204,7 +205,7 @@ export const Home: React.FC<HomeProps> = ({
                 {dailyChallengeCompleted ? 'Daily Puzzle Completed' : 'Daily Puzzle'}
               </span>
               <span className="text-[10px] text-white/65 block truncate">
-                {dailyChallengeCompleted ? 'Your daily reward is secured' : `A fresh challenge • Puzzle #${dailyChallengeLevel}`}
+                {dailyChallengeCompleted ? 'Your daily reward is secured' : dailyMidState ? `Resume your puzzle • #${dailyChallengeLevel}` : `A fresh challenge • Puzzle #${dailyChallengeLevel}`}
               </span>
             </div>
           </div>
