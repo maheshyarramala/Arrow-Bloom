@@ -52,6 +52,8 @@ export interface LevelConfig {
     coveragePct: number;
     trapPct: number;
     avgLength: number;
+    difficultyTier?: string;
+    turnChance?: number;
   };
 }
 
