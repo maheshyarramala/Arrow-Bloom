@@ -267,7 +267,7 @@ function buildSingleLevelCandidate(
   const difficulty = getDifficultyProfile(levelNumber);
   let gridSize = difficulty.gridSize;
   let { cells: playableCells } = rasterizeShape(shapeDef, gridSize);
-  while (playableCells.length < 620 && gridSize < 64) {
+  while (playableCells.length < 620 && gridSize + 2 <= 64) {
     gridSize += 2;
     ({ cells: playableCells } = rasterizeShape(shapeDef, gridSize));
   }
