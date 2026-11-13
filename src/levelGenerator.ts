@@ -111,12 +111,12 @@ export function getDirFromDelta(dr: number, dc: number): Direction {
 
 export function getDifficultyProfile(level: number) {
   const safeLevel = Math.max(1, Math.min(300, Math.floor(level)));
-  if (safeLevel <= 10) return { tier: 'Beginner', gridSize: 44, turnChance: 0.30, targetMin: 7, targetMax: 17 };
-  if (safeLevel <= 50) return { tier: 'Easy', gridSize: 45, turnChance: 0.36, targetMin: 7, targetMax: 18 };
-  if (safeLevel <= 100) return { tier: 'Medium', gridSize: 47, turnChance: 0.42, targetMin: 8, targetMax: 19 };
-  if (safeLevel <= 180) return { tier: 'Hard', gridSize: 49, turnChance: 0.48, targetMin: 8, targetMax: 20 };
-  if (safeLevel <= 250) return { tier: 'Expert', gridSize: 51, turnChance: 0.54, targetMin: 9, targetMax: 21 };
-  return { tier: 'Master', gridSize: 53, turnChance: 0.60, targetMin: 9, targetMax: 22 };
+  if (safeLevel <= 10) return { tier: 'Beginner', gridSize: 46, turnChance: 0.34, targetMin: 7, targetMax: 17 };
+  if (safeLevel <= 50) return { tier: 'Easy', gridSize: 47, turnChance: 0.38, targetMin: 7, targetMax: 18 };
+  if (safeLevel <= 100) return { tier: 'Medium', gridSize: 49, turnChance: 0.44, targetMin: 8, targetMax: 19 };
+  if (safeLevel <= 180) return { tier: 'Hard', gridSize: 51, turnChance: 0.50, targetMin: 8, targetMax: 20 };
+  if (safeLevel <= 250) return { tier: 'Expert', gridSize: 53, turnChance: 0.56, targetMin: 9, targetMax: 21 };
+  return { tier: 'Master', gridSize: 55, turnChance: 0.62, targetMin: 9, targetMax: 22 };
 }
 
 export function getLevelParams(level: number) {
