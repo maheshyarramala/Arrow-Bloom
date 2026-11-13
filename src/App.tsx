@@ -327,7 +327,7 @@ export default function App() {
         if (requestId === levelRequestIdRef.current) setIsPreparingLevel(false);
       }
     },
-    [requestLevel]
+    [requestLevel, progress]
   );
 
   // Arrow selection
@@ -1007,14 +1007,14 @@ export default function App() {
           score={score}
           mistakes={mistakes}
           isNewHigh={isNewHighScore}
-          hasNextLevel={currentLevelNumber < 300}
+          hasNextLevel={isDailyChallenge || currentLevelNumber < 300}
           isAdFree={isAdFree}
           isDailyChallenge={isDailyChallenge}
           arrowsCleared={levelConfig.arrows.length}
           solutionDepth={levelConfig.stats.depth}
           gridSize={levelConfig.gridSize}
           onNextLevel={() => isDailyChallenge ? goHome() : startLevel(currentLevelNumber + 1)}
-          onReplay={() => startLevel(currentLevelNumber, true)}
+          onReplay={() => startLevel(currentLevelNumber, true, false, isDailyChallenge)}
           onHome={goHome}
           onDoubleScoreAd={handleDoubleScoreAd}
         />
