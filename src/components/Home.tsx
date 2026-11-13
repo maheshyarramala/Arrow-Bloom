@@ -6,10 +6,8 @@
 import React from 'react';
 import {
   Play,
-  HelpCircle,
   Settings as SettingsIcon,
   Star,
-  Trophy,
   Crown,
   Gamepad2,
   Gift,
@@ -23,8 +21,6 @@ interface HomeProps {
   progress: PlayerProgress;
   isDarkTheme?: boolean;
   onPlayLevel: (lvl: number) => void;
-  onOpenLevelList: () => void;
-  onOpenHowToPlay: () => void;
   onOpenSettings: () => void;
   onOpenShop: () => void;
   onOpenGameCenter: () => void;
@@ -35,8 +31,6 @@ export const Home: React.FC<HomeProps> = ({
   progress,
   isDarkTheme = true,
   onPlayLevel,
-  onOpenLevelList,
-  onOpenHowToPlay,
   onOpenSettings,
   onOpenShop,
   onOpenGameCenter,
@@ -71,10 +65,7 @@ export const Home: React.FC<HomeProps> = ({
             <span className="text-lg font-black tracking-tight leading-none">
               Arrow Bloom
             </span>
-            <span className="text-[10px] text-pink-400 font-bold uppercase tracking-wider">
-              {isVip ? '👑 VIP Ad-Free' : '300 Puzzle Mazes'}
-            </span>
-          </div>
+</div>
         </div>
 
         <div className="flex items-center gap-1.5">
@@ -177,7 +168,7 @@ export const Home: React.FC<HomeProps> = ({
         >
           <span className="flex items-center justify-center gap-2.5 text-lg font-black text-white drop-shadow">
             <Play className="w-5 h-5 fill-current" />
-            {midState ? `Resume Level ${currentLvl}` : `Play Level ${currentLvl}`}
+            {midState ? 'Resume' : 'Play'}
           </span>
           <span className="block mt-0.5 text-[11px] font-extrabold text-white/90">
             {midState
@@ -219,22 +210,7 @@ export const Home: React.FC<HomeProps> = ({
               {completedCount}/{missions.length}
             </span>
           </div>
-        </button>
-
-        {/* Browse Levels Button */}
-        <button
-          onClick={onOpenLevelList}
-          className={`w-full py-2.5 px-4 rounded-2xl border flex items-center justify-center gap-2 font-bold text-xs active:scale-95 transition-all ${
-            isDarkTheme
-              ? 'bg-white/10 text-white border-white/15 hover:bg-white/20'
-              : 'bg-white text-slate-800 border-slate-200 shadow-sm'
-          }`}
-        >
-          <Trophy className="w-4 h-4 text-amber-400" />
-          <span>Browse All 300 Levels</span>
-        </button>
-
-        {/* Ad-Free VIP Pass Promo Card (if not purchased) */}
+        </button>{/* Ad-Free VIP Pass Promo Card (if not purchased) */}
         {!isVip ? (
           <div
             onClick={onOpenShop}
@@ -263,22 +239,6 @@ export const Home: React.FC<HomeProps> = ({
             <span>Lifetime Ad-Free VIP Active</span>
           </div>
         )}
-      </section>
-
-      {/* Bottom Clean Footer: Rules & Mechanics link */}
-      <footer className="w-full max-w-md mx-auto py-3 border-t border-white/10 shrink-0 flex items-center justify-center">
-        <button
-          onClick={onOpenHowToPlay}
-          className={`py-2 px-4 rounded-xl border flex items-center justify-center gap-1.5 font-bold text-xs active:scale-95 transition-all ${
-            isDarkTheme
-              ? 'bg-white/5 text-white/80 border-white/10 hover:bg-white/10'
-              : 'bg-white text-slate-700 border-slate-200'
-          }`}
-        >
-          <HelpCircle className="w-4 h-4 text-amber-400" />
-          <span>Game Rules &amp; How to Play</span>
-        </button>
-      </footer>
-    </main>
+      </section></main>
   );
 };

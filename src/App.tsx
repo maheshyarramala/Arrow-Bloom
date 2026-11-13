@@ -105,6 +105,7 @@ export default function App() {
   const [showPerfOverlay, setShowPerfOverlay] = useState(false);
   const [isBoardDragging, setIsBoardDragging] = useState(false);
   const workerRef = useRef<Worker | null>(null);
+  const prefetchedLevelsRef = useRef<Map<number, LevelConfig>>(new Map());
   const pendingLevelsRef = useRef<
     Map<number, Array<{ resolve: (level: LevelConfig) => void; reject: (error: Error) => void }>>
   >(new Map());
@@ -177,7 +178,10 @@ export default function App() {
       }>
     ) => {
       const pending = pendingLevelsRef.current.get(event.data.levelNumber);
-      if (!pending) return;
+      if (!pending) {
+        if (event.data.level) prefetchedLevelsRef.current.set(event.data.levelNumber, event.data.level);
+        return;
+      }
       pendingLevelsRef.current.delete(event.data.levelNumber);
       if (event.data.level) {
         setGenerationMs(event.data.generationMs || 0);
@@ -188,6 +192,8 @@ export default function App() {
         );
       }
     };
+    // Warm the next playable puzzle while the player is still on the home screen.
+    worker.postMessage({ levelNumber: Math.max(1, Math.min(300, progress.unlockedLevel || 1)) });
     worker.onerror = () => {
       pendingLevelsRef.current.forEach((resolvers) =>
         resolvers.forEach((item) => item.reject(new Error('Level worker failed')))
@@ -208,8 +214,13 @@ export default function App() {
   const handleDraggingChange = useCallback((dragging: boolean) => setIsBoardDragging(dragging), []);
 
   const requestLevel = useCallback(
-    (levelNumber: number) =>
-      new Promise<LevelConfig>((resolve, reject) => {
+    (levelNumber: number) => {
+      const prefetched = prefetchedLevelsRef.current.get(levelNumber);
+      if (prefetched) {
+        prefetchedLevelsRef.current.delete(levelNumber);
+        return Promise.resolve(prefetched);
+      }
+      return new Promise<LevelConfig>((resolve, reject) => {
         const worker = workerRef.current;
         if (!worker) {
           reject(new Error('Level worker is not ready'));
@@ -219,7 +230,8 @@ export default function App() {
         waiting.push({ resolve, reject });
         pendingLevelsRef.current.set(levelNumber, waiting);
         worker.postMessage({ levelNumber });
-      }),
+      });
+    },
     []
   );
 
@@ -252,10 +264,12 @@ export default function App() {
   const startLevel = useCallback(
     async (lvlNum: number, fromScratch = false, extraHint = false) => {
       const requestId = ++levelRequestIdRef.current;
-      setIsPreparingLevel(false);
+      setIsPreparingLevel(true);
+      // Start each puzzle in a predictable fit-to-screen view.
+      setZoomLevel(1);
+      setPanOffset({ x: 0, y: 0 });
       setActiveArrows([]);
       setLevelConfig(EMPTY_LEVEL);
-      const spinnerTimer = window.setTimeout(() => setIsPreparingLevel(true), 150);
       setCurrentLevelNumber(lvlNum);
       setScreen('game');
 
@@ -308,7 +322,6 @@ export default function App() {
       } catch {
         setScreen('home');
       } finally {
-        window.clearTimeout(spinnerTimer);
         if (requestId === levelRequestIdRef.current) setIsPreparingLevel(false);
       }
     },
@@ -366,7 +379,7 @@ export default function App() {
       setActiveArrows(nextBoard);
 
       const now = performance.now();
-      const animationDuration = Math.min(1900, Math.max(650, 420 + arrow.cells.length * 24));
+      const animationDuration = Math.min(3400, Math.max(1300, 950 + arrow.cells.length * 42));
       setEscapingArrows((current) => [
         ...current.filter((item) => item.arrow.id !== arrowId),
         { arrow, startedAt: now, duration: animationDuration },
@@ -814,8 +827,6 @@ export default function App() {
           progress={progress}
           isDarkTheme={isDark}
           onPlayLevel={(lvl) => startLevel(lvl)}
-          onOpenLevelList={() => setScreen('home')}
-          onOpenHowToPlay={() => setScreen('how-to-play')}
           onOpenSettings={() => setScreen('settings')}
           onOpenShop={() => setShowShop(true)}
           onOpenGameCenter={() => setShowGameCenter(true)}
@@ -853,7 +864,7 @@ export default function App() {
       )}
 
       {/* Screen 4: How To Play Screen */}
-      {screen === 'how-to-play' && <HowToPlay onClose={goHome} />}
+      {screen === 'how-to-play' && <HowToPlay onClose={() => setScreen('settings')} />}
 
       {/* Screen 5: Game Screen */}
       {screen === 'game' && (
