@@ -391,9 +391,9 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     const rect = container.getBoundingClientRect();
     const width = Math.max(1, rect.width);
     const height = Math.max(1, rect.height);
-    const board = Math.max(220, Math.min(width - 12, height - 12));
+    const board = Math.max(220, Math.min(width - 4, height - 4));
     const maxDimension = 4096;
-    const baseDpr = Math.min(3.5, window.devicePixelRatio || 1);
+    const baseDpr = Math.min(2.5, window.devicePixelRatio || 1);
     const zoomFactor = Math.max(1, zoomLevel);
     const dpr = Math.min(baseDpr * zoomFactor, maxDimension / Math.max(1, board));
     sizeRef.current = { width, height, board, dpr };
