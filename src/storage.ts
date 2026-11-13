@@ -253,6 +253,8 @@ export const ACHIEVEMENTS_DEF: Array<{ id: string; title: string; description: s
   { id: 'century_solver', title: 'Century Solver', description: 'Conquer 100 intricate arrow puzzles', icon: '💯', xpReward: 7500, target: 100 },
   { id: 'ad_free_vip', title: 'Patron of Bloom', description: 'Unlock Lifetime Ad-Free VIP Pass', icon: '👑', xpReward: 5000, target: 1 },
   { id: 'grand_master', title: 'Grand Master 300', description: 'Conquer all 300 arrow silhouettes', icon: '🌟', xpReward: 15000, target: 300 },
+  { id: 'arrow_collector', title: 'Arrow Collector', description: 'Clear 1,000 arrows', icon: '🏹', xpReward: 2500, target: 1000 },
+  { id: 'daily_bloom', title: 'Daily Bloom', description: 'Complete 7 daily puzzles', icon: '🌞', xpReward: 3500, target: 7 },
 ];
 
 export const DEFAULT_GAMER_PROFILE: GamerProfile = {
