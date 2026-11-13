@@ -21,7 +21,6 @@ interface TopBarProps {
 }
 
 export const TopBar: React.FC<TopBarProps> = React.memo(({
-  levelNumber,
   shapeName,
   collectionName,
   score,
