@@ -593,7 +593,7 @@ export default function App() {
       savedAt: Date.now(),
         dailyChallenge: isDailyChallenge,
     });
-  }, [undoHistory, currentLevelNumber, score, mistakes, hintsLeft, hearts]);
+  }, [undoHistory, currentLevelNumber, score, mistakes, hintsLeft, hearts, isDailyChallenge]);
 
   // Execute Hint Action
   const executeHintAction = useCallback(() => {
@@ -650,7 +650,7 @@ export default function App() {
         },
       });
     }
-  }, [isAdFree, hintsLeft, isPreparingLevel, executeHintAction, currentLevelNumber, score, mistakes, hearts]);
+  }, [isAdFree, hintsLeft, isPreparingLevel, executeHintAction, currentLevelNumber, score, mistakes, hearts, isDailyChallenge]);
 
   // "Continue with Free Hits" on Game Over:
   // Starts game right where it ended, restores 3 hearts, and plays 5s ad (or instant for VIP)!
