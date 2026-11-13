@@ -191,7 +191,6 @@ export function resetProgress(): PlayerProgress {
   return DEFAULT_PROGRESS;
 }
 
-const MID_LEVEL_KEY = 'arrow_bloom_mid_level';
 const AD_FREE_KEY = 'arrow_bloom_ad_free';
 const GAMER_PROFILE_KEY = 'arrow_bloom_gamer_profile';
 
