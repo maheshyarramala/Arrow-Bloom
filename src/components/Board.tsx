@@ -277,7 +277,9 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       }
       const {path,cumulative} = geometry;
       const [dr,dc] = DIR_DELTA[arrow.direction];
-      const advance = progress * (board + (cells.length-1)*cell + cell*2);
+      // Ease into and out of the escape so the arrow glides smoothly instead of snapping.
+      const easedProgress = progress * progress * (3 - 2 * progress);
+      const advance = easedProgress * (board + (cells.length-1)*cell + cell*2);
       const color = PALETTE[arrow.colorIndex % PALETTE.length] || '#FF2A85';
       const sample = (distance:number) => {
         let segment=0;
