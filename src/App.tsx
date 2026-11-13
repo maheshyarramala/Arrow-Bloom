@@ -415,6 +415,7 @@ export default function App() {
           arrowsCleared: (pArrows.stats?.arrowsCleared || 0) + 1,
           bestCombo: Math.max(pArrows.stats?.bestCombo || 0, nextCombo),
           perfectLevels: pArrows.stats?.perfectLevels || 0,
+          dailyChallengesCompleted: pArrows.stats?.dailyChallengesCompleted || 0,
           lastPlayedAt: Date.now(),
         },
       };
@@ -493,6 +494,7 @@ export default function App() {
             arrowsCleared: pConsumedBase.stats?.arrowsCleared || 0,
             bestCombo: Math.max(pConsumedBase.stats?.bestCombo || 0, comboCount),
             perfectLevels: (pConsumedBase.stats?.perfectLevels || 0) + (finalMistakes === 0 ? 1 : 0),
+            dailyChallengesCompleted: pConsumedBase.stats?.dailyChallengesCompleted || 0,
             lastPlayedAt: Date.now(),
           },
         };
@@ -503,6 +505,10 @@ export default function App() {
           nextSavedProgress = {
             ...pConsumed,
             dailyChallenge: { date: today, levelNumber: currentLevelNumber, completed: true },
+            stats: {
+              ...pConsumed.stats!,
+              dailyChallengesCompleted: (pConsumed.stats?.dailyChallengesCompleted || 0) + (alreadyClaimed ? 0 : 1),
+            },
             dailyMissions: pConsumed.dailyMissions
               ? { ...pConsumed.dailyMissions, bonusHintsBank: pConsumed.dailyMissions.bonusHintsBank + (alreadyClaimed ? 0 : 2) }
               : pConsumed.dailyMissions,
