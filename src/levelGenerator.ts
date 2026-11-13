@@ -546,9 +546,9 @@ export function getLevel(
 
   let bestCandidate: LevelConfig | null = null;
   const maxAttempts = options.maxAttempts ?? 20;
-  const deadline = options.timeBudgetMs ? performance.now() + options.timeBudgetMs : Number.POSITIVE_INFINITY;
-
-  for (let attempt = 0; attempt < maxAttempts && performance.now() <= deadline; attempt++) {
+  // Always allow the configured retry count; a single slow candidate must not prevent
+  // the worker from trying alternate deterministic seeds for a valid puzzle.
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const candidate = buildSingleLevelCandidate(safeLevel, safeLevel * 7919 + attempt * 101);
     if (candidate && validateLevel(candidate)) {
       levelCache.set(safeLevel, candidate);
