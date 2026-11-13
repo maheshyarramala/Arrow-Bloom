@@ -13,7 +13,8 @@
     "android:sync": "npm run build && cap sync android && npm run android:icons",
     "android:open": "cap open android",
     "test:levels": "tsx scripts/verify-performance.ts",
-    "test:storage": "tsx scripts/verify-storage.ts"
+    "test:storage": "tsx scripts/verify-storage.ts",
+    "test:offline": "tsx scripts/verify-offline.ts"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.3",
