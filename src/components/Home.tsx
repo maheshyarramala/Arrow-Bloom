@@ -28,7 +28,7 @@ interface HomeProps {
   onOpenDailyMissions: () => void;
   dailyChallengeLevel: number;
   dailyChallengeCompleted: boolean;
-  onPlayDailyChallenge: () => void;
+  onPlayDailyChallenge: (resume: boolean) => void;
 }
 
 export const Home: React.FC<HomeProps> = ({
@@ -188,7 +188,7 @@ export const Home: React.FC<HomeProps> = ({
         {/* Daily Puzzle of the Day */}
         <button
           type="button"
-          onClick={onPlayDailyChallenge}
+          onClick={() => onPlayDailyChallenge(Boolean(dailyMidState))}
           disabled={dailyChallengeCompleted}
           className={`w-full p-3 rounded-2xl border flex items-center justify-between text-left transition-all ${
             dailyChallengeCompleted
@@ -202,7 +202,7 @@ export const Home: React.FC<HomeProps> = ({
             </div>
             <div className="min-w-0">
               <span className={`text-xs font-black block ${dailyChallengeCompleted ? 'text-emerald-300' : 'text-cyan-200'}`}>
-                {dailyChallengeCompleted ? 'Daily Puzzle Completed' : 'Daily Puzzle'}
+                {dailyChallengeCompleted ? 'Daily Puzzle Completed' : dailyMidState ? 'Resume Daily Puzzle' : 'Daily Puzzle'}
               </span>
               <span className="text-[10px] text-white/65 block truncate">
                 {dailyChallengeCompleted ? 'Your daily reward is secured' : dailyMidState ? `Resume your puzzle • #${dailyChallengeLevel}` : `A fresh challenge • Puzzle #${dailyChallengeLevel}`}
