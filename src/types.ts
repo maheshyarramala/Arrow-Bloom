@@ -61,6 +61,8 @@ export interface GameSettings {
   vibrationEnabled: boolean;
   colorBlindMode: boolean;
   performanceMode: boolean;
+  /** Arrow escape animation pace; optional to support older saved settings. */
+  animationSpeed?: 'slow' | 'normal' | 'fast';
   theme: 'dark' | 'light';
 }
 

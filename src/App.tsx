@@ -379,7 +379,11 @@ export default function App() {
       setActiveArrows(nextBoard);
 
       const now = performance.now();
-      const animationDuration = Math.min(3400, Math.max(1300, 950 + arrow.cells.length * 42));
+      const speed = settings.animationSpeed || 'slow';
+      const speedMultiplier = speed === 'fast' ? 0.62 : speed === 'normal' ? 0.82 : 1;
+      const animationDuration = Math.round(
+        Math.min(3400, Math.max(1300, 950 + arrow.cells.length * 42)) * speedMultiplier
+      );
       setEscapingArrows((current) => [
         ...current.filter((item) => item.arrow.id !== arrowId),
         { arrow, startedAt: now, duration: animationDuration },
@@ -490,7 +494,7 @@ export default function App() {
       const timer = window.setTimeout(finishAnimation, animationDuration);
       escapeTimersRef.current.set(arrowId, timer);
     },
-    [hearts, levelConfig.gridSize, comboCount, mistakes, score, hintsLeft, progress, currentLevelNumber]
+    [hearts, levelConfig.gridSize, comboCount, mistakes, score, hintsLeft, progress, currentLevelNumber, settings.animationSpeed]
   );
 
   const handleArrowSelectRef = useRef<(arrowId: string) => void>(() => {});
