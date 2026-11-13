@@ -221,7 +221,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
         <div>
           <h2 className="text-xl font-black text-white">Out of Hearts!</h2>
           <p className="text-xs text-white/70 mt-1 leading-relaxed">
-            You were doing great on Level {levelNumber}! Only{' '}
+            You were doing great! Only{' '}
             <strong className="text-amber-300">{remainingArrowsCount} arrows</strong> left.
             Continue right now without losing your progress!
           </p>
