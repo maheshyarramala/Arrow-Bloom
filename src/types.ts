@@ -109,6 +109,7 @@ export interface PlayerProgress {
     arrowsCleared: number;
     bestCombo: number;
     perfectLevels: number;
+    dailyChallengesCompleted?: number;
     lastPlayedAt: number;
   };
 }
