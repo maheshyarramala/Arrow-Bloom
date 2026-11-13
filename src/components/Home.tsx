@@ -12,6 +12,7 @@ import {
   Gamepad2,
   Gift,
   Flame,
+  Sparkles,
 } from 'lucide-react';
 import { PlayerProgress } from '../types.ts';
 import { isAdFreePurchased, loadMidLevelState } from '../storage.ts';
@@ -25,6 +26,9 @@ interface HomeProps {
   onOpenShop: () => void;
   onOpenGameCenter: () => void;
   onOpenDailyMissions: () => void;
+  dailyChallengeLevel: number;
+  dailyChallengeCompleted: boolean;
+  onPlayDailyChallenge: () => void;
 }
 
 export const Home: React.FC<HomeProps> = ({
@@ -35,6 +39,9 @@ export const Home: React.FC<HomeProps> = ({
   onOpenShop,
   onOpenGameCenter,
   onOpenDailyMissions,
+  dailyChallengeLevel,
+  dailyChallengeCompleted,
+  onPlayDailyChallenge,
 }) => {
   const currentLvl = Math.min(300, Math.max(1, progress.unlockedLevel || 1));
   const totalStars = Object.values(progress.levelData).reduce(
@@ -174,6 +181,35 @@ export const Home: React.FC<HomeProps> = ({
             {midState
               ? `⚡ In-progress (${midState.activeArrows.length} arrows left)`
               : 'Start your journey'}
+          </span>
+        </button>
+
+        {/* Daily Puzzle of the Day */}
+        <button
+          type="button"
+          onClick={onPlayDailyChallenge}
+          disabled={dailyChallengeCompleted}
+          className={`w-full p-3 rounded-2xl border flex items-center justify-between text-left transition-all ${
+            dailyChallengeCompleted
+              ? 'bg-emerald-500/15 border-emerald-400/35 opacity-80'
+              : 'bg-gradient-to-r from-cyan-500/20 via-indigo-500/20 to-purple-500/20 border-cyan-400/35 active:scale-[0.98]'
+          }`}
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-cyan-500/20 border border-cyan-400/30 flex items-center justify-center text-cyan-300 shrink-0">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className={`text-xs font-black block ${dailyChallengeCompleted ? 'text-emerald-300' : 'text-cyan-200'}`}>
+                {dailyChallengeCompleted ? 'Daily Puzzle Completed' : 'Daily Puzzle'}
+              </span>
+              <span className="text-[10px] text-white/65 block truncate">
+                {dailyChallengeCompleted ? 'Your daily reward is secured' : `A fresh challenge • Puzzle #${dailyChallengeLevel}`}
+              </span>
+            </div>
+          </div>
+          <span className="text-[10px] font-black px-2 py-1 rounded-lg bg-white/10 text-white/85 shrink-0">
+            {dailyChallengeCompleted ? 'DONE' : 'PLAY'}
           </span>
         </button>
 
