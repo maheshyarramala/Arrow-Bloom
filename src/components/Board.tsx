@@ -141,7 +141,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     ctx.lineWidth = Math.max(1.6, cell * 0.21);
     if (!performanceMode) {
       ctx.shadowColor = color;
-      ctx.shadowBlur = glow ? Math.max(8, cell * 0.5) : Math.max(2, cell * 0.16);
+      ctx.shadowBlur = glow ? Math.max(4, cell * 0.22) : 0;
     }
     tracePath(0);
     ctx.stroke();
@@ -175,7 +175,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     headGradient.addColorStop(1, color);
     ctx.save();
     ctx.fillStyle = headGradient;
-    if (!performanceMode) { ctx.shadowColor = color; ctx.shadowBlur = glow ? 10 : 3; }
+    if (!performanceMode && glow) { ctx.shadowColor = color; ctx.shadowBlur = 4; }
     ctx.beginPath();
     ctx.moveTo(hx + dc * cell * 0.38, hy + dr * cell * 0.49);
     ctx.lineTo(hx - dc * cell * 0.10 + px * cell * 0.28, hy - dr * cell * 0.10 + py * cell * 0.34);
@@ -222,7 +222,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       for (let i = 0; i < group.length; i++) {
         const arrow = group[i];
         if (arrow.id !== shakingArrowId) {
-          drawArrow(ctx, arrow, cell, 1, 0, 0, isDarkTheme);
+          drawArrow(ctx, arrow, cell, 1, 0, 0, false);
         }
       }
     }
@@ -319,7 +319,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       const arrow = arrowById.get(hintId);
       if (arrow) {
         const pulse = performanceMode ? 1 : 0.65 + Math.sin(now / 180) * 0.2;
-        drawArrow(ctx, arrow, cell, 1, 0, 0, true, true);
+        drawArrow(ctx, arrow, cell, 1, 0, 0, false, true);
         if (hintedArrowId === arrow.id) {
           const head = arrow.cells[arrow.cells.length - 1];
           const [dr, dc] = DIR_DELTA[arrow.direction];
@@ -365,7 +365,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       active = true;
     }
     const focusedArrow = focusActiveRef.current ? arrows[focusedArrowIndexRef.current] : null;
-    if (focusedArrow) drawArrow(ctx, focusedArrow, cell, 0.9, 0, 0, true);
+    if (focusedArrow) drawArrow(ctx, focusedArrow, cell, 0.9, 0, 0, false);
     ctx.globalAlpha = 1;
     if (floatingScores.length) {
       ctx.font = '900 12px Fredoka, sans-serif';
