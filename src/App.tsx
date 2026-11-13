@@ -379,7 +379,7 @@ export default function App() {
       setActiveArrows(nextBoard);
 
       const now = performance.now();
-      const animationDuration = Math.min(2200, Math.max(850, 650 + arrow.cells.length * 30));
+      const animationDuration = Math.min(3400, Math.max(1300, 950 + arrow.cells.length * 42));
       setEscapingArrows((current) => [
         ...current.filter((item) => item.arrow.id !== arrowId),
         { arrow, startedAt: now, duration: animationDuration },
