@@ -139,6 +139,7 @@ export interface SavedLevelState {
   hintsLeft: number;
   hearts: number;
   savedAt: number;
+  dailyChallenge?: boolean;
 }
 
 export interface AdState {
