@@ -914,7 +914,7 @@ export default function App() {
           onPlayLevel={(lvl) => startLevel(lvl)}
           dailyChallengeLevel={getDailyChallengeLevel()}
           dailyChallengeCompleted={progress.dailyChallenge?.date === getTodayDateString() && progress.dailyChallenge.completed}
-          onPlayDailyChallenge={() => startLevel(getDailyChallengeLevel(), true, false, true)}
+          onPlayDailyChallenge={(resume) => startLevel(getDailyChallengeLevel(), !resume, false, true)}
           onOpenSettings={() => setScreen('settings')}
           onOpenShop={() => setShowShop(true)}
           onOpenGameCenter={() => setShowGameCenter(true)}
