@@ -861,7 +861,7 @@ export default function App() {
       )}
 
       {/* Screen 4: How To Play Screen */}
-      {screen === 'how-to-play' && <HowToPlay onClose={goHome} />}
+      {screen === 'how-to-play' && <HowToPlay onClose={() => setScreen('settings')} />}
 
       {/* Screen 5: Game Screen */}
       {screen === 'game' && (
