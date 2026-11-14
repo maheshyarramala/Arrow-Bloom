@@ -1,7 +1,7 @@
 /**
  * Arrow Bloom - Main Application Controller
  * Handles screen transitions, mid-level resume persistence, Capacitor mobile back-button navigation,
- * 5-second rewarded video ads, ₹99 Lifetime Ad-Free pass, Google Play Games Hub, and legal pages.
+ * rewarded AdMob video ads, ₹499 Lifetime Ad-Free pass, Google Play Games Hub, and legal pages.
  */
 import React, { useState, useEffect, useCallback, useReducer, useRef } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
@@ -653,7 +653,7 @@ export default function App() {
   }, [isAdFree, hintsLeft, isPreparingLevel, executeHintAction, currentLevelNumber, score, mistakes, hearts, isDailyChallenge]);
 
   // "Continue with Free Hits" on Game Over:
-  // Starts game right where it ended, restores 3 hearts, and plays 5s ad (or instant for VIP)!
+  // Starts game right where it ended, restores 3 hearts, and plays 60s AdMob video ad (or instant for VIP)!
   const handleContinueWithFreeHits = useCallback(() => {
     const performContinue = () => {
       setHearts(3);
@@ -1109,7 +1109,7 @@ export default function App() {
         />
       )}
 
-      {/* Shop & ₹99 Lifetime Ad-Free Modal */}
+      {/* Shop & ₹499 Lifetime Ad-Free Modal */}
       <ShopModal
         isOpen={showShop}
         onClose={() => setShowShop(false)}

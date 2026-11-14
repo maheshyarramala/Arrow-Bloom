@@ -201,11 +201,11 @@ export const LegalPagesModal: React.FC<LegalPagesModalProps> = ({
               </p>
               <h4 className="font-bold text-white">1. In-App Purchases &amp; VIP Pass</h4>
               <p>
-                The &ldquo;Lifetime Ad-Free Pass&rdquo; (₹99 / $1.19) and Hint Bundles are processed securely through Google Play In-App Billing. All purchases are tied to your Google account and governed by Google Play Store terms.
+                The &ldquo;Lifetime Ad-Free Pass&rdquo; (₹499 / $5.99) and Hint Bundles are processed securely through Google Play In-App Billing. All purchases are tied to your Google account and governed by Google Play Store terms.
               </p>
               <h4 className="font-bold text-white">2. Rewarded Ads &amp; Free Hits</h4>
               <p>
-                Optional 5-second video ads provide free in-game rewards (such as solution hints and free revives). Rewarded perks are granted upon complete playback of the ad.
+                Optional 5-second and 60-second Google AdMob rewarded video ads provide free in-game rewards (such as solution hints, score bonuses, and 3-heart revives). Rewarded perks are granted upon complete playback of the ad.
               </p>
               <h4 className="font-bold text-white">3. Intellectual Property</h4>
               <p>
@@ -243,7 +243,7 @@ export const LegalPagesModal: React.FC<LegalPagesModalProps> = ({
                 <div className="flex items-start gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
                   <span>
-                    <strong>Ad-Free Option:</strong> Players can permanently disable all ads with the ₹99 Lifetime Pass.
+                    <strong>Ad-Free Option:</strong> Players can permanently disable all ads with the ₹499 Lifetime Pass.
                   </span>
                 </div>
                 <div className="flex items-start gap-1.5">

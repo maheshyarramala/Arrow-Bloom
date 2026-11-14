@@ -264,7 +264,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
             <div className="flex flex-col text-left leading-tight">
               <span className="text-sm font-black">Continue with Free Hits</span>
               <span className="text-[10px] font-extrabold opacity-85">
-                {isAdFree ? '👑 VIP Instant Free Revive' : '▶ Watch 5s Ad to restore 3 Hearts'}
+                {isAdFree ? '👑 VIP Instant Free Revive' : '▶ Watch 60s AdMob Video to restore 3 Hearts'}
               </span>
             </div>
           </button>

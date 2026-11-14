@@ -47,14 +47,14 @@ export const BannerAd: React.FC<BannerAdProps> = ({
         </div>
       </div>
 
-      {/* Right: ₹99 Ad-Free CTA */}
+      {/* Right: ₹499 Ad-Free CTA */}
       <button
         onClick={onOpenShop}
         className="shrink-0 px-2.5 py-1 rounded-xl bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 active:scale-95 text-slate-950 font-black text-[10px] shadow-sm flex items-center gap-1 transition-transform"
-        title="Remove all ads forever for ₹99"
+        title="Remove all ads forever for ₹499"
       >
         <Crown className="w-3 h-3 text-slate-950 fill-current" />
-        <span>No Ads ₹99</span>
+        <span>No Ads ₹499</span>
       </button>
     </div>
   );

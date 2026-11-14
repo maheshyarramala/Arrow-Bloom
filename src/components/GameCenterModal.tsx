@@ -317,7 +317,7 @@ export const GameCenterModal: React.FC<GameCenterModalProps> = ({
               }}
               className="text-amber-400 hover:text-amber-300 font-bold underline"
             >
-              Get VIP Pass ₹99
+              Get VIP Pass ₹499
             </button>
           )}
         </div>

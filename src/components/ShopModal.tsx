@@ -1,6 +1,6 @@
 /**
  * Arrow Bloom - Shop & In-App Purchases Modal
- * Offers Lifetime Ad-Free for ₹99 ($1.19), Hint Bundles, and Google Play / UPI payment flows.
+ * Offers Lifetime Ad-Free for ₹499 ($5.99), Hint Bundles, and Google Play / UPI payment flows.
  */
 import React, { useState } from 'react';
 import {
@@ -118,7 +118,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
             </div>
 
             <div className="text-right">
-              <span className="text-xl font-black text-white">₹99</span>
+              <span className="text-xl font-black text-white">₹499</span>
               <span className="block text-[10px] text-white/50 uppercase">
                 One-Time
               </span>
@@ -161,7 +161,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                 ) : (
                   <>
                     <Zap className="w-4 h-4 fill-current" />
-                    <span>Pay ₹99 &amp; Unlock Ad-Free</span>
+                    <span>Pay ₹499 &amp; Unlock Ad-Free</span>
                   </>
                 )}
               </button>
@@ -203,7 +203,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
           {showPaymentInfo && (
             <div className="p-2.5 rounded-xl bg-slate-950 border border-white/15 text-[11px] text-white/70 space-y-1.5 animate-fade-in leading-relaxed">
               <p className="font-bold text-white">How Google Play Billing Works:</p>
-              <p>• In the published Android app on Google Play, tapping &ldquo;Pay ₹99&rdquo; automatically invokes Google Play&apos;s native payment sheet.</p>
+              <p>• In the published Android app on Google Play, tapping &ldquo;Pay ₹499&rdquo; automatically invokes Google Play&apos;s native payment sheet.</p>
               <p>• Users in India pay directly via <strong>UPI, Google Pay, PhonePe, Paytm, Cards, or Net Banking</strong>.</p>
               <p>• Google automatically transfers the earnings directly to your bank account via your Play Console developer payout profile.</p>
             </div>

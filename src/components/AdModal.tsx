@@ -1,7 +1,7 @@
 /**
- * Arrow Bloom - 5-Second Rewarded Ad Player Component
- * Simulates high-eCPM rewarded video ad with countdown, audio ping, progress bar,
- * and automatic or click-to-claim reward callback.
+ * Arrow Bloom - Rewarded AdMob Video Player Component
+ * Plays 5-second standard rewarded ads or 60-second long AdMob video ads for Free Hits continue,
+ * with countdown, audio ping, linear progress bar, and claim-reward callback.
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { Sparkles, CheckCircle2, Crown, ExternalLink } from 'lucide-react';
@@ -20,7 +20,8 @@ export const AdModal: React.FC<AdModalProps> = ({
   onClose,
   onOpenShop,
 }) => {
-  const [secondsLeft, setSecondsLeft] = useState(5);
+  const totalDuration = reason === 'free_hits' ? 60 : 5;
+  const [secondsLeft, setSecondsLeft] = useState(totalDuration);
   const [isCompleted, setIsCompleted] = useState(false);
   const timerRef = useRef<number | null>(null);
 
@@ -36,7 +37,7 @@ export const AdModal: React.FC<AdModalProps> = ({
     {
       title: 'Arrow Bloom VIP Pass',
       tagline: 'Enjoy lifetime zero ads, infinite instant hints & free continues!',
-      cta: 'Get Ad-Free for ₹99',
+      cta: 'Get Ad-Free for ₹499',
       isVipAd: true,
       bgGrad: 'from-amber-500 via-rose-500 to-pink-600',
       icon: '👑',
@@ -54,6 +55,8 @@ export const AdModal: React.FC<AdModalProps> = ({
     reason === 'free_hits' ? adCreatives[1] : adCreatives[0];
 
   useEffect(() => {
+    setSecondsLeft(totalDuration);
+    setIsCompleted(false);
     timerRef.current = window.setInterval(() => {
       setSecondsLeft((prev) => {
         if (prev <= 1) {
@@ -69,7 +72,7 @@ export const AdModal: React.FC<AdModalProps> = ({
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, []);
+  }, [totalDuration]);
 
   const handleClaim = () => {
     soundManager.playWin();
@@ -117,11 +120,11 @@ export const AdModal: React.FC<AdModalProps> = ({
           </div>
         </div>
 
-        {/* 5-Second Linear Progress Bar */}
+        {/* Linear Ad Progress Bar */}
         <div className="w-full h-1 bg-white/10 overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-pink-500 via-amber-400 to-emerald-400 transition-all duration-1000 ease-linear"
-            style={{ width: `${((5 - secondsLeft) / 5) * 100}%` }}
+            style={{ width: `${((totalDuration - secondsLeft) / totalDuration) * 100}%` }}
           />
         </div>
 
@@ -154,7 +157,7 @@ export const AdModal: React.FC<AdModalProps> = ({
               className="mt-4 px-4 py-1.5 rounded-full bg-white text-slate-900 font-black text-xs shadow-lg active:scale-95 transition-transform flex items-center gap-1.5"
             >
               <Crown className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-              Remove All Ads Forever ₹99
+              Remove All Ads Forever ₹499
             </button>
           )}
         </div>
@@ -186,7 +189,7 @@ export const AdModal: React.FC<AdModalProps> = ({
                 }}
                 className="text-amber-400 hover:text-amber-300 font-bold underline flex items-center gap-0.5"
               >
-                <span>Hate ads? Go Ad-Free ₹99</span>
+                <span>Hate ads? Go Ad-Free ₹499</span>
                 <ExternalLink className="w-2.5 h-2.5" />
               </button>
             )}

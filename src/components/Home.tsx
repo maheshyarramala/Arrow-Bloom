@@ -262,12 +262,12 @@ export const Home: React.FC<HomeProps> = ({
                   Remove All Ads Forever
                 </span>
                 <span className="text-[10px] text-white/70">
-                  Instant hints &amp; free continues for ₹99 ($1.19)
+                  Instant hints &amp; free continues for ₹499 ($5.99)
                 </span>
               </div>
             </div>
             <span className="px-2.5 py-1 rounded-xl bg-amber-400 text-slate-950 font-black text-xs shrink-0 shadow">
-              ₹99
+              ₹499
             </span>
           </div>
         ) : (

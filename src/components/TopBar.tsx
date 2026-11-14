@@ -126,7 +126,7 @@ export const TopBar: React.FC<TopBarProps> = React.memo(({
           <button
             onClick={onOpenShop}
             aria-label="Shop and VIP"
-            title={isAdFree ? 'VIP Ad-Free Active' : 'Remove Ads for ₹99'}
+            title={isAdFree ? 'VIP Ad-Free Active' : 'Remove Ads for ₹499'}
             className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-95 border ${
               isAdFree
                 ? 'bg-amber-400/20 text-amber-400 border-amber-400/40'
