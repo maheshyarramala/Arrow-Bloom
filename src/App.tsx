@@ -126,8 +126,7 @@ export default function App() {
   // Floating score bubbles
   const [floatingScores, setFloatingScores] = useState<FloatingScoreItem[]>([]);
 
-  // Undo History & Hints
-  const [undoHistory, setUndoHistory] = useState<ArrowData[]>([]);
+  // Hints
   const [hintsLeft, setHintsLeft] = useState<number>(3);
   const [hintedArrowId, setHintedArrowId] = useState<string | null>(null);
 
@@ -307,7 +306,6 @@ export default function App() {
         setComboCount(0);
         setShowComboPill(false);
         lastClearTimeRef.current = 0;
-        setUndoHistory([]);
         setHintedArrowId(null);
         setEscapingArrows([]);
         completionCommittedRef.current = false;
@@ -461,7 +459,6 @@ export default function App() {
         createdAt: now,
       };
       setFloatingScores((prev) => [...prev.slice(-2), floatItem]);
-      setUndoHistory((hist) => [...hist, arrow]);
 
       const finishAnimation = () => {
         removedArrowIdsRef.current.delete(arrowId);
@@ -566,34 +563,6 @@ export default function App() {
     setZoomLevel(1);
     setPanOffset({ x: 0, y: 0 });
   }, []);
-
-  // Undo (Z)
-  const handleUndo = useCallback(() => {
-    if (undoHistory.length === 0) return;
-    const lastArrow = undoHistory[undoHistory.length - 1];
-    const timer = escapeTimersRef.current.get(lastArrow.id);
-    if (timer !== undefined) window.clearTimeout(timer);
-    escapeTimersRef.current.delete(lastArrow.id);
-    removedArrowIdsRef.current.delete(lastArrow.id);
-    setEscapingArrows((current) => current.filter((item) => item.arrow.id !== lastArrow.id));
-    setUndoHistory((hist) => hist.slice(0, -1));
-    const restored = [...activeArrowsRef.current, lastArrow];
-    activeArrowsRef.current = restored;
-    setActiveArrows(restored);
-    soundManager.playClick();
-
-    // Update mid-level state
-    saveMidLevelState({
-      levelNumber: currentLevelNumber,
-      activeArrows: restored,
-      score,
-      mistakes,
-      hintsLeft,
-      hearts,
-      savedAt: Date.now(),
-        dailyChallenge: isDailyChallenge,
-    });
-  }, [undoHistory, currentLevelNumber, score, mistakes, hintsLeft, hearts, isDailyChallenge]);
 
   // Execute Hint Action
   const executeHintAction = useCallback(() => {
@@ -871,8 +840,6 @@ export default function App() {
 
       if (e.key === 'r' || e.key === 'R') {
         if (screen === 'game') startLevel(currentLevelNumber, true);
-      } else if (e.key === 'z' || e.key === 'Z') {
-        if (screen === 'game') handleUndo();
       } else if (e.key === 'h' || e.key === 'H') {
         if (screen === 'game') handleHint();
       } else if (e.key === 'Escape') {
@@ -882,11 +849,11 @@ export default function App() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [screen, currentLevelNumber, startLevel, handleUndo, handleHint, handleBackNavigation]);
+  }, [screen, currentLevelNumber, startLevel, handleHint, handleBackNavigation]);
 
   // Tutorial arrow highlight on Level 1
   const tutorialArrowId =
-    currentLevelNumber === 1 && mistakes === 0 && undoHistory.length === 0
+    currentLevelNumber === 1 && mistakes === 0 && activeArrows.length === levelConfig.arrows.length
       ? getHintArrow(activeArrows, levelConfig.solutionOrder, levelConfig.gridSize)?.id || null
       : null;
 
@@ -1019,12 +986,10 @@ export default function App() {
 
           {/* In-Game Bottom Bar */}
           <BottomBar
-            canUndo={undoHistory.length > 0}
             hintsLeft={hintsLeft}
             zoomLevel={zoomLevel}
             isDarkTheme={isDark}
             isAdFree={isAdFree}
-            onUndo={handleUndo}
             onHint={handleHint}
             onZoomIn={zoomIn}
             onZoomOut={zoomOut}

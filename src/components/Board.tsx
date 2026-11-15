@@ -89,112 +89,142 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     const color = white ? '#FFFFFF' : (PALETTE[arrow.colorIndex % PALETTE.length] || '#FF2A85');
     const cells = arrow.cells;
     if (!cells.length) return;
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = Math.max(1.6, cell * 0.21);
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    if (glow && !performanceMode) {
-      ctx.shadowColor = color;
-      ctx.shadowBlur = zoomLevel > 1 ? 6 : 3;
-      ctx.beginPath();
-      for (let i = 0; i < cells.length; i++) {
-        const x = (cells[i].c + 0.5) * cell + offsetX;
-        const y = (cells[i].r + 0.5) * cell + offsetY;
-        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-      }
-      ctx.lineWidth += 3;
-      ctx.globalAlpha *= 0.22;
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-      ctx.globalAlpha = alpha;
-      ctx.lineWidth = Math.max(1.6, cell * 0.21);
-    }
-    const tracePath = (yOffset: number) => {
-      ctx.beginPath();
-      for (let i = 0; i < cells.length; i++) {
-        const x = (cells[i].c + 0.5) * cell + offsetX;
-        const y = (cells[i].r + 0.5) * cell + offsetY + yOffset;
-        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-      }
-    };
-    // Three-layer raised arrow: soft cast shadow, dark bevel, vivid top face and a fine highlight.
-    if (!performanceMode) {
-      ctx.save();
-      ctx.strokeStyle = 'rgba(0,0,0,0.48)';
-      ctx.shadowColor = 'rgba(0,0,0,0.65)';
-      ctx.shadowBlur = Math.max(2, cell * 0.20);
-      ctx.lineWidth = Math.max(2.4, cell * 0.34);
-      tracePath(cell * 0.14);
-      ctx.stroke();
-      ctx.restore();
-    }
-    ctx.save();
-    ctx.strokeStyle = performanceMode ? color : 'rgba(7,12,30,0.82)';
-    ctx.lineWidth = Math.max(2, cell * 0.29);
-    tracePath(performanceMode ? 0 : cell * 0.07);
-    ctx.stroke();
-    ctx.restore();
-    ctx.save();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = Math.max(1.6, cell * 0.21);
-    if (!performanceMode) {
-      ctx.shadowColor = color;
-      ctx.shadowBlur = glow ? Math.max(4, cell * 0.22) : 0;
-    }
-    tracePath(0);
-    ctx.stroke();
-    if (!performanceMode) {
-      ctx.globalAlpha *= 0.55;
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.lineWidth = Math.max(0.8, cell * 0.045);
-      tracePath(-Math.max(0.7, cell * 0.055));
-      ctx.stroke();
-    }
-    ctx.restore();
-
     const head = cells[cells.length - 1];
     const [dr, dc] = DIR_DELTA[arrow.direction];
     const hx = (head.c + 0.5) * cell + offsetX;
     const hy = (head.r + 0.5) * cell + offsetY;
     const px = -dr;
     const py = dc;
+
+    // Stop the shaft cleanly inside the arrowhead base so the head and shaft fuse seamlessly with zero seam.
+    const headBaseX = hx + dc * cell * 0.05;
+    const headBaseY = hy + dr * cell * 0.05;
+    const shaftWidth = Math.max(1.25, cell * 0.185);
+    const bevelWidth = Math.max(1.85, cell * 0.265);
+    const shadowWidth = Math.max(2.1, cell * 0.31);
+
+    const tipReach = Math.max(2.15, cell * 0.50);
+    const wingBack = Math.max(0.75, cell * 0.20);
+    const wingHalf = Math.max(1.85, cell * 0.43);
+    const notchBack = Math.max(0.18, cell * 0.05);
+
+    const tracePath = (yOffset: number) => {
+      ctx.beginPath();
+      for (let i = 0; i < cells.length; i++) {
+        const isLast = i === cells.length - 1 && cells.length > 1;
+        const x = isLast ? headBaseX : (cells[i].c + 0.5) * cell + offsetX;
+        const y = (isLast ? headBaseY : (cells[i].r + 0.5) * cell + offsetY) + yOffset;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+    };
+
+    const traceHead = (yDrop: number) => {
+      ctx.beginPath();
+      ctx.moveTo(hx + dc * tipReach, hy + dr * tipReach + yDrop);
+      ctx.lineTo(hx - dc * wingBack + px * wingHalf, hy - dr * wingBack + py * wingHalf + yDrop);
+      ctx.lineTo(hx - dc * notchBack, hy - dr * notchBack + yDrop);
+      ctx.lineTo(hx - dc * wingBack - px * wingHalf, hy - dr * wingBack - py * wingHalf + yDrop);
+      ctx.closePath();
+    };
+
     ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
-    ctx.beginPath();
-    ctx.moveTo(hx + dc * cell * 0.38, hy + dr * cell * 0.49 + cell * 0.12);
-    ctx.lineTo(hx - dc * cell * 0.10 + px * cell * 0.28, hy - dr * cell * 0.10 + py * cell * 0.34 + cell * 0.12);
-    ctx.lineTo(hx - dc * cell * 0.10 - px * cell * 0.28, hy - dr * cell * 0.10 - py * cell * 0.34 + cell * 0.12);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-    const headGradient = ctx.createLinearGradient(hx - dc * cell * 0.25, hy - dr * cell * 0.25, hx + dc * cell * 0.30, hy + dr * cell * 0.30);
-    headGradient.addColorStop(0, '#FFFFFF');
-    headGradient.addColorStop(0.32, color);
-    headGradient.addColorStop(1, color);
+    ctx.globalAlpha = alpha;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    if (glow && !performanceMode) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = zoomLevel > 1 ? 6 : 3;
+      tracePath(0);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = shaftWidth + 2.4;
+      ctx.globalAlpha = alpha * 0.22;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = alpha;
+    }
+
+    // Layer 1: Unified soft cast shadow under both shaft and arrowhead.
+    if (!performanceMode) {
+      ctx.save();
+      const shadowY = Math.max(0.55, cell * 0.11);
+      ctx.strokeStyle = 'rgba(0,0,0,0.48)';
+      ctx.fillStyle = 'rgba(0,0,0,0.48)';
+      ctx.shadowColor = 'rgba(0,0,0,0.62)';
+      ctx.shadowBlur = Math.max(1.5, cell * 0.17);
+      ctx.lineWidth = shadowWidth;
+      tracePath(shadowY);
+      ctx.stroke();
+      traceHead(shadowY);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Layer 2: Unified dark outer bevel/outline around BOTH shaft and arrowhead so they read as one crisp piece.
+    const bevelColor = performanceMode
+      ? color
+      : (isDarkTheme ? 'rgba(6,10,24,0.92)' : 'rgba(15,23,42,0.84)');
+    const bevelY = performanceMode ? 0 : cell * 0.045;
     ctx.save();
-    ctx.fillStyle = headGradient;
-    if (!performanceMode && glow) { ctx.shadowColor = color; ctx.shadowBlur = 4; }
-    ctx.beginPath();
-    ctx.moveTo(hx + dc * cell * 0.38, hy + dr * cell * 0.49);
-    ctx.lineTo(hx - dc * cell * 0.10 + px * cell * 0.28, hy - dr * cell * 0.10 + py * cell * 0.34);
-    ctx.lineTo(hx - dc * cell * 0.10 - px * cell * 0.28, hy - dr * cell * 0.10 - py * cell * 0.34);
-    ctx.closePath();
-    ctx.fill();
+    ctx.strokeStyle = bevelColor;
+    ctx.fillStyle = bevelColor;
+    ctx.lineWidth = bevelWidth;
+    tracePath(bevelY);
+    ctx.stroke();
+    if (!performanceMode) {
+      traceHead(0);
+      ctx.fill();
+      ctx.lineWidth = Math.max(1.1, cell * 0.13);
+      ctx.stroke();
+    }
     ctx.restore();
+
+    // Layer 3: Unified bright shaft + arrowhead fill with ZERO dark seam at the neck.
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = shaftWidth;
+    if (!performanceMode && glow) {
+      ctx.shadowColor = color;
+      ctx.shadowBlur = Math.max(4, cell * 0.20);
+    }
+    tracePath(0);
+    ctx.stroke();
+
+    const headGradient = ctx.createLinearGradient(
+      hx - dc * wingBack,
+      hy - dr * wingBack,
+      hx + dc * tipReach,
+      hy + dr * tipReach
+    );
+    headGradient.addColorStop(0, color);
+    headGradient.addColorStop(0.58, color);
+    headGradient.addColorStop(1, '#FFFFFF');
+    ctx.fillStyle = white ? '#FFFFFF' : headGradient;
+    traceHead(0);
+    ctx.fill();
+
+    if (!performanceMode && cell >= 4.5) {
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = alpha * 0.45;
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = Math.max(0.65, cell * 0.04);
+      tracePath(-Math.max(0.45, cell * 0.045));
+      ctx.stroke();
+    }
+    ctx.restore();
+
     if (colorBlindMode) {
       ctx.fillStyle = '#FFFFFF';
       ctx.font = `900 ${Math.max(8, cell * 0.28)}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       const symbol = COLOR_BLIND_SYMBOLS[arrow.colorIndex % COLOR_BLIND_SYMBOLS.length];
-      for (let i = 0; i < cells.length; i += 2) {
+      for (let i = 0; i < cells.length - 1; i += 2) {
         ctx.fillText(symbol, (cells[i].c + 0.5) * cell + offsetX, (cells[i].r + 0.5) * cell + offsetY + 1);
       }
     }
     ctx.restore();
-  }, [colorBlindMode, performanceMode, zoomLevel]);
+  }, [colorBlindMode, isDarkTheme, performanceMode, zoomLevel]);
 
   const drawStatic = useCallback(() => {
     const canvas = staticRef.current;
@@ -205,8 +235,8 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, board, board);
     const cell = board / gridSize;
-    ctx.fillStyle = isDarkTheme ? 'rgba(255,255,255,0.22)' : 'rgba(51,65,85,0.25)';
-    const radius = Math.max(1.2, cell * 0.08);
+    ctx.fillStyle = isDarkTheme ? 'rgba(255,255,255,0.16)' : 'rgba(51,65,85,0.18)';
+    const radius = Math.max(0.7, cell * 0.07);
     for (let r = 0; r < gridSize; r++) {
       const row = playableMask[r];
       for (let c = 0; c < gridSize; c++) {
@@ -289,21 +319,37 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
         return {x:path[segment].x+(path[segment+1].x-path[segment].x)*t,y:path[segment].y+(path[segment+1].y-path[segment].y)*t};
       };
       ctx.save();
-      ctx.strokeStyle=color; ctx.fillStyle=color; ctx.lineWidth=Math.max(1.6,cell*.21);
       ctx.lineCap='round'; ctx.lineJoin='round'; ctx.globalAlpha=1-progress*.12;
-      ctx.beginPath();
-      let first=true;
-      for(let i=0;i<cells.length;i++){
-        const point=sample(i*cell+advance);
-        if(first){ctx.moveTo(point.x,point.y);first=false;}else ctx.lineTo(point.x,point.y);
-      }
-      ctx.stroke();
       const movingHead=sample((cells.length-1)*cell+advance);
-      ctx.beginPath();
-      ctx.moveTo(movingHead.x+dc*cell*.34,movingHead.y+dr*cell*.34);
-      ctx.lineTo(movingHead.x-dc*cell*.08-dr*cell*.25,movingHead.y-dr*cell*.08+dc*cell*.25);
-      ctx.lineTo(movingHead.x-dc*cell*.08+dr*cell*.32,movingHead.y-dr*cell*.08-dc*cell*.32);
-      ctx.closePath();ctx.fill();ctx.restore();
+      const px=-dr, py=dc;
+      const eTip=Math.max(2.15,cell*.50), eBack=Math.max(0.75,cell*.20), eWing=Math.max(1.85,cell*.43), eNotch=Math.max(0.18,cell*.05);
+      const traceEscPath = () => {
+        ctx.beginPath();
+        let first=true;
+        for(let i=0;i<cells.length;i++){
+          const point=sample(i*cell+advance);
+          if(first){ctx.moveTo(point.x,point.y);first=false;}else ctx.lineTo(point.x,point.y);
+        }
+      };
+      const traceEscHead = () => {
+        ctx.beginPath();
+        ctx.moveTo(movingHead.x+dc*eTip,movingHead.y+dr*eTip);
+        ctx.lineTo(movingHead.x-dc*eBack+px*eWing,movingHead.y-dr*eBack+py*eWing);
+        ctx.lineTo(movingHead.x-dc*eNotch,movingHead.y-dr*eNotch);
+        ctx.lineTo(movingHead.x-dc*eBack-px*eWing,movingHead.y-dr*eBack-py*eWing);
+        ctx.closePath();
+      };
+      const escBevel = isDarkTheme?'rgba(6,10,24,0.92)':'rgba(15,23,42,0.84)';
+      ctx.strokeStyle=escBevel; ctx.fillStyle=escBevel;
+      ctx.lineWidth=Math.max(1.85,cell*.265);
+      traceEscPath(); ctx.stroke();
+      traceEscHead(); ctx.fill();
+      ctx.lineWidth=Math.max(1.1,cell*.13); ctx.stroke();
+      ctx.strokeStyle=color; ctx.fillStyle=color;
+      ctx.lineWidth=Math.max(1.25,cell*.185);
+      traceEscPath(); ctx.stroke();
+      traceEscHead(); ctx.fill();
+      ctx.restore();
       active ||= progress < 1;
     }
     if (shakingArrowId) {
@@ -384,7 +430,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
       ctx.globalAlpha = 1;
     }
     if (active && !rafRef.current) rafRef.current = requestAnimationFrame(tick);
-  }, [gridSize, arrows, escapingArrows, shakingArrowId, flashBlockedArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, comboCount, drawArrow, performanceMode, onPerformanceModeChange, debugOverlay, generationMs, arrowById]);
+  }, [gridSize, arrows, escapingArrows, shakingArrowId, flashBlockedArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, comboCount, drawArrow, isDarkTheme, performanceMode, onPerformanceModeChange, debugOverlay, generationMs, arrowById]);
 
   // Re-rasterize static & dynamic canvases at dpr * zoomLevel for razor-sharp clarity up to 4x zoom
   const resizeCanvas = useCallback(() => {

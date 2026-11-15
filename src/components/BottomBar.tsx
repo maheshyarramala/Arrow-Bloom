@@ -1,17 +1,15 @@
 /**
  * Arrow Bloom - In-Game Bottom Bar
- * Controls: Undo, Hint (with Ad badge when 0 hints left or VIP unlimited), Zoom +, Zoom -, Fit
+ * Controls: Hint (with Ad badge when 0 hints left or VIP unlimited), Zoom +, Zoom -, Fit
  */
 import React from 'react';
-import { Undo2, Lightbulb, ZoomIn, ZoomOut, Maximize2, Video, Crown } from 'lucide-react';
+import { Lightbulb, ZoomIn, ZoomOut, Maximize2, Video, Crown } from 'lucide-react';
 
 interface BottomBarProps {
-  canUndo: boolean;
   hintsLeft: number;
   zoomLevel: number;
   isDarkTheme?: boolean;
   isAdFree?: boolean;
-  onUndo: () => void;
   onHint: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
@@ -19,12 +17,10 @@ interface BottomBarProps {
 }
 
 export const BottomBar: React.FC<BottomBarProps> = React.memo(({
-  canUndo,
   hintsLeft,
   zoomLevel,
   isDarkTheme = true,
   isAdFree = false,
-  onUndo,
   onHint,
   onZoomIn,
   onZoomOut,
@@ -32,26 +28,6 @@ export const BottomBar: React.FC<BottomBarProps> = React.memo(({
 }) => {
   return (
     <footer className="w-full max-w-lg mx-auto flex items-center justify-between gap-2 px-3 pb-safe pt-1 z-20 shrink-0 select-none">
-      {/* Undo Button */}
-      <button
-        onClick={onUndo}
-        disabled={!canUndo}
-        title="Undo last move (Z)"
-        aria-label="Undo move"
-        className={`flex-1 py-2.5 px-2 rounded-2xl flex items-center justify-center gap-1.5 font-bold text-xs md:text-sm border transition-all active:scale-95 shadow-sm ${
-          canUndo
-            ? isDarkTheme
-              ? 'bg-white/15 hover:bg-white/25 text-white border-white/20'
-              : 'bg-white hover:bg-slate-100 text-slate-800 border-slate-200'
-            : isDarkTheme
-            ? 'bg-white/5 text-white/30 border-white/5 cursor-not-allowed'
-            : 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-        }`}
-      >
-        <Undo2 className="w-4 h-4" />
-        <span>Undo</span>
-      </button>
-
       {/* Hint Button: Active either with remaining hints OR via Rewarded Ad / VIP */}
       <button
         onClick={onHint}
