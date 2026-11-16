@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { CollectionConfig } from '../types.ts';
 import { SHAPE_DEFINITIONS, getShapeThumbnailPath } from '../shapes.ts';
-import { fireLevelWinConfetti, fireGrandFinaleConfetti } from './Confetti.tsx';
+import { fireGrandFinaleConfetti } from './Confetti.tsx';
 
 interface LevelCompleteModalProps {
   levelNumber: number;
@@ -57,25 +57,22 @@ export const LevelCompleteModal: React.FC<LevelCompleteModalProps> = ({
   onHome,
   onDoubleScoreAd,
 }) => {
-  const shapeDef = SHAPE_DEFINITIONS[levelNumber];
-
-  useEffect(() => {
-    fireLevelWinConfetti();
-  }, []);
+  // Beginner Level 1 is a starter tutorial grid rather than the Heart silhouette
+  const shapeDef = levelNumber === 1 ? undefined : SHAPE_DEFINITIONS[levelNumber];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-md animate-fade-in select-none">
-      <div className="relative w-full max-w-sm rounded-3xl bg-slate-900/95 border-4 border-amber-400/40 p-5 shadow-2xl text-center flex flex-col items-center gap-3 text-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/82 select-none">
+      <div className="relative w-full max-w-sm rounded-3xl bg-slate-900 border-4 border-amber-400/40 p-5 shadow-2xl text-center flex flex-col items-center gap-3 text-white">
         {/* Header Tag */}
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 text-xs font-black uppercase tracking-wider shadow-md">
           <Sparkles className="w-3.5 h-3.5 fill-current" />
           <span>{isDailyChallenge ? 'Daily Puzzle Cleared!' : 'Puzzle Cleared!'}</span>
         </div>
 
-        {/* Revealed Colorful Silhouette Celebration Picture */}
-        {shapeDef && (
-          <div className="relative w-28 h-28 my-1 rounded-2xl bg-slate-950/80 border border-white/20 p-2 flex items-center justify-center shadow-inner overflow-hidden animate-pulse">
-            <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-[0_0_12px_#FF2A85]">
+        {/* Revealed Colorful Silhouette Celebration Picture (Levels 2+) or First Bloom Emblem (Level 1) */}
+        {shapeDef ? (
+          <div className="relative w-28 h-28 my-1 rounded-2xl bg-slate-950/80 border border-white/20 p-2 flex items-center justify-center shadow-inner overflow-hidden">
+            <svg viewBox="0 0 100 100" className="w-full h-full">
               <defs>
                 <linearGradient id="winShapeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stopColor="#FF2A85" />
@@ -90,6 +87,12 @@ export const LevelCompleteModal: React.FC<LevelCompleteModalProps> = ({
                 strokeWidth="2"
               />
             </svg>
+          </div>
+        ) : (
+          <div className="relative w-20 h-20 my-1 rounded-3xl bg-gradient-to-br from-amber-400 via-pink-500 to-cyan-400 p-0.5 flex items-center justify-center shadow-xl">
+            <div className="w-full h-full rounded-[22px] bg-slate-950 flex items-center justify-center">
+              <Trophy className="w-10 h-10 text-amber-300" />
+            </div>
           </div>
         )}
 
@@ -239,8 +242,8 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   onHome,
 }) => {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fade-in select-none">
-      <div className="relative w-full max-w-sm rounded-3xl bg-slate-900/95 border-4 border-rose-500/40 p-5 shadow-2xl text-center flex flex-col items-center gap-3 text-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 select-none">
+      <div className="relative w-full max-w-sm rounded-3xl bg-slate-900 border-4 border-rose-500/40 p-5 shadow-2xl text-center flex flex-col items-center gap-3 text-white">
         <div className="w-14 h-14 rounded-full bg-rose-500/20 border-2 border-rose-500/40 flex items-center justify-center">
           <HeartCrack className="w-8 h-8 text-rose-400 animate-pulse" />
         </div>
@@ -311,8 +314,8 @@ export const CollectionCompleteModal: React.FC<CollectionCompleteModalProps> = (
   }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fade-in select-none">
-      <div className="relative w-full max-w-sm rounded-3xl bg-slate-900/95 border-4 border-yellow-400/60 p-6 shadow-2xl text-center flex flex-col items-center gap-4 text-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 select-none">
+      <div className="relative w-full max-w-sm rounded-3xl bg-slate-900 border-4 border-yellow-400/60 p-6 shadow-2xl text-center flex flex-col items-center gap-4 text-white">
         <div className="w-18 h-18 rounded-3xl bg-gradient-to-tr from-amber-400 to-yellow-300 flex items-center justify-center shadow-lg border-2 border-yellow-200 transform -rotate-3 animate-bounce">
           <Trophy className="w-9 h-9 text-slate-950" />
         </div>

@@ -43,6 +43,11 @@ export const TopBar: React.FC<TopBarProps> = React.memo(({
   const displayedScoreRef = useRef(score);
 
   useEffect(() => {
+    if (score === 0) {
+      displayedScoreRef.current = 0;
+      if (scoreTextRef.current) scoreTextRef.current.textContent = '0';
+      return;
+    }
     const from = displayedScoreRef.current;
     const delta = score - from;
     const started = performance.now();

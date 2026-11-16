@@ -72,7 +72,7 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
   const updateWrapperTransform = useCallback(() => {
     const t = transformRef.current;
     if (wrapperRef.current) {
-      wrapperRef.current.style.transform = `translate(${t.x}px, ${t.y}px) scale(${t.zoom})`;
+      wrapperRef.current.style.transform = `translate3d(${t.x}px, ${t.y}px, 0) scale(${t.zoom})`;
     }
   }, []);
 
@@ -433,7 +433,12 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     if (active && !rafRef.current) rafRef.current = requestAnimationFrame(tick);
   }, [gridSize, arrows, escapingArrows, shakingArrowId, flashBlockedArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, comboCount, drawArrow, isDarkTheme, performanceMode, onPerformanceModeChange, debugOverlay, generationMs, arrowById]);
 
-  // Re-rasterize static & dynamic canvases at dpr * zoomLevel for razor-sharp clarity up to 4x zoom
+  const drawStaticRef = useRef(drawStatic);
+  drawStaticRef.current = drawStatic;
+  const drawDynamicRef = useRef(drawDynamic);
+  drawDynamicRef.current = drawDynamic;
+
+  // Re-rasterize static & dynamic canvases ONLY when container dimensions, gridSize, or zoomLevel change.
   const resizeCanvas = useCallback(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -445,28 +450,35 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
     const baseDpr = Math.min(2.5, window.devicePixelRatio || 1);
     const zoomFactor = Math.max(1, zoomLevel);
     const dpr = Math.min(baseDpr * zoomFactor, maxDimension / Math.max(1, board));
+    const targetPx = Math.round(board * dpr);
+    const boardCss = `${board}px`;
+
     sizeRef.current = { width, height, board, dpr };
     cellSizeRef.current = board / gridSize;
     for (const canvas of [staticRef.current, dynamicRef.current]) {
       if (!canvas) continue;
-      canvas.width = Math.round(board * dpr);
-      canvas.height = Math.round(board * dpr);
-      canvas.style.width = board + 'px';
-      canvas.style.height = board + 'px';
+      if (canvas.width !== targetPx || canvas.height !== targetPx) {
+        canvas.width = targetPx;
+        canvas.height = targetPx;
+      }
+      if (canvas.style.width !== boardCss || canvas.style.height !== boardCss) {
+        canvas.style.width = boardCss;
+        canvas.style.height = boardCss;
+      }
     }
     if (wrapperRef.current) {
-      wrapperRef.current.style.width = board + 'px';
-      wrapperRef.current.style.height = board + 'px';
+      if (wrapperRef.current.style.width !== boardCss) wrapperRef.current.style.width = boardCss;
+      if (wrapperRef.current.style.height !== boardCss) wrapperRef.current.style.height = boardCss;
     }
     updateWrapperTransform();
-    drawStatic();
-    drawDynamic(performance.now());
-  }, [gridSize, performanceMode, updateWrapperTransform, zoomLevel, drawStatic, drawDynamic]);
+    drawStaticRef.current();
+    drawDynamicRef.current(performance.now());
+  }, [gridSize, zoomLevel, updateWrapperTransform]);
 
   const tick = useCallback((now: number) => {
     rafRef.current = 0;
-    drawDynamic(now);
-  }, [drawDynamic]);
+    drawDynamicRef.current(now);
+  }, []);
 
   const rebuildOwner = useCallback(() => {
     const owner = new Int16Array(gridSize * gridSize);
@@ -481,24 +493,27 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
   useEffect(() => { rebuildOwner(); drawStatic(); }, [rebuildOwner, drawStatic]);
   useEffect(() => {
     resizeCanvas();
-  }, [zoomLevel, resizeCanvas]);
+  }, [resizeCanvas]);
 
   useEffect(() => {
+    if (shakingArrowId) animationStartRef.current = performance.now();
+  }, [shakingArrowId]);
+
+  useEffect(() => {
+    drawDynamic(performance.now());
     if (escapingArrows.length || shakingArrowId || hintedArrowId || tutorialArrowId || floatingScores.length || showComboPill) {
-      animationStartRef.current = performance.now();
       if (!rafRef.current) rafRef.current = requestAnimationFrame(tick);
     }
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); rafRef.current = 0; };
-  }, [escapingArrows, shakingArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, tick]);
+  }, [escapingArrows, shakingArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, drawDynamic, tick]);
 
   useEffect(() => {
     const observer = new ResizeObserver(() => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(() => { rafRef.current = 0; resizeCanvas(); });
+      resizeCanvas();
     });
     if (containerRef.current) observer.observe(containerRef.current);
     resizeCanvas();
-    return () => { observer.disconnect(); if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+    return () => { observer.disconnect(); };
   }, [resizeCanvas]);
 
   useEffect(() => {

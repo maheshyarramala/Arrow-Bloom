@@ -12,8 +12,8 @@ export const HowToPlay: React.FC<HowToPlayProps> = ({ onClose }) => {
   const [practiceStep, setPracticeStep] = useState(0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fade-in">
-      <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl bg-slate-900/95 border-4 border-white/20 p-6 shadow-2xl text-white flex flex-col gap-5">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/88">
+      <div className="relative w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl bg-slate-900 border-4 border-white/20 p-6 shadow-2xl text-white flex flex-col gap-5">
         {/* Header */}
         <div className="flex items-center justify-between pb-2 border-b border-white/10">
           <div className="flex items-center gap-2">

@@ -94,7 +94,7 @@ export const AdModal: React.FC<AdModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in select-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 select-none">
       <div className="relative w-full max-w-sm rounded-3xl bg-slate-900 border-2 border-white/20 shadow-2xl overflow-hidden text-white flex flex-col">
         {/* Ad Header / Status Bar */}
         <div className="bg-slate-950/90 px-4 py-2.5 border-b border-white/10 flex items-center justify-between">

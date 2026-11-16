@@ -64,7 +64,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in select-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/88 select-none">
       <div className="relative w-full max-w-sm rounded-3xl bg-slate-900 border-2 border-amber-400/40 p-5 shadow-2xl text-white flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
         {/* Close Button */}
         <button

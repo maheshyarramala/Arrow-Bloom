@@ -340,7 +340,7 @@ function buildSimpleLevelOne(seed: number): LevelConfig {
   return {
     levelNumber: 1,
     collectionId: collection.id,
-    shapeName: shapeDef.name,
+    shapeName: 'First Bloom',
     gridSize,
     playableMask,
     playableCells,

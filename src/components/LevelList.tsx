@@ -5,7 +5,7 @@ import React from 'react';
 import { COLLECTIONS } from '../levelGenerator.ts';
 import { PlayerProgress } from '../types.ts';
 import { SHAPE_DEFINITIONS, getShapeThumbnailPath } from '../shapes.ts';
-import { ChevronLeft, Lock, Check, Star } from 'lucide-react';
+import { ChevronLeft, Lock, Check, Star, Sparkles } from 'lucide-react';
 
 interface LevelListProps {
   progress: PlayerProgress;
@@ -120,15 +120,19 @@ export const LevelList: React.FC<LevelListProps> = ({
                         ) : null}
                       </div>
 
-                      {/* Mini Silhouette Outline Icon */}
-                      {shapeDef && (
-                        <svg viewBox="0 0 100 100" className="w-7 h-7 my-auto opacity-70">
-                          <path
-                            d={getShapeThumbnailPath(shapeDef, 100)}
-                            fill="currentColor"
-                            opacity={isUnlocked ? 0.8 : 0.2}
-                          />
-                        </svg>
+                      {/* Mini Silhouette Outline Icon (Level 1 uses Bloom emblem instead of Heart shape) */}
+                      {lvlNum === 1 ? (
+                        <Sparkles className="w-6 h-6 my-auto opacity-85" />
+                      ) : (
+                        shapeDef && (
+                          <svg viewBox="0 0 100 100" className="w-7 h-7 my-auto opacity-70">
+                            <path
+                              d={getShapeThumbnailPath(shapeDef, 100)}
+                              fill="currentColor"
+                              opacity={isUnlocked ? 0.8 : 0.2}
+                            />
+                          </svg>
+                        )
                       )}
 
                       {/* Bottom row: Stars */}

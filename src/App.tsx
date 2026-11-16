@@ -351,6 +351,10 @@ export default function App() {
       setPanOffset({ x: 0, y: 0 });
       setActiveArrows([]);
       setLevelConfig(EMPTY_LEVEL);
+      dispatchScore({ type: 'RESET_SCORE' });
+      setComboCount(0);
+      setShowComboPill(false);
+      setFloatingScores([]);
       setCurrentLevelNumber(lvlNum);
       setScreen('game');
 
@@ -1019,6 +1023,11 @@ export default function App() {
 
   const isDark = settings.theme === 'dark';
 
+  const confettiColorIndices = useMemo(
+    () => levelConfig.arrows.map((a) => a.colorIndex),
+    [levelConfig.arrows]
+  );
+
   return (
     <main
       className={`relative w-full h-[100dvh] flex flex-col justify-between overflow-hidden select-none font-['Fredoka',sans-serif] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] ${
@@ -1030,7 +1039,7 @@ export default function App() {
         collection={screen === 'game' ? currentCollection : null}
         theme={settings.theme}
         performanceMode={settings.performanceMode}
-        paused={isBoardDragging || (screen === 'game' && levelConfig.gridSize >= 20)}
+        paused={isBoardDragging || screen === 'game'}
       />
 
       {/* Screen 1: Home Screen */}
@@ -1127,9 +1136,9 @@ export default function App() {
             !showGameOver && (
               <div className="w-full max-w-lg mx-auto px-3 pt-1 shrink-0 z-20">
                 <div
-                  className={`rounded-2xl px-3.5 py-2.5 border shadow-lg backdrop-blur-md flex items-center justify-between gap-3 ${
+                  className={`rounded-2xl px-3.5 py-2.5 border shadow-lg flex items-center justify-between gap-3 ${
                     isDark
-                      ? 'bg-slate-900/90 border-amber-400/40 text-white'
+                      ? 'bg-slate-900/95 border-amber-400/40 text-white'
                       : 'bg-white/95 border-amber-500/50 text-slate-900'
                   }`}
                 >
@@ -1227,7 +1236,7 @@ export default function App() {
       {/* Level Complete Celebration Confetti */}
       <LevelWinConfetti
         active={showLevelComplete || showCollectionComplete}
-        colorIndices={levelConfig.arrows.map((a) => a.colorIndex)}
+        colorIndices={confettiColorIndices}
       />
 
       {/* Level Complete Modal */}
@@ -1283,7 +1292,7 @@ export default function App() {
 
       {/* Out of Hints Rewarded Video Ad Confirmation Modal */}
       {showHintAdPrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm select-none">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/82 select-none">
           <div
             className={`relative w-full max-w-xs rounded-3xl p-5 border-2 shadow-2xl flex flex-col gap-3 ${
               isDark
@@ -1339,7 +1348,7 @@ export default function App() {
       {toastBanner && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none px-4 w-full max-w-sm flex justify-center">
           <div
-            className={`px-4 py-2 rounded-2xl text-xs font-black shadow-xl border backdrop-blur-md text-center ${
+            className={`px-4 py-2 rounded-2xl text-xs font-black shadow-xl border text-center ${
               toastBanner.tone === 'success'
                 ? 'bg-emerald-500/95 text-slate-950 border-emerald-200'
                 : toastBanner.tone === 'warning'

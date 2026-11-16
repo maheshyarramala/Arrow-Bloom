@@ -12,6 +12,7 @@ export function fireLevelWinConfetti() {
       spread: 55,
       origin: { x: 0, y: 0.7 },
       colors: ['#FF4D8D', '#FFD93D', '#2EE6A8', '#22D3EE', '#B05CFF', '#FF8A3D'],
+      disableForReducedMotion: true,
     });
     // Right burst
     confetti({
@@ -20,6 +21,7 @@ export function fireLevelWinConfetti() {
       spread: 55,
       origin: { x: 1, y: 0.7 },
       colors: ['#FF4D8D', '#FFD93D', '#2EE6A8', '#22D3EE', '#B05CFF', '#FF8A3D'],
+      disableForReducedMotion: true,
     });
   } catch {
     // Ignore canvas-confetti issues
@@ -38,6 +40,7 @@ export function fireGrandFinaleConfetti() {
         spread: 70,
         origin: { x: 0, y: 0.65 },
         colors,
+        disableForReducedMotion: true,
       });
       confetti({
         particleCount: 4,
@@ -45,6 +48,7 @@ export function fireGrandFinaleConfetti() {
         spread: 70,
         origin: { x: 1, y: 0.65 },
         colors,
+        disableForReducedMotion: true,
       });
 
       if (Date.now() < end) {

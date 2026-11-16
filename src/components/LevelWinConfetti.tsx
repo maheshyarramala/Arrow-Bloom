@@ -1,9 +1,9 @@
 /**
- * Arrow Bloom - Level Win Confetti Explosion Component
- * Triggers an explosion of colored particles at the center of the board when a level is cleared,
- * matching the level's color palette.
+ * Arrow Bloom - Canvas-based Level Win Confetti Explosion
+ * Renders smooth 60fps celebratory confetti onto a single lightweight canvas
+ * without triggering DOM churn or GPU compositor whiteouts on mobile WebViews.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { PALETTE } from '../levelGenerator.ts';
 
 interface LevelWinConfettiProps {
@@ -13,7 +13,6 @@ interface LevelWinConfettiProps {
 }
 
 interface ConfettiParticle {
-  id: number;
   x: number;
   y: number;
   vx: number;
@@ -23,7 +22,6 @@ interface ConfettiParticle {
   rotation: number;
   vRot: number;
   shape: 'rect' | 'circle' | 'star';
-  life: number;
 }
 
 export const LevelWinConfetti: React.FC<LevelWinConfettiProps> = ({
@@ -31,123 +29,113 @@ export const LevelWinConfetti: React.FC<LevelWinConfettiProps> = ({
   colorIndices = [0, 2, 4, 5, 8],
   onComplete,
 }) => {
-  const [particles, setParticles] = useState<ConfettiParticle[]>([]);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
-    if (!active) {
-      setParticles([]);
-      return;
-    }
+    const canvas = canvasRef.current;
+    if (!active || !canvas) return;
 
-    const paletteColors = colorIndices.length > 0
-      ? colorIndices.map(idx => PALETTE[idx % PALETTE.length])
-      : ['#FF2A85', '#FFD000', '#10E7A1', '#00E5FF', '#AF52DE', '#FF7A00'];
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-    const count = 75;
-    const newParticles: ConfettiParticle[] = [];
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const width = window.innerWidth || 360;
+    const height = window.innerHeight || 640;
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const uniqueIndices = Array.from(new Set(colorIndices));
+    const paletteColors =
+      uniqueIndices.length > 0
+        ? uniqueIndices.map((idx) => PALETTE[Math.abs(idx) % PALETTE.length])
+        : ['#FF2A85', '#FFD000', '#10E7A1', '#00E5FF', '#AF52DE', '#FF7A00'];
+
+    const cx = width * 0.5;
+    const cy = height * 0.45;
+    const count = 65;
+    const shapes: Array<'rect' | 'circle' | 'star'> = ['rect', 'circle', 'star'];
+    const particles: ConfettiParticle[] = [];
 
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = Math.random() * 12 + 4;
-      const shapes: Array<'rect' | 'circle' | 'star'> = ['rect', 'circle', 'star'];
-      newParticles.push({
-        id: i,
-        x: 0, // centered
-        y: 0,
+      const speed = Math.random() * 11 + 4;
+      particles.push({
+        x: cx,
+        y: cy,
         vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 2,
-        color: paletteColors[Math.floor(Math.random() * paletteColors.length)],
-        size: Math.random() * 8 + 6,
-        rotation: Math.random() * 360,
-        vRot: (Math.random() - 0.5) * 15,
-        shape: shapes[Math.floor(Math.random() * shapes.length)],
-        life: 1.0,
+        vy: Math.sin(angle) * speed - 3,
+        color: paletteColors[i % paletteColors.length],
+        size: Math.random() * 7 + 5,
+        rotation: Math.random() * Math.PI * 2,
+        vRot: (Math.random() - 0.5) * 0.28,
+        shape: shapes[i % shapes.length],
       });
     }
 
-    setParticles(newParticles);
+    let rafId = 0;
+    const startTime = performance.now();
+    const duration = 1700;
 
-    let rafId: number;
-    let startTime = performance.now();
-    const duration = 1800; // 1.8s explosion
-
-    const animate = (now: number) => {
+    const render = (now: number) => {
       const elapsed = now - startTime;
       const progress = Math.min(1, elapsed / duration);
+      ctx.clearRect(0, 0, width, height);
 
       if (progress < 1) {
-        setParticles(prev =>
-          prev.map(p => ({
-            ...p,
-            x: p.x + p.vx,
-            y: p.y + p.vy,
-            vy: p.vy + 0.35, // gravity
-            vx: p.vx * 0.96, // drag
-            rotation: p.rotation + p.vRot,
-            life: 1 - progress,
-          }))
-        );
-        rafId = requestAnimationFrame(animate);
+        const alpha = progress < 0.7 ? 1 : 1 - (progress - 0.7) / 0.3;
+        ctx.globalAlpha = Math.max(0, alpha);
+
+        for (let i = 0; i < particles.length; i++) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.34;
+          p.vx *= 0.965;
+          p.rotation += p.vRot;
+
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.rotation);
+          ctx.fillStyle = p.color;
+
+          if (p.shape === 'rect') {
+            ctx.fillRect(-p.size * 0.5, -p.size * 0.3, p.size, p.size * 0.6);
+          } else if (p.shape === 'circle') {
+            ctx.beginPath();
+            ctx.arc(0, 0, p.size * 0.4, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            ctx.font = `bold ${Math.round(p.size * 1.2)}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('★', 0, 0);
+          }
+          ctx.restore();
+        }
+        rafId = requestAnimationFrame(render);
       } else {
-        setParticles([]);
-        onComplete?.();
+        ctx.clearRect(0, 0, width, height);
+        onCompleteRef.current?.();
       }
     };
 
-    rafId = requestAnimationFrame(animate);
-
+    rafId = requestAnimationFrame(render);
     return () => {
       if (rafId) cancelAnimationFrame(rafId);
+      ctx.clearRect(0, 0, width, height);
     };
-  }, [active, colorIndices, onComplete]);
+  }, [active, colorIndices]);
 
-  if (!active || particles.length === 0) return null;
+  if (!active) return null;
 
   return (
-    <div className="absolute inset-0 z-50 pointer-events-none flex items-center justify-center overflow-hidden">
-      <div className="relative w-0 h-0">
-        {particles.map(p => (
-          <div
-            key={p.id}
-            className="absolute transform -translate-x-1/2 -translate-y-1/2"
-            style={{
-              left: `${p.x}px`,
-              top: `${p.y}px`,
-              opacity: p.life,
-              transform: `translate(-50%, -50%) rotate(${p.rotation}deg) scale(${p.life})`,
-            }}
-          >
-            {p.shape === 'rect' && (
-              <div
-                className="rounded-xs shadow-md"
-                style={{
-                  width: `${p.size}px`,
-                  height: `${p.size * 0.6}px`,
-                  backgroundColor: p.color,
-                }}
-              />
-            )}
-            {p.shape === 'circle' && (
-              <div
-                className="rounded-full shadow-md"
-                style={{
-                  width: `${p.size * 0.8}px`,
-                  height: `${p.size * 0.8}px`,
-                  backgroundColor: p.color,
-                }}
-              />
-            )}
-            {p.shape === 'star' && (
-              <div
-                className="text-xs font-bold filter drop-shadow"
-                style={{ color: p.color, fontSize: `${p.size * 1.2}px` }}
-              >
-                ★
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
+    <canvas
+      ref={canvasRef}
+      className="fixed inset-0 w-full h-full z-[60] pointer-events-none"
+      aria-hidden="true"
+    />
   );
 };
