@@ -33,11 +33,6 @@ interface BoardProps {
   generationMs?: number;
 }
 
-interface Particle { x: number; y: number; vx: number; vy: number; life: number; color: string; size: number; active: boolean; }
-
-const MAX_PARTICLES = 60;
-const BURST_COLORS = ['#FF2A85', '#FFD000', '#10E7A1', '#00E5FF', '#FFFFFF', '#FFAA00'];
-
 export const Board: React.FC<BoardProps> = React.memo((props) => {
   const {
     gridSize, playableMask, arrows, isDarkTheme = true, colorBlindMode = false,
@@ -55,7 +50,6 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
   const ownerRef = useRef<Int16Array>(new Int16Array(0));
   const rafRef = useRef<number>(0);
   const animationStartRef = useRef(0);
-  const particlesRef = useRef<Particle[]>(Array.from({ length: MAX_PARTICLES }, () => ({ x: 0, y: 0, vx: 0, vy: 0, life: 0, color: '#FFFFFF', size: 2, active: false })));
   const frameMonitorRef = useRef({ last: 0, average: 16.7, slowSince: 0 });
   const focusedArrowIndexRef = useRef(0);
   const focusActiveRef = useRef(false);
@@ -402,16 +396,6 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
         active ||= !performanceMode && Boolean(hintedArrowId || tutorialArrowId);
       }
     }
-    const particles = particlesRef.current;
-    for (let i = 0; i < particles.length; i++) {
-      const p = particles[i];
-      if (!p.active) continue;
-      p.x += p.vx; p.y += p.vy; p.vy += 0.12; p.life -= 0.055;
-      if (p.life <= 0) { p.active = false; continue; }
-      ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
-      ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
-      active = true;
-    }
     const focusedArrow = focusActiveRef.current ? arrows[focusedArrowIndexRef.current] : null;
     if (focusedArrow) drawArrow(ctx, focusedArrow, cell, 0.9, 0, 0, false);
     ctx.globalAlpha = 1;
@@ -485,28 +469,10 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
   useEffect(() => {
     if (escapingArrows.length || shakingArrowId || hintedArrowId || tutorialArrowId || floatingScores.length || showComboPill) {
       animationStartRef.current = performance.now();
-      if (escapingArrows.length) {
-        const newestAnimation = escapingArrows[escapingArrows.length - 1];
-        const arrow = newestAnimation.arrow;
-        if (arrow) {
-          const head = arrow.cells[arrow.cells.length - 1];
-          const cx = (head.c + 0.5) * cellSizeRef.current;
-          const cy = (head.r + 0.5) * cellSizeRef.current;
-          const count = performanceMode ? 6 : 12;
-          for (let i = 0; i < count; i++) {
-            const particle = particlesRef.current.find(item => !item.active);
-            if (!particle) break;
-            const angle = Math.PI * 2 * i / count + (Math.random() - 0.5);
-            const speed = Math.random() * 3 + 1.5;
-            particle.x = cx; particle.y = cy; particle.vx = Math.cos(angle) * speed; particle.vy = Math.sin(angle) * speed;
-            particle.life = 1; particle.color = BURST_COLORS[(Math.random() * BURST_COLORS.length) | 0]; particle.size = Math.random() * 4 + 2; particle.active = true;
-          }
-        }
-      }
       if (!rafRef.current) rafRef.current = requestAnimationFrame(tick);
     }
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); rafRef.current = 0; };
-  }, [escapingArrows, shakingArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, tick, arrows, performanceMode]);
+  }, [escapingArrows, shakingArrowId, hintedArrowId, tutorialArrowId, floatingScores, showComboPill, tick]);
 
   useEffect(() => {
     const observer = new ResizeObserver(() => {
