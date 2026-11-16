@@ -1,0 +1,20 @@
+I want to add Google AdMob Rewarded Video Ads to my React + TypeScript + Capacitor game "Arrow Bloom" so that when a player runs out of hints (`hintsLeft === 0`), they can watch a rewarded video ad to earn +1 hint.
+
+Please inspect and update `package.json`, `capacitor.config.json`, `android/app/src/main/AndroidManifest.xml`, `src/App.tsx`, `src/components/BottomBar.tsx`, and create a dedicated `src/services/admob.ts` helper. Output the complete updated code for every modified/new file and the exact terminal commands I need to run.
+
+Requirements:
+1. Install and configure `@capacitor-community/admob` matching my installed `@capacitor/core` version:
+   - Add the AdMob `APPLICATION_ID` meta-data tag in `AndroidManifest.xml` using Google's official test App ID (`ca-app-pub-3940256099942544~3347511713`) with a clear comment showing where to swap in my real production AdMob App ID.
+   - In `src/services/admob.ts`, initialize `AdMob.initialize()` on app startup (only on native platforms via `Capacitor.isNativePlatform()`), handle User Messaging Platform (UMP) consent if needed, and use Google's official Android test Rewarded Ad Unit ID (`ca-app-pub-3940256099942544/5224354917`) via an env/config constant so I can easily swap in my production ID later.
+
+2. Preload & Rewarded Ad Lifecycle (`src/services/admob.ts`):
+   - Preload the next rewarded video ad (`AdMob.prepareRewardVideoAd`) in the background on app load and immediately after an ad is dismissed, so there is zero waiting when the player taps for a hint.
+   - Listen for `RewardAdPluginEvents.Rewarded` to confirm the user finished watching the video before granting the reward (never grant the hint if they close early or if the ad fails to load).
+   - Handle `FailedToLoad`, `FailedToShow`, and offline/no-fill errors gracefully with a friendly status message.
+   - When running in a normal web browser (`!Capacitor.isNativePlatform()`), provide a clean fallback (e.g., disable or show a "Available in mobile app" toast without crashing).
+
+3. Hint Out-of-Balance UX (`src/App.tsx`, `src/components/BottomBar.tsx`):
+   - When `hintsLeft > 0`, tapping the Hint button works normally and decrements `hintsLeft`.
+   - When `hintsLeft === 0`, update the Hint button in `BottomBar.tsx` to show a clear video/ad badge (e.g., "Free Hint" / video icon) instead of staying disabled.
+   - Tapping it when `hintsLeft === 0` opens a quick confirmation prompt ("Out of Hints — Watch a short video ad to get +1 Hint?") or launches `showRewardedHintAd()`.
+   - Once `Rewarded` fires, add `+1` to `hintsLeft` (and optionally auto-trigger the hint or let the player tap Hint), pause game audio/music while the ad is open, and resume cleanly when `Dismissed` fires.

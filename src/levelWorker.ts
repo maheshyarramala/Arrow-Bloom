@@ -3,7 +3,7 @@ import type { LevelConfig } from './types.ts';
 
 const DB_NAME = 'arrow-bloom-level-cache';
 const STORE = 'levels';
-const GENERATOR_VERSION = 12;
+const GENERATOR_VERSION = 13;
 
 function openCache(): Promise<IDBDatabase | null> {
   return new Promise((resolve) => {

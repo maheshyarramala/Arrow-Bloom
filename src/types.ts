@@ -103,6 +103,7 @@ export interface PlayerProgress {
   unlockedLevel: number;
   levelData: Record<number, LevelProgress>;
   totalScore: number;
+  tutorialCompleted?: boolean;
   dailyMissions?: DailyMissionsProgress;
   dailyChallenge?: { date: string; levelNumber: number; completed: boolean };
   stats?: {

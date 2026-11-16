@@ -3,8 +3,9 @@
  * Handles screen transitions, mid-level resume persistence, Capacitor mobile back-button navigation,
  * rewarded AdMob video ads, ₹499 Lifetime Ad-Free pass, Google Play Games Hub, and legal pages.
  */
-import React, { useState, useEffect, useCallback, useReducer, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useReducer, useRef, useMemo } from 'react';
 import { App as CapacitorApp } from '@capacitor/app';
+import { Video, SkipForward, Sparkles, X } from 'lucide-react';
 import {
   ArrowData,
   CollectionConfig,
@@ -32,7 +33,9 @@ import {
   loadMidLevelState,
   clearMidLevelState,
   isAdFreePurchased,
+  markTutorialCompleted,
 } from './storage.ts';
+import { initializeAdMob, showRewardedHintAd } from './services/admob.ts';
 
 // Core Components
 import { Background } from './components/Background.tsx';
@@ -164,6 +167,27 @@ export default function App() {
     isOpen: false,
     reason: 'hint',
   });
+  const [showHintAdPrompt, setShowHintAdPrompt] = useState(false);
+  const [isLoadingRewardAd, setIsLoadingRewardAd] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState<0 | 1 | 2 | 3>(0);
+  const [toastBanner, setToastBanner] = useState<{
+    text: string;
+    tone: 'info' | 'warning' | 'success';
+  } | null>(null);
+  const toastTimerRef = useRef<number | null>(null);
+
+  const showToast = useCallback((text: string, tone: 'info' | 'warning' | 'success' = 'info') => {
+    setToastBanner({ text, tone });
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => {
+      setToastBanner(null);
+    }, 2800);
+  }, []);
+
+  // Initialize AdMob on startup (no-op on web browsers)
+  useEffect(() => {
+    void initializeAdMob();
+  }, []);
 
   // Level worker setup
   useEffect(() => {
@@ -248,6 +272,7 @@ export default function App() {
   useEffect(() => {
     return () => {
       if (comboHideTimerRef.current) clearTimeout(comboHideTimerRef.current);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     };
   }, []);
 
@@ -259,6 +284,61 @@ export default function App() {
   const removedArrowIdsRef = useRef<Set<string>>(new Set());
   const escapeTimersRef = useRef<Map<string, number>>(new Map());
   const completionCommittedRef = useRef(false);
+
+  // Determine the single guided arrow on Level 1 for Tutorial Steps 1 & 2
+  const tutorialArrowId = useMemo(() => {
+    if (
+      screen !== 'game' ||
+      currentLevelNumber !== 1 ||
+      isDailyChallenge ||
+      progress.tutorialCompleted ||
+      (tutorialStep !== 1 && tutorialStep !== 2) ||
+      activeArrows.length === 0
+    ) {
+      return null;
+    }
+
+    if (tutorialStep === 1) {
+      // Pick an initially free arrow that unblocks another arrow right away
+      const blockingFree = activeArrows.find((candidate) => {
+        if (!checkArrowRay(candidate.id, activeArrows, levelConfig.gridSize).isFree) return false;
+        return activeArrows.some(
+          (other) =>
+            other.id !== candidate.id &&
+            checkArrowRay(other.id, activeArrows, levelConfig.gridSize).blockingArrowId === candidate.id
+        );
+      });
+      if (blockingFree) return blockingFree.id;
+      return getHintArrow(activeArrows, levelConfig.solutionOrder, levelConfig.gridSize)?.id || null;
+    }
+
+    // Step 2: Prefer an arrow that was originally blocked and is NOW free
+    const initiallyFreeIds = new Set(
+      levelConfig.arrows
+        .filter((a) => checkArrowRay(a.id, levelConfig.arrows, levelConfig.gridSize).isFree)
+        .map((a) => a.id)
+    );
+    const newlyUnblocked = activeArrows.find(
+      (a) => !initiallyFreeIds.has(a.id) && checkArrowRay(a.id, activeArrows, levelConfig.gridSize).isFree
+    );
+    if (newlyUnblocked) return newlyUnblocked.id;
+    return getHintArrow(activeArrows, levelConfig.solutionOrder, levelConfig.gridSize)?.id || null;
+  }, [
+    screen,
+    currentLevelNumber,
+    isDailyChallenge,
+    progress.tutorialCompleted,
+    tutorialStep,
+    activeArrows,
+    levelConfig.arrows,
+    levelConfig.gridSize,
+    levelConfig.solutionOrder,
+  ]);
+
+  const tutorialStepRef = useRef(tutorialStep);
+  tutorialStepRef.current = tutorialStep;
+  const tutorialArrowIdRef = useRef(tutorialArrowId);
+  tutorialArrowIdRef.current = tutorialArrowId;
 
   // Start Level: Supports Mid-Level Resume Persistence!
   const startLevel = useCallback(
@@ -283,14 +363,25 @@ export default function App() {
         const savedMidState = fromScratch ? null : loadMidLevelState(lvlNum);
 
         if (savedMidState && savedMidState.activeArrows && savedMidState.activeArrows.length > 0) {
-          setIsDailyChallenge(dailyChallenge || Boolean(savedMidState.dailyChallenge));
+          const effectiveDaily = dailyChallenge || Boolean(savedMidState.dailyChallenge);
+          setIsDailyChallenge(effectiveDaily);
           // RESUME EXACTLY WHERE PLAYER LEFT OFF
           setActiveArrows(savedMidState.activeArrows.map((a) => ({ ...a, cells: a.cells })));
           activeArrowsRef.current = savedMidState.activeArrows;
           setHearts(Math.max(1, savedMidState.hearts || 3));
           setMistakes(savedMidState.mistakes || 0);
           dispatchScore({ type: 'SET_SCORE', score: savedMidState.score || 0 });
-          setHintsLeft(extraHint ? (savedMidState.hintsLeft || 3) + 1 : savedMidState.hintsLeft || 3);
+          setHintsLeft(
+            extraHint
+              ? (savedMidState.hintsLeft ?? 3) + 1
+              : savedMidState.hintsLeft ?? 3
+          );
+          if (lvlNum === 1 && !effectiveDaily && !progress.tutorialCompleted) {
+            const cleared = config.arrows.length - savedMidState.activeArrows.length;
+            setTutorialStep(cleared <= 0 ? 1 : cleared === 1 ? 2 : 3);
+          } else {
+            setTutorialStep(0);
+          }
         } else {
           // Fresh board start
           clearMidLevelState();
@@ -301,8 +392,10 @@ export default function App() {
           dispatchScore({ type: 'RESET_SCORE' });
           const missionBonusHints = progress.dailyMissions?.bonusHintsBank || 0;
           setHintsLeft(extraHint ? 4 + missionBonusHints : 3 + missionBonusHints);
+          setTutorialStep(lvlNum === 1 && !dailyChallenge && !progress.tutorialCompleted ? 1 : 0);
         }
 
+        setShowHintAdPrompt(false);
         setComboCount(0);
         setShowComboPill(false);
         lastClearTimeRef.current = 0;
@@ -337,6 +430,20 @@ export default function App() {
         return;
       const arrow = boardNow.find((item) => item.id === arrowId);
       if (!arrow) return;
+
+      // During Level 1 tutorial Steps 1–2, gently guide taps to the highlighted arrow without deducting a Heart
+      if (
+        currentLevelNumber === 1 &&
+        !isDailyChallenge &&
+        !progress.tutorialCompleted &&
+        (tutorialStepRef.current === 1 || tutorialStepRef.current === 2) &&
+        tutorialArrowIdRef.current &&
+        arrowId !== tutorialArrowIdRef.current
+      ) {
+        soundManager.playClick();
+        showToast('Tap the glowing arrow first!', 'info');
+        return;
+      }
 
       const rayResult = checkArrowRay(arrowId, boardNow, levelConfig.gridSize);
       if (!rayResult.isFree) {
@@ -406,11 +513,25 @@ export default function App() {
       dispatchScore({ type: 'ADD_SCORE', points: pts });
       const nextTotalScore = score + pts;
 
+      // Advance Level 1 tutorial steps as the player clears arrows
+      let completedTutorialThisMove = false;
+      if (currentLevelNumber === 1 && !isDailyChallenge && !progress.tutorialCompleted) {
+        if (tutorialStepRef.current === 1) {
+          setTutorialStep(2);
+        } else if (tutorialStepRef.current === 2) {
+          setTutorialStep(3);
+        } else if (tutorialStepRef.current === 3) {
+          setTutorialStep(0);
+          completedTutorialThisMove = true;
+        }
+      }
+
       // Track mission progress for arrows cleared and combos reached
       let progNow = progress;
       const { updatedProgress: pArrows } = recordMissionEvent(progNow, { type: 'ARROWS_CLEARED', count: 1 });
       progNow = {
         ...pArrows,
+        tutorialCompleted: completedTutorialThisMove ? true : pArrows.tutorialCompleted,
         stats: {
           arrowsCleared: (pArrows.stats?.arrowsCleared || 0) + 1,
           bestCombo: Math.max(pArrows.stats?.bestCombo || 0, nextCombo),
@@ -517,6 +638,10 @@ export default function App() {
         } else {
           nextSavedProgress = updateLevelCompletion(pConsumed, currentLevelNumber, stars, finalScore);
         }
+        if (currentLevelNumber === 1) {
+          nextSavedProgress = markTutorialCompleted(nextSavedProgress);
+          setTutorialStep(0);
+        }
         setProgress(nextSavedProgress);
         soundManager.playWin();
 
@@ -533,7 +658,7 @@ export default function App() {
       const timer = window.setTimeout(finishAnimation, animationDuration);
       escapeTimersRef.current.set(arrowId, timer);
     },
-    [hearts, levelConfig.gridSize, comboCount, mistakes, score, hintsLeft, progress, currentLevelNumber, settings.animationSpeed, isDailyChallenge]
+    [hearts, levelConfig.gridSize, comboCount, mistakes, score, hintsLeft, progress, currentLevelNumber, settings.animationSpeed, isDailyChallenge, showToast]
   );
 
   const handleArrowSelectRef = useRef<(arrowId: string) => void>(() => {});
@@ -581,10 +706,10 @@ export default function App() {
     );
   }, [levelConfig, isPreparingLevel]);
 
-  // Hint handler with Rewarded Ad & VIP support
+  // Hint handler with AdMob Rewarded Video Ads & VIP support
   const handleHint = useCallback(() => {
     const boardNow = activeArrowsRef.current;
-    if (boardNow.length === 0 || isPreparingLevel) return;
+    if (boardNow.length === 0 || isPreparingLevel || isLoadingRewardAd) return;
 
     if (isAdFree) {
       // VIP: Instant free hints forever!
@@ -604,22 +729,57 @@ export default function App() {
           hintsLeft: next,
           hearts,
           savedAt: Date.now(),
-        dailyChallenge: isDailyChallenge,
+          dailyChallenge: isDailyChallenge,
         });
         return next;
       });
       executeHintAction();
     } else {
-      // Out of hints: Trigger 5-second rewarded video ad!
-      setAdState({
-        isOpen: true,
-        reason: 'hint',
-        onReward: () => {
-          executeHintAction();
-        },
-      });
+      // Out of hints: confirm watching an AdMob rewarded video ad for +1 Hint
+      setShowHintAdPrompt(true);
     }
-  }, [isAdFree, hintsLeft, isPreparingLevel, executeHintAction, currentLevelNumber, score, mistakes, hearts, isDailyChallenge]);
+  }, [isAdFree, hintsLeft, isPreparingLevel, isLoadingRewardAd, executeHintAction, currentLevelNumber, score, mistakes, hearts, isDailyChallenge]);
+
+  const handleWatchRewardedHintAd = useCallback(async () => {
+    setShowHintAdPrompt(false);
+    if (isLoadingRewardAd) return;
+
+    setIsLoadingRewardAd(true);
+    const result = await showRewardedHintAd({
+      onAdOpened: () => soundManager.pauseAllAudio(),
+      onAdClosed: () => soundManager.resumeAudio(),
+    });
+    setIsLoadingRewardAd(false);
+
+    if (result.rewarded) {
+      setHintsLeft((prev) => {
+        const next = prev + 1;
+        saveMidLevelState({
+          levelNumber: currentLevelNumber,
+          activeArrows: activeArrowsRef.current,
+          score,
+          mistakes,
+          hintsLeft: next,
+          hearts,
+          savedAt: Date.now(),
+          dailyChallenge: isDailyChallenge,
+        });
+        return next;
+      });
+      soundManager.playHint();
+      showToast('+1 Hint earned! Tap Hint to reveal an arrow.', 'success');
+    } else if (result.unavailableOnWeb) {
+      showToast('Available in mobile app', 'info');
+    } else if (result.errorMessage) {
+      showToast(result.errorMessage, 'warning');
+    }
+  }, [isLoadingRewardAd, currentLevelNumber, score, mistakes, hearts, isDailyChallenge, showToast]);
+
+  const handleDismissTutorial = useCallback(() => {
+    setTutorialStep(0);
+    setProgress((prev) => markTutorialCompleted(prev));
+    soundManager.playClick();
+  }, []);
 
   // "Continue with Free Hits" on Game Over:
   // Starts game right where it ended, restores 3 hearts, and plays 60s AdMob video ad (or instant for VIP)!
@@ -740,6 +900,7 @@ export default function App() {
   const stateSnapshotRef = useRef({
     screen,
     adOpen: adState.isOpen,
+    showHintAdPrompt,
     showShop,
     showGameCenter,
     showLegal,
@@ -752,6 +913,7 @@ export default function App() {
   stateSnapshotRef.current = {
     screen,
     adOpen: adState.isOpen,
+    showHintAdPrompt,
     showShop,
     showGameCenter,
     showLegal,
@@ -765,6 +927,10 @@ export default function App() {
     const s = stateSnapshotRef.current;
 
     // 1. Close open full-screen modals first
+    if (s.showHintAdPrompt) {
+      setShowHintAdPrompt(false);
+      return true;
+    }
     if (s.adOpen) {
       setAdState((prev) => ({ ...prev, isOpen: false }));
       return true;
@@ -850,12 +1016,6 @@ export default function App() {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [screen, currentLevelNumber, startLevel, handleHint, handleBackNavigation]);
-
-  // Tutorial arrow highlight on Level 1
-  const tutorialArrowId =
-    currentLevelNumber === 1 && mistakes === 0 && activeArrows.length === levelConfig.arrows.length
-      ? getHintArrow(activeArrows, levelConfig.solutionOrder, levelConfig.gridSize)?.id || null
-      : null;
 
   const isDark = settings.theme === 'dark';
 
@@ -956,6 +1116,65 @@ export default function App() {
               </div>
             </div>
           )}
+
+          {/* Non-blocking 3-Step Interactive Tutorial Card for Level 1 */}
+          {currentLevelNumber === 1 &&
+            !isDailyChallenge &&
+            !progress.tutorialCompleted &&
+            tutorialStep > 0 &&
+            !isPreparingLevel &&
+            !showLevelComplete &&
+            !showGameOver && (
+              <div className="w-full max-w-lg mx-auto px-3 pt-1 shrink-0 z-20">
+                <div
+                  className={`rounded-2xl px-3.5 py-2.5 border shadow-lg backdrop-blur-md flex items-center justify-between gap-3 ${
+                    isDark
+                      ? 'bg-slate-900/90 border-amber-400/40 text-white'
+                      : 'bg-white/95 border-amber-500/50 text-slate-900'
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-amber-400 text-slate-950">
+                        Step {tutorialStep} / 3
+                      </span>
+                      <span className="text-[11px] font-bold opacity-70">How to Play</span>
+                    </div>
+                    <p className="text-xs sm:text-sm font-bold leading-snug">
+                      {tutorialStep === 1 &&
+                        'Tap the glowing arrow—its path ahead is clear, so it slides out!'}
+                      {tutorialStep === 2 &&
+                        'Great! Removing arrows frees up blocked ones behind them.'}
+                      {tutorialStep === 3 &&
+                        'Tapping a blocked arrow costs a Heart ❤️. Use Zoom or Hint anytime on bigger levels!'}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {tutorialStep === 3 ? (
+                      <button
+                        onClick={handleDismissTutorial}
+                        className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-400 text-slate-950 font-black text-xs shadow active:scale-95 transition-transform"
+                      >
+                        Got it!
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleDismissTutorial}
+                        className={`px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 border active:scale-95 transition-transform ${
+                          isDark
+                            ? 'bg-white/10 hover:bg-white/20 text-white/80 border-white/15'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                        }`}
+                      >
+                        <SkipForward className="w-3 h-3" />
+                        <span>Skip</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
           {/* High-Resolution Dynamic Scaled Board */}
           <Board
@@ -1062,7 +1281,78 @@ export default function App() {
         />
       )}
 
-      {/* 5-Second Rewarded Video Ad Modal */}
+      {/* Out of Hints Rewarded Video Ad Confirmation Modal */}
+      {showHintAdPrompt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm select-none">
+          <div
+            className={`relative w-full max-w-xs rounded-3xl p-5 border-2 shadow-2xl flex flex-col gap-3 ${
+              isDark
+                ? 'bg-slate-900 border-cyan-400/40 text-white'
+                : 'bg-white border-cyan-500/40 text-slate-900'
+            }`}
+          >
+            <button
+              onClick={() => setShowHintAdPrompt(false)}
+              aria-label="Close hint ad prompt"
+              className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center bg-black/15 hover:bg-black/25 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-400 to-emerald-400 text-slate-950 flex items-center justify-center shadow-lg">
+              <Video className="w-6 h-6" />
+            </div>
+
+            <div>
+              <h3 className="text-lg font-black tracking-tight">Out of Hints</h3>
+              <p className="text-xs sm:text-sm opacity-80 mt-1 leading-relaxed">
+                Watch a short video ad to get <span className="font-black text-emerald-400">+1 Hint</span>?
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                onClick={() => setShowHintAdPrompt(false)}
+                className={`flex-1 py-2.5 px-3 rounded-2xl font-bold text-xs border active:scale-95 transition-transform ${
+                  isDark
+                    ? 'bg-white/10 hover:bg-white/15 border-white/15 text-white'
+                    : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
+                }`}
+              >
+                Not Now
+              </button>
+              <button
+                onClick={() => {
+                  void handleWatchRewardedHintAd();
+                }}
+                className="flex-1 py-2.5 px-3 rounded-2xl bg-gradient-to-r from-cyan-400 to-emerald-400 text-slate-950 font-black text-xs shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Watch Ad (+1)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Non-blocking Status / Tutorial Guidance Toast */}
+      {toastBanner && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none px-4 w-full max-w-sm flex justify-center">
+          <div
+            className={`px-4 py-2 rounded-2xl text-xs font-black shadow-xl border backdrop-blur-md text-center ${
+              toastBanner.tone === 'success'
+                ? 'bg-emerald-500/95 text-slate-950 border-emerald-200'
+                : toastBanner.tone === 'warning'
+                ? 'bg-amber-400/95 text-slate-950 border-yellow-200'
+                : 'bg-slate-900/95 text-cyan-200 border-cyan-400/40'
+            }`}
+          >
+            {toastBanner.text}
+          </div>
+        </div>
+      )}
+
+      {/* 5-Second / 60-Second Simulated Rewarded Video Modal (Free Hits / Double Score) */}
       {adState.isOpen && (
         <AdModal
           reason={adState.reason}

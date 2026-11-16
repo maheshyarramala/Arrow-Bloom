@@ -36,15 +36,15 @@ export const BottomBar: React.FC<BottomBarProps> = React.memo(({
             ? 'VIP Free Instant Hint (H)'
             : hintsLeft > 0
             ? `Use Hint (${hintsLeft} left)`
-            : 'Watch 5s Ad for Free Hint'
+            : 'Watch a short video ad for +1 Free Hint'
         }
-        aria-label="Use hint"
+        aria-label={hintsLeft > 0 || isAdFree ? 'Use hint' : 'Watch video ad for free hint'}
         className={`flex-1 py-2.5 px-2 rounded-2xl flex items-center justify-center gap-1.5 font-black text-xs md:text-sm transition-all active:scale-95 shadow-md border ${
           isAdFree
             ? 'bg-gradient-to-r from-amber-400 to-yellow-400 text-slate-950 border-yellow-200'
             : hintsLeft > 0
             ? 'bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-slate-950 border-yellow-200'
-            : 'bg-gradient-to-r from-cyan-500 to-teal-400 text-slate-950 border-cyan-200 animate-pulse'
+            : 'bg-gradient-to-r from-cyan-400 to-emerald-400 hover:from-cyan-300 hover:to-emerald-300 text-slate-950 border-cyan-100'
         }`}
       >
         {isAdFree ? (
@@ -65,8 +65,8 @@ export const BottomBar: React.FC<BottomBarProps> = React.memo(({
           </>
         ) : (
           <>
-            <Video className="w-4 h-4" />
-            <span>+Hint</span>
+            <Video className="w-4 h-4 fill-slate-950/15" />
+            <span>Free Hint</span>
             <span className="px-1.5 py-0.2 rounded bg-slate-950/20 text-[10px] font-black uppercase">
               Ad
             </span>

@@ -260,10 +260,110 @@ export function analyzeLevelSolvability(
   return { solvable: removedCount === count, depth, initialFreeCount, trapPct };
 }
 
+function buildSimpleLevelOne(seed: number): LevelConfig {
+  const rng = createRNG(seed);
+  const shapeDef = SHAPE_DEFINITIONS[1];
+  const { collection } = getLevelParams(1);
+  const gridSize = 10;
+
+  // Handcrafted 8-arrow 10x10 beginner layout:
+  // Zero overlaps, zero diagonals, zero self-blocking, initialFreeCount = 3, depth = 3.
+  const rawArrows: Array<{ id: string; cells: CellCoord[]; direction: Direction; order: number }> = [
+    {
+      id: 'a_1_1',
+      cells: [{ r: 1, c: 2 }, { r: 1, c: 3 }, { r: 1, c: 4 }, { r: 1, c: 5 }],
+      direction: 'right',
+      order: 0,
+    },
+    {
+      id: 'a_1_2',
+      cells: [{ r: 5, c: 4 }, { r: 4, c: 4 }, { r: 3, c: 4 }, { r: 2, c: 4 }],
+      direction: 'up',
+      order: 1,
+    },
+    {
+      id: 'a_1_3',
+      cells: [{ r: 7, c: 5 }, { r: 7, c: 4 }, { r: 7, c: 3 }, { r: 7, c: 2 }],
+      direction: 'left',
+      order: 2,
+    },
+    {
+      id: 'a_1_4',
+      cells: [{ r: 3, c: 2 }, { r: 4, c: 2 }, { r: 5, c: 2 }, { r: 6, c: 2 }],
+      direction: 'down',
+      order: 3,
+    },
+    {
+      id: 'a_1_5',
+      cells: [{ r: 5, c: 6 }, { r: 4, c: 6 }, { r: 3, c: 6 }, { r: 3, c: 5 }],
+      direction: 'left',
+      order: 4,
+    },
+    {
+      id: 'a_1_6',
+      cells: [{ r: 5, c: 8 }, { r: 6, c: 8 }, { r: 7, c: 8 }, { r: 8, c: 8 }],
+      direction: 'down',
+      order: 5,
+    },
+    {
+      id: 'a_1_7',
+      cells: [{ r: 8, c: 4 }, { r: 8, c: 5 }, { r: 8, c: 6 }, { r: 8, c: 7 }],
+      direction: 'right',
+      order: 6,
+    },
+    {
+      id: 'a_1_8',
+      cells: [{ r: 2, c: 7 }, { r: 3, c: 7 }, { r: 4, c: 7 }, { r: 5, c: 7 }],
+      direction: 'down',
+      order: 7,
+    },
+  ];
+
+  const arrows: ArrowData[] = rawArrows.map((item) => ({
+    ...item,
+    colorIndex: -1,
+  }));
+
+  assignColors(arrows, gridSize, rng);
+
+  const playableMask = Array.from({ length: gridSize }, () => Array(gridSize).fill(false));
+  const playableCells: CellCoord[] = [];
+  for (const arrow of arrows) {
+    for (const cell of arrow.cells) {
+      playableMask[cell.r][cell.c] = true;
+      playableCells.push(cell);
+    }
+  }
+
+  const analysis = analyzeLevelSolvability(arrows, gridSize);
+
+  return {
+    levelNumber: 1,
+    collectionId: collection.id,
+    shapeName: shapeDef.name,
+    gridSize,
+    playableMask,
+    playableCells,
+    arrows,
+    solutionOrder: ['a_1_1', 'a_1_3', 'a_1_6', 'a_1_2', 'a_1_4', 'a_1_7', 'a_1_5', 'a_1_8'],
+    stats: {
+      depth: analysis.depth,
+      initialFreeCount: analysis.initialFreeCount,
+      coveragePct: 100,
+      trapPct: analysis.trapPct,
+      avgLength: 4,
+      difficultyTier: 'Tutorial',
+    },
+  };
+}
+
 function buildSingleLevelCandidate(
   levelNumber: number,
   seed: number
 ): LevelConfig | null {
+  if (levelNumber === 1) {
+    return buildSimpleLevelOne(seed);
+  }
   const rng = createRNG(seed);
   const shapeKey = ((levelNumber - 1) % 150) + 1;
   const shapeDef = SHAPE_DEFINITIONS[levelNumber] || SHAPE_DEFINITIONS[shapeKey] || SHAPE_DEFINITIONS[1];
@@ -626,8 +726,13 @@ function buildSingleLevelCandidate(
 }
 
 export function validateLevel(level: LevelConfig): boolean {
-  // Enforce >=120 arrows per level and valid level bounds (1–500).
-  if (!level || !level.arrows || level.arrows.length < 120 || !level.shapeName || level.levelNumber < 1 || level.levelNumber > 500) return false;
+  // Enforce 6–10 arrows for beginner Level 1, and >=120 arrows for Levels 2–500.
+  if (!level || !level.arrows || !level.shapeName || level.levelNumber < 1 || level.levelNumber > 500) return false;
+  if (level.levelNumber === 1) {
+    if (level.arrows.length < 6 || level.arrows.length > 10) return false;
+  } else if (level.arrows.length < 120) {
+    return false;
+  }
   const gridSize = level.gridSize;
   const owner = new Int16Array(gridSize * gridSize);
   owner.fill(-1);

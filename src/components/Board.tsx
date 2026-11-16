@@ -382,16 +382,33 @@ export const Board: React.FC<BoardProps> = React.memo((props) => {
         if (tutorialArrowId === arrow.id) {
           const head = arrow.cells[arrow.cells.length - 1];
           const [dr, dc] = DIR_DELTA[arrow.direction];
-          ctx.fillStyle = '#FEF08A';
+          const cx = (head.c + 0.5) * cell;
+          const cy = (head.r + 0.5) * cell;
+          const pulseScale = performanceMode ? 1 : 0.92 + Math.sin(now / 170) * 0.14;
+          const tapX = Math.max(cell * 0.45, Math.min(board - cell * 0.45, cx + dc * cell * 0.55));
+          const tapY = Math.max(cell * 0.45, Math.min(board - cell * 0.45, cy + dr * cell * 0.55));
+          ctx.save();
           ctx.globalAlpha = pulse;
+          ctx.strokeStyle = '#FACC15';
+          ctx.lineWidth = Math.max(2.5, cell * 0.11);
           ctx.beginPath();
-          ctx.arc((head.c + 0.5 + dc * 0.6) * cell, (head.r + 0.5 + dr * 0.6) * cell, cell * 0.3, 0, Math.PI * 2);
+          ctx.arc(cx, cy, cell * 0.52 * pulseScale, 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.fillStyle = '#FEF08A';
+          ctx.beginPath();
+          ctx.arc(tapX, tapY, Math.max(12, cell * 0.34), 0, Math.PI * 2);
           ctx.fill();
-          ctx.font = `${Math.max(12, cell * 0.4)}px sans-serif`;
+          ctx.strokeStyle = '#CA8A04';
+          ctx.lineWidth = Math.max(1.5, cell * 0.05);
+          ctx.stroke();
+
+          ctx.globalAlpha = 1;
+          ctx.font = `${Math.max(14, cell * 0.42)}px sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText('👆', (head.c + 0.5 + dc * 0.6) * cell, (head.r + 0.5 + dr * 0.6) * cell);
-          ctx.globalAlpha = 1;
+          ctx.fillText('👆', tapX, tapY + 1);
+          ctx.restore();
         }
         active ||= !performanceMode && Boolean(hintedArrowId || tutorialArrowId);
       }

@@ -36,7 +36,11 @@ for (let levelNumber = 1; levelNumber <= 500; levelNumber++) {
   const elapsed = performance.now() - started;
   maxGenerationMs = Math.max(maxGenerationMs, elapsed);
   assert(level.levelNumber === levelNumber, `Level identity mismatch at ${levelNumber}`);
-  assert(level.arrows.length >= 120, `Level ${levelNumber} generated only ${level.arrows.length} arrows (must be >= 120)`);
+  if (levelNumber === 1) {
+    assert(level.arrows.length >= 6 && level.arrows.length <= 10, `Level 1 generated ${level.arrows.length} arrows (must be 6–10)`);
+  } else {
+    assert(level.arrows.length >= 120, `Level ${levelNumber} generated only ${level.arrows.length} arrows (must be >= 120)`);
+  }
   assert(level.gridSize >= 1 && level.gridSize <= 104, `Level ${levelNumber} grid out of bounds`);
   assert(level.playableMask.length === level.gridSize, `Level ${levelNumber} mask height mismatch`);
   assert(level.playableMask.every(row => row.length === level.gridSize), `Level ${levelNumber} mask width mismatch`);

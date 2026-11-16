@@ -1,0 +1,19 @@
+My game "Arrow Bloom" already has Levels 2–500 working with 170–300+ arrows and deep dependency chains. DO NOT change the generator logic, grid sizes, or difficulty metrics for Levels 2–500.
+
+I ONLY want to change **Level 1** into a simple, beginner-friendly onboarding level with low arrows, and add an interactive step-by-step tutorial on Level 1 so new players learn how to play. Please update `src/levelGenerator.ts`, `src/levelWorker.ts`, `src/App.tsx`, `src/components/Board.tsx`, and `src/storage.ts`. Output the complete updated code for each modified file.
+
+1. Keep Levels 2–500 completely untouched; make ONLY Level 1 simple (`src/levelGenerator.ts`, `src/levelWorker.ts`):
+   - Add an explicit `levelNumber === 1` branch (or hardcoded/handcrafted Level 1 layout) in `getLevel` / `buildSingleLevelCandidate`:
+     - Small `8×8` or `10×10` grid with **6 to 10 arrows** total (simple, chunky, easy-to-tap orthogonal arrows—no overlaps, no diagonals, no self-blocking).
+     - `initialFreeCount` of 2–3 arrows and `depth` of 2–4 so the player experiences unblocking a chain right away.
+   - Ensure `meetsDifficultyTargets` and any level validator accept this 6–10 arrow layout **only** when `levelNumber === 1`, while keeping all existing 150+ arrow and depth rules intact for Levels 2–500.
+   - Bump `GENERATOR_VERSION` in `src/levelWorker.ts` (or invalidate only Level 1's cache key) so existing players/testers see the new simple Level 1 immediately.
+
+2. Add a 3-step interactive tutorial on Level 1 (`src/App.tsx`, `src/components/Board.tsx`, `src/storage.ts`):
+   - Track `tutorialCompleted` in `src/storage.ts` (and show a small "Skip" button so returning players aren't stuck).
+   - Use the existing `tutorialArrowId` prop in `Board.tsx` to highlight one **free (unblocked)** arrow at a time with a pulsing glow and tap hand (`👆`).
+   - Show a compact, non-blocking tutorial card at the top/bottom of the board (never covering the arrows):
+     - **Step 1**: Highlight a free arrow and say: *"Tap the glowing arrow—its path ahead is clear, so it slides out!"* Advance when cleared.
+     - **Step 2**: Highlight a newly unblocked arrow and say: *"Great! Removing arrows frees up blocked ones behind them."* Advance when cleared.
+     - **Step 3**: Show a quick tip: *"Tapping a blocked arrow costs a Heart ❤️. Use Zoom or Hint anytime on bigger levels!"* with a **"Got it!"** button (or auto-dismiss on the next move) so the player finishes Level 1 on their own.
+   - During Steps 1–2, gently prompt *"Tap the glowing arrow first!"* if they tap a different arrow instead of deducting a Heart.

@@ -21,6 +21,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
 export const DEFAULT_PROGRESS: PlayerProgress = {
   unlockedLevel: 1,
   totalScore: 0,
+  tutorialCompleted: false,
   levelData: {
     1: { unlocked: true, stars: 0, highScore: 0, cleared: false },
   },
@@ -57,6 +58,10 @@ export function loadProgress(): PlayerProgress {
     const loaded: PlayerProgress = {
       unlockedLevel: parsed.unlockedLevel || 1,
       totalScore: parsed.totalScore || 0,
+      tutorialCompleted:
+        parsed.tutorialCompleted !== undefined
+          ? Boolean(parsed.tutorialCompleted)
+          : Boolean(parsed.levelData?.[1]?.cleared),
       levelData: parsed.levelData || { 1: { unlocked: true, stars: 0, highScore: 0, cleared: false } },
       dailyMissions: parsed.dailyMissions,
       dailyChallenge: parsed.dailyChallenge,
@@ -181,6 +186,16 @@ export function updateLevelCompletion(
   return nextProgress;
 }
 
+export function markTutorialCompleted(currentProgress: PlayerProgress): PlayerProgress {
+  if (currentProgress.tutorialCompleted) return currentProgress;
+  const nextProgress: PlayerProgress = {
+    ...currentProgress,
+    tutorialCompleted: true,
+  };
+  saveProgress(nextProgress);
+  return nextProgress;
+}
+
 export function resetProgress(): PlayerProgress {
   try {
     localStorage.removeItem(PROGRESS_KEY);
@@ -189,7 +204,7 @@ export function resetProgress(): PlayerProgress {
   } catch {
     // Ignore
   }
-  return DEFAULT_PROGRESS;
+  return { ...DEFAULT_PROGRESS, tutorialCompleted: false };
 }
 
 const AD_FREE_KEY = 'arrow_bloom_ad_free';

@@ -321,6 +321,22 @@ class SoundManager {
       this.bgmInterval = null;
     }
   }
+
+  public pauseAllAudio() {
+    this.stopBGM();
+    if (this.ctx && this.ctx.state === 'running') {
+      this.ctx.suspend().catch(() => {});
+    }
+  }
+
+  public resumeAudio() {
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+    if (this.musicEnabled && !this.isBgmPlaying) {
+      this.startBGM();
+    }
+  }
 }
 
 export const soundManager = new SoundManager();
